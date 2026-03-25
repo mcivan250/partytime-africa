@@ -22,6 +22,7 @@ export default function EventPageClient({ event }: EventPageClientProps) {
   const [commentCount, setCommentCount] = useState(0);
   const [newComment, setNewComment] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showAllGuests, setShowAllGuests] = useState(false);
 
   const selectedTheme = THEMES.find((t) => t.id === event.theme) || THEMES[0];
 
@@ -113,23 +114,74 @@ export default function EventPageClient({ event }: EventPageClientProps) {
     }
   };
 
+  const handleWhatsAppShare = () => {
+    const url = window.location.href;
+    const text = `🎉 ${event.title}\n\n${event.description || ''}\n\n📅 ${event.date_time ? new Date(event.date_time).toLocaleDateString() : ''}\n📍 ${event.location_address || ''}\n\nRSVP here: ${url}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+  };
+
+  // Calculate urgency & social proof
+  const totalInterested = rsvpCounts.going + rsvpCounts.maybe;
+  const isTrending = totalInterested > 50;
+  const isPopular = totalInterested > 20;
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-12 px-4">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+      {/* Header - Fixed on mobile */}
+      <div className="sticky top-0 z-50 bg-white shadow-md px-4 py-3">
+        <div className="max-w-4xl mx-auto flex items-center justify-between">
+          <Link href="/" className="text-purple-600 font-semibold hover:underline flex items-center">
+            <span className="mr-2">←</span> Back
+          </Link>
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={handleWhatsAppShare}
+              className="bg-green-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-600 transition flex items-center space-x-2"
+            >
+              <span>📱</span>
+              <span className="hidden sm:inline">WhatsApp</span>
+            </button>
+            <button
+              onClick={handleShare}
+              className="bg-purple-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-purple-700 transition"
+            >
+              Share
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-4xl mx-auto py-8 px-4">
+        {/* Social Proof Badges */}
+        {(isTrending || isPopular) && (
+          <div className="flex flex-wrap gap-2 mb-4">
+            {isTrending && (
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-orange-100 text-orange-800">
+                🔥 Trending
+              </span>
+            )}
+            {isPopular && (
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-purple-100 text-purple-800">
+                ⭐ Popular
+              </span>
+            )}
+          </div>
+        )}
+
         {/* Event Card */}
         <div
-          className={`rounded-3xl bg-gradient-to-br ${selectedTheme.gradient} p-12 text-white shadow-2xl mb-8`}
+          className={`rounded-3xl bg-gradient-to-br ${selectedTheme.gradient} p-8 md:p-12 text-white shadow-2xl mb-6`}
         >
           <div className="text-center">
-            <h1 className="text-5xl font-bold mb-6">{event.title}</h1>
+            <h1 className="text-4xl md:text-5xl font-bold mb-6">{event.title}</h1>
 
             {event.description && (
-              <p className="text-xl opacity-90 mb-8 max-w-2xl mx-auto">
+              <p className="text-lg md:text-xl opacity-90 mb-8 max-w-2xl mx-auto">
                 {event.description}
               </p>
             )}
 
-            <div className="space-y-3 text-lg">
+            <div className="space-y-3 text-base md:text-lg">
               {event.date_time && (
                 <p className="flex items-center justify-center space-x-2">
                   <span>📅</span>
@@ -155,19 +207,38 @@ export default function EventPageClient({ event }: EventPageClientProps) {
                   <span>{event.location_address}</span>
                 </p>
               )}
-
-              {rsvpCounts.total > 0 && (
-                <p className="flex items-center justify-center space-x-2">
-                  <span>👥</span>
-                  <span>{rsvpCounts.total} people interested</span>
-                </p>
-              )}
             </div>
           </div>
         </div>
 
+        {/* Social Proof Stats */}
+        {totalInterested > 0 && (
+          <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
+            <div className="grid grid-cols-2 gap-4 text-center">
+              <div>
+                <div className="text-3xl font-bold text-purple-600">{rsvpCounts.going}</div>
+                <div className="text-sm text-gray-600">Going</div>
+              </div>
+              <div>
+                <div className="text-3xl font-bold text-yellow-600">{rsvpCounts.maybe}</div>
+                <div className="text-sm text-gray-600">Maybe</div>
+              </div>
+            </div>
+            {rsvps.length > 0 && (
+              <div className="mt-4 text-center">
+                <button
+                  onClick={() => setShowAllGuests(!showAllGuests)}
+                  className="text-purple-600 hover:underline text-sm font-semibold"
+                >
+                  👀 See who's going
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* RSVP Section */}
-        <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
+        <div className="bg-white rounded-2xl shadow-xl p-6 md:p-8 mb-6">
           <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
             Will you be there?
           </h2>
@@ -182,51 +253,54 @@ export default function EventPageClient({ event }: EventPageClientProps) {
             </p>
           )}
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-3 gap-3 md:gap-4">
             <button
               onClick={() => handleRSVP('going')}
               disabled={loading}
-              className={`py-4 px-6 rounded-xl font-semibold transition shadow-lg ${
+              className={`py-3 md:py-4 px-4 md:px-6 rounded-xl font-semibold transition shadow-lg ${
                 userRsvp?.status === 'going'
-                  ? 'bg-green-600 text-white'
-                  : 'bg-green-500 text-white hover:bg-green-600'
+                  ? 'bg-green-600 text-white scale-105'
+                  : 'bg-green-500 text-white hover:bg-green-600 hover:scale-105'
               } disabled:opacity-50`}
             >
-              ✓ Going
+              <div className="text-xl md:text-2xl mb-1">✓</div>
+              <div className="text-xs md:text-sm">Going</div>
               {rsvpCounts.going > 0 && (
-                <span className="block text-sm mt-1">{rsvpCounts.going}</span>
+                <div className="text-xs md:text-sm font-bold mt-1">{rsvpCounts.going}</div>
               )}
             </button>
             <button
               onClick={() => handleRSVP('maybe')}
               disabled={loading}
-              className={`py-4 px-6 rounded-xl font-semibold transition shadow-lg ${
+              className={`py-3 md:py-4 px-4 md:px-6 rounded-xl font-semibold transition shadow-lg ${
                 userRsvp?.status === 'maybe'
-                  ? 'bg-yellow-600 text-white'
-                  : 'bg-yellow-500 text-white hover:bg-yellow-600'
+                  ? 'bg-yellow-600 text-white scale-105'
+                  : 'bg-yellow-500 text-white hover:bg-yellow-600 hover:scale-105'
               } disabled:opacity-50`}
             >
-              ? Maybe
+              <div className="text-xl md:text-2xl mb-1">?</div>
+              <div className="text-xs md:text-sm">Maybe</div>
               {rsvpCounts.maybe > 0 && (
-                <span className="block text-sm mt-1">{rsvpCounts.maybe}</span>
+                <div className="text-xs md:text-sm font-bold mt-1">{rsvpCounts.maybe}</div>
               )}
             </button>
             <button
               onClick={() => handleRSVP('cant_go')}
               disabled={loading}
-              className={`py-4 px-6 rounded-xl font-semibold transition shadow-lg ${
+              className={`py-3 md:py-4 px-4 md:px-6 rounded-xl font-semibold transition shadow-lg ${
                 userRsvp?.status === 'cant_go'
-                  ? 'bg-red-600 text-white'
-                  : 'bg-red-500 text-white hover:bg-red-600'
+                  ? 'bg-red-600 text-white scale-105'
+                  : 'bg-red-500 text-white hover:bg-red-600 hover:scale-105'
               } disabled:opacity-50`}
             >
-              ✗ Can't Go
+              <div className="text-xl md:text-2xl mb-1">✗</div>
+              <div className="text-xs md:text-sm">Can't Go</div>
             </button>
           </div>
 
           {!user && (
             <p className="text-center text-sm text-gray-500 mt-4">
-              <Link href="/auth" className="text-purple-600 hover:underline">
+              <Link href="/auth" className="text-purple-600 hover:underline font-semibold">
                 Sign in
               </Link>{' '}
               to RSVP
@@ -234,20 +308,20 @@ export default function EventPageClient({ event }: EventPageClientProps) {
           )}
         </div>
 
-        {/* Guest List */}
-        {event.is_guest_list_public && rsvps.length > 0 && (
-          <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
+        {/* Guest List - Expandable */}
+        {event.is_guest_list_public && rsvps.length > 0 && showAllGuests && (
+          <div className="bg-white rounded-2xl shadow-xl p-6 md:p-8 mb-6">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">
-              Guest List ({rsvps.length})
+              Who's Going ({rsvps.length})
             </h2>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {rsvps.map((rsvp: any) => (
                 <div key={rsvp.id} className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center font-bold text-purple-600">
-                    {rsvp.users?.name?.[0] || '?'}
+                  <div className="w-10 h-10 bg-gradient-to-br from-purple-400 to-pink-400 rounded-full flex items-center justify-center font-bold text-white shadow-md">
+                    {rsvp.users?.name?.[0]?.toUpperCase() || '?'}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900 truncate">
+                    <p className="font-medium text-gray-900 truncate text-sm">
                       {rsvp.users?.name || 'Guest'}
                     </p>
                     {rsvp.plus_ones > 0 && (
@@ -262,9 +336,9 @@ export default function EventPageClient({ event }: EventPageClientProps) {
 
         {/* Comments */}
         {event.is_comments_enabled && (
-          <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
+          <div className="bg-white rounded-2xl shadow-xl p-6 md:p-8 mb-6">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">
-              Comments ({commentCount})
+              💬 Comments ({commentCount})
             </h2>
 
             {user ? (
@@ -274,19 +348,19 @@ export default function EventPageClient({ event }: EventPageClientProps) {
                   onChange={(e) => setNewComment(e.target.value)}
                   placeholder="Add a comment..."
                   rows={3}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 resize-none"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-600 focus:border-transparent resize-none text-base"
                 />
                 <button
                   type="submit"
                   disabled={loading || !newComment.trim()}
-                  className="mt-2 bg-purple-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-purple-700 disabled:bg-gray-300"
+                  className="mt-3 bg-purple-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-purple-700 disabled:bg-gray-300 transition shadow-lg hover:shadow-xl"
                 >
                   Post Comment
                 </button>
               </form>
             ) : (
-              <p className="text-center text-gray-500 mb-6 py-4 bg-gray-50 rounded-lg">
-                <Link href="/auth" className="text-purple-600 hover:underline">
+              <p className="text-center text-gray-500 mb-6 py-4 bg-gray-50 rounded-xl">
+                <Link href="/auth" className="text-purple-600 hover:underline font-semibold">
                   Sign in
                 </Link>{' '}
                 to comment
@@ -295,26 +369,29 @@ export default function EventPageClient({ event }: EventPageClientProps) {
 
             {comments.length === 0 ? (
               <p className="text-center text-gray-500 py-8">
-                No comments yet. Be the first!
+                No comments yet. Be the first! 💭
               </p>
             ) : (
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {comments.map((comment) => (
                   <div key={comment.id} className="border-b border-gray-100 pb-4 last:border-0">
                     <div className="flex items-start space-x-3">
-                      <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center font-bold text-purple-600">
-                        {comment.user?.name?.[0] || '?'}
+                      <div className="w-10 h-10 bg-gradient-to-br from-purple-400 to-pink-400 rounded-full flex items-center justify-center font-bold text-white shadow-md flex-shrink-0">
+                        {comment.user?.name?.[0]?.toUpperCase() || '?'}
                       </div>
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2 mb-1">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center space-x-2 mb-1 flex-wrap">
                           <span className="font-semibold text-gray-900">
                             {comment.user?.name || 'Guest'}
                           </span>
-                          <span className="text-sm text-gray-500">
-                            {new Date(comment.created_at).toLocaleDateString()}
+                          <span className="text-xs text-gray-500">
+                            {new Date(comment.created_at).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                            })}
                           </span>
                         </div>
-                        <p className="text-gray-700">{comment.content}</p>
+                        <p className="text-gray-700 text-sm md:text-base break-words">{comment.content}</p>
                       </div>
                     </div>
                   </div>
@@ -324,35 +401,13 @@ export default function EventPageClient({ event }: EventPageClientProps) {
           </div>
         )}
 
-        {/* Share Section */}
-        <div className="text-center">
-          <p className="text-gray-600 mb-4">Share this event:</p>
-          <div className="flex justify-center space-x-4">
-            <button
-              onClick={handleShare}
-              className="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition"
-            >
-              📱 Share
-            </button>
-            <button
-              onClick={() => {
-                navigator.clipboard.writeText(window.location.href);
-                alert('Link copied!');
-              }}
-              className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition"
-            >
-              📋 Copy Link
-            </button>
-          </div>
-        </div>
-
         {/* Footer */}
-        <div className="text-center mt-12 text-sm text-gray-500">
-          Created with{' '}
-          <Link href="/" className="text-purple-600 hover:underline">
+        <div className="text-center mt-8 text-sm text-gray-500">
+          Powered by{' '}
+          <Link href="/" className="text-purple-600 hover:underline font-semibold">
             Party Time Africa
           </Link>{' '}
-          • Turn up, African style.
+          🎉
         </div>
       </div>
     </div>
