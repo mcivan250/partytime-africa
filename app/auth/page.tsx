@@ -7,10 +7,11 @@ import { signUpWithEmail, signInWithEmail, signInWithPhone, verifyOTP, createWal
 
 export default function AuthPage() {
   const router = useRouter();
-  const [mode, setMode] = useState<'signin' | 'signup' | 'phone'>('signin');
+  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [method, setMethod] = useState<'email' | 'phone'>('email');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [otpSent, setOtpSent] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -18,18 +19,49 @@ export default function AuthPage() {
     email: '',
     phone: '',
     password: '',
+    confirmPassword: '',
     otp: '',
   });
+
+  // Password strength checker
+  const getPasswordStrength = (password: string) => {
+    let strength = 0;
+    if (password.length >= 8) strength++;
+    if (/[A-Z]/.test(password)) strength++;
+    if (/[a-z]/.test(password)) strength++;
+    if (/[0-9]/.test(password)) strength++;
+    if (/[^A-Za-z0-9]/.test(password)) strength++;
+    return strength;
+  };
+
+  const passwordStrength = getPasswordStrength(formData.password);
+  const passwordStrengthLabel = ['Very Weak', 'Weak', 'Fair', 'Good', 'Strong'][passwordStrength];
+  const passwordStrengthColor = ['red', 'orange', 'yellow', 'blue', 'green'][passwordStrength];
 
   const handleEmailSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setSuccess(null);
+
+    // Validation
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match');
+      setLoading(false);
+      return;
+    }
+
+    if (passwordStrength < 3) {
+      setError('Password is too weak. Please use a stronger password.');
+      setLoading(false);
+      return;
+    }
 
     try {
       const user = await signUpWithEmail(formData.email, formData.password, formData.name);
       await createWallet(user.id);
-      router.push('/');
+      setSuccess('Account created! Please check your email to verify your account.');
+      setTimeout(() => router.push('/'), 2000);
     } catch (err: any) {
       setError(err.message || 'Failed to sign up');
     } finally {
@@ -46,7 +78,7 @@ export default function AuthPage() {
       await signInWithEmail(formData.email, formData.password);
       router.push('/');
     } catch (err: any) {
-      setError(err.message || 'Failed to sign in');
+      setError(err.message || 'Invalid email or password');
     } finally {
       setLoading(false);
     }
@@ -56,11 +88,13 @@ export default function AuthPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setSuccess(null);
 
     try {
       if (!otpSent) {
         await signInWithPhone(formData.phone);
         setOtpSent(true);
+        setSuccess('Code sent! Check your phone for the verification code.');
       } else {
         const user = await verifyOTP(formData.phone, formData.otp);
         if (user) {
@@ -81,8 +115,8 @@ export default function AuthPage() {
         {/* Logo/Brand */}
         <div className="text-center mb-8">
           <Link href="/" className="inline-block">
-            <h1 className="text-5xl font-bold text-white mb-2">Party Time</h1>
-            <p className="text-white/80">Turn up, African style 🎉</p>
+            <h1 className="text-5xl font-bold text-white mb-2 drop-shadow-2xl">Party Time</h1>
+            <p className="text-white/90 text-lg">Turn up, African style 🎉</p>
           </Link>
         </div>
 
@@ -94,11 +128,13 @@ export default function AuthPage() {
               onClick={() => {
                 setMethod('email');
                 setOtpSent(false);
+                setError(null);
+                setSuccess(null);
               }}
               className={`flex-1 py-3 rounded-xl font-semibold transition ${
                 method === 'email'
-                  ? 'bg-purple-600 text-white'
-                  : 'bg-gray-100 text-gray-600'
+                  ? 'bg-purple-600 text-white shadow-lg'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
               📧 Email
@@ -106,13 +142,14 @@ export default function AuthPage() {
             <button
               onClick={() => {
                 setMethod('phone');
-                setMode('phone');
                 setOtpSent(false);
+                setError(null);
+                setSuccess(null);
               }}
               className={`flex-1 py-3 rounded-xl font-semibold transition ${
                 method === 'phone'
-                  ? 'bg-purple-600 text-white'
-                  : 'bg-gray-100 text-gray-600'
+                  ? 'bg-purple-600 text-white shadow-lg'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
               📱 Phone
@@ -120,8 +157,16 @@ export default function AuthPage() {
           </div>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">
-              {error}
+            <div className="bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded mb-4">
+              <p className="font-semibold">Error</p>
+              <p className="text-sm">{error}</p>
+            </div>
+          )}
+
+          {success && (
+            <div className="bg-green-50 border-l-4 border-green-500 text-green-700 px-4 py-3 rounded mb-4">
+              <p className="font-semibold">Success!</p>
+              <p className="text-sm">{success}</p>
             </div>
           )}
 
@@ -129,36 +174,42 @@ export default function AuthPage() {
           {method === 'email' && (
             <>
               {/* Mode Tabs */}
-              {mode !== 'phone' && (
-                <div className="flex space-x-2 mb-6">
-                  <button
-                    onClick={() => setMode('signin')}
-                    className={`flex-1 py-2 text-sm font-medium ${
-                      mode === 'signin'
-                        ? 'text-purple-600 border-b-2 border-purple-600'
-                        : 'text-gray-500'
-                    }`}
-                  >
-                    Sign In
-                  </button>
-                  <button
-                    onClick={() => setMode('signup')}
-                    className={`flex-1 py-2 text-sm font-medium ${
-                      mode === 'signup'
-                        ? 'text-purple-600 border-b-2 border-purple-600'
-                        : 'text-gray-500'
-                    }`}
-                  >
-                    Sign Up
-                  </button>
-                </div>
-              )}
+              <div className="flex space-x-2 mb-6 border-b border-gray-200">
+                <button
+                  onClick={() => {
+                    setMode('signin');
+                    setError(null);
+                    setSuccess(null);
+                  }}
+                  className={`flex-1 py-3 text-sm font-medium transition ${
+                    mode === 'signin'
+                      ? 'text-purple-600 border-b-2 border-purple-600 -mb-px'
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  Sign In
+                </button>
+                <button
+                  onClick={() => {
+                    setMode('signup');
+                    setError(null);
+                    setSuccess(null);
+                  }}
+                  className={`flex-1 py-3 text-sm font-medium transition ${
+                    mode === 'signup'
+                      ? 'text-purple-600 border-b-2 border-purple-600 -mb-px'
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  Create Account
+                </button>
+              </div>
 
               <form onSubmit={mode === 'signin' ? handleEmailSignIn : handleEmailSignUp} className="space-y-4">
                 {mode === 'signup' && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Full Name
+                      Full Name *
                     </label>
                     <input
                       type="text"
@@ -166,14 +217,14 @@ export default function AuthPage() {
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       placeholder="Chris Mugabo"
                       required
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
+                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-600 focus:border-purple-600 transition"
                     />
                   </div>
                 )}
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Email
+                    Email Address *
                   </label>
                   <input
                     type="email"
@@ -181,13 +232,13 @@ export default function AuthPage() {
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     placeholder="you@example.com"
                     required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-600 focus:border-purple-600 transition"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Password
+                    Password *
                   </label>
                   <input
                     type="password"
@@ -195,17 +246,65 @@ export default function AuthPage() {
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     placeholder="••••••••"
                     required
-                    minLength={6}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
+                    minLength={8}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-600 focus:border-purple-600 transition"
                   />
+                  {mode === 'signup' && formData.password && (
+                    <div className="mt-2">
+                      <div className="flex items-center justify-between text-xs mb-1">
+                        <span className="text-gray-600">Password strength:</span>
+                        <span className={`font-semibold text-${passwordStrengthColor}-600`}>
+                          {passwordStrengthLabel}
+                        </span>
+                      </div>
+                      <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full bg-${passwordStrengthColor}-500 transition-all`}
+                          style={{ width: `${(passwordStrength / 5) * 100}%` }}
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Use 8+ characters with uppercase, lowercase, numbers & symbols
+                      </p>
+                    </div>
+                  )}
                 </div>
+
+                {mode === 'signup' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Confirm Password *
+                    </label>
+                    <input
+                      type="password"
+                      value={formData.confirmPassword}
+                      onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                      placeholder="••••••••"
+                      required
+                      minLength={8}
+                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-600 focus:border-purple-600 transition"
+                    />
+                  </div>
+                )}
 
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-purple-600 text-white py-3 rounded-lg font-semibold hover:bg-purple-700 disabled:bg-gray-300 transition"
+                  className="w-full bg-purple-600 text-white py-4 rounded-xl font-semibold hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition shadow-lg hover:shadow-xl"
                 >
-                  {loading ? 'Loading...' : mode === 'signin' ? 'Sign In' : 'Create Account'}
+                  {loading ? (
+                    <span className="flex items-center justify-center">
+                      <svg className="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      Processing...
+                    </span>
+                  ) : mode === 'signin' ? (
+                    'Sign In'
+                  ) : (
+                    'Create Account'
+                  )}
                 </button>
               </form>
             </>
@@ -216,7 +315,7 @@ export default function AuthPage() {
             <form onSubmit={handlePhoneSignIn} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Phone Number
+                  Phone Number *
                 </label>
                 <input
                   type="tel"
@@ -225,26 +324,30 @@ export default function AuthPage() {
                   placeholder="+256 700 000 000"
                   required
                   disabled={otpSent}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent disabled:bg-gray-100"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-600 focus:border-purple-600 transition disabled:bg-gray-100"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  We'll send you a verification code via SMS
+                </p>
               </div>
 
               {otpSent && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Enter OTP Code
+                    Verification Code *
                   </label>
                   <input
                     type="text"
                     value={formData.otp}
-                    onChange={(e) => setFormData({ ...formData, otp: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, otp: e.target.value.replace(/\D/g, '') })}
                     placeholder="123456"
                     required
                     maxLength={6}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent text-center text-2xl font-mono"
+                    autoFocus
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-600 focus:border-purple-600 text-center text-2xl font-mono tracking-widest transition"
                   />
-                  <p className="text-sm text-gray-600 mt-2">
-                    We sent a code to {formData.phone}
+                  <p className="text-sm text-gray-600 mt-2 text-center">
+                    Code sent to <span className="font-semibold">{formData.phone}</span>
                   </p>
                 </div>
               )}
@@ -252,15 +355,30 @@ export default function AuthPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-purple-600 text-white py-3 rounded-lg font-semibold hover:bg-purple-700 disabled:bg-gray-300 transition"
+                className="w-full bg-purple-600 text-white py-4 rounded-xl font-semibold hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition shadow-lg hover:shadow-xl"
               >
-                {loading ? 'Loading...' : otpSent ? 'Verify Code' : 'Send Code'}
+                {loading ? (
+                  <span className="flex items-center justify-center">
+                    <svg className="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    Processing...
+                  </span>
+                ) : otpSent ? (
+                  'Verify & Sign In'
+                ) : (
+                  'Send Verification Code'
+                )}
               </button>
 
               {otpSent && (
                 <button
                   type="button"
-                  onClick={() => setOtpSent(false)}
+                  onClick={() => {
+                    setOtpSent(false);
+                    setFormData({ ...formData, otp: '' });
+                  }}
                   className="w-full text-purple-600 text-sm font-medium hover:underline"
                 >
                   ← Change Phone Number
@@ -270,21 +388,28 @@ export default function AuthPage() {
           )}
 
           {/* Footer */}
-          <div className="mt-6 text-center text-sm text-gray-600">
-            By continuing, you agree to our{' '}
-            <Link href="/terms" className="text-purple-600 hover:underline">
-              Terms
-            </Link>{' '}
-            and{' '}
-            <Link href="/privacy" className="text-purple-600 hover:underline">
-              Privacy Policy
-            </Link>
+          <div className="mt-6 pt-6 border-t border-gray-200 text-center text-xs text-gray-600">
+            <p>
+              By continuing, you agree to our{' '}
+              <Link href="/terms" className="text-purple-600 hover:underline font-medium">
+                Terms of Service
+              </Link>{' '}
+              and{' '}
+              <Link href="/privacy" className="text-purple-600 hover:underline font-medium">
+                Privacy Policy
+              </Link>
+            </p>
           </div>
         </div>
 
         {/* Social Proof */}
-        <div className="mt-8 text-center text-white/80 text-sm">
-          <p>Trusted by event organizers across Uganda 🇺🇬</p>
+        <div className="mt-6 text-center">
+          <p className="text-white/90 text-sm font-medium mb-2">
+            🔒 Secure & Encrypted
+          </p>
+          <p className="text-white/70 text-xs">
+            Trusted by event organizers across Uganda 🇺🇬
+          </p>
         </div>
       </div>
     </div>
