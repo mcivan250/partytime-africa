@@ -20,7 +20,7 @@ export default async function EventPage({ params }: { params: { slug: string } }
             Event Not Found
           </h2>
           <p className="text-gray-600 mb-6">
-            {error || "This event doesn't exist or has been removed."}
+            {error?.message || "This event doesn't exist or has been removed."}
           </p>
           <a
             href="/"

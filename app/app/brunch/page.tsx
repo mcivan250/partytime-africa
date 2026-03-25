@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { BRUNCH_THEMES, getDayName, formatCurrency } from '@/lib/booking-types';
+import { BRUNCH_THEMES, getDayName } from '@/lib/booking-types';
+import { formatCurrency } from '@/lib/payment-types';
 
 export default function BrunchPage() {
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
