@@ -6,6 +6,7 @@ import { Event, THEMES } from '@/lib/types';
 import { getCurrentUser, AuthUser } from '@/lib/auth';
 import { createOrUpdateRSVP, getRSVPsForEvent, getUserRSVP, getRSVPCounts } from '@/lib/rsvp';
 import { createComment, getCommentsForEvent, getCommentCount, Comment } from '@/lib/comments';
+import { getFriendsAttendingEvent } from '@/lib/friends';
 import Link from 'next/link';
 
 interface EventPageClientProps {
@@ -18,6 +19,7 @@ export default function EventPageClient({ event }: EventPageClientProps) {
   const [userRsvp, setUserRsvp] = useState<any>(null);
   const [rsvpCounts, setRsvpCounts] = useState({ going: 0, maybe: 0, cant_go: 0, total: 0 });
   const [rsvps, setRsvps] = useState<any[]>([]);
+  const [friendsAttending, setFriendsAttending] = useState<any[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentCount, setCommentCount] = useState(0);
   const [newComment, setNewComment] = useState('');
@@ -30,6 +32,7 @@ export default function EventPageClient({ event }: EventPageClientProps) {
     loadUser();
     loadRSVPs();
     loadComments();
+    loadFriendsAttending();
   }, []);
 
   const loadUser = async () => {
@@ -58,6 +61,21 @@ export default function EventPageClient({ event }: EventPageClientProps) {
       setComments(eventComments);
       const count = await getCommentCount(event.id!);
       setCommentCount(count);
+    }
+  };
+
+  const loadFriendsAttending = async () => {
+    if (!user) {
+      const currentUser = await getCurrentUser();
+      if (!currentUser) return;
+      setUser(currentUser);
+    }
+    
+    try {
+      const friends = await getFriendsAttendingEvent(user?.id || '', event.id!);
+      setFriendsAttending(friends);
+    } catch (error) {
+      console.error('Error loading friends attending:', error);
     }
   };
 
@@ -153,20 +171,23 @@ export default function EventPageClient({ event }: EventPageClientProps) {
 
       <div className="max-w-4xl mx-auto py-8 px-4">
         {/* Social Proof Badges */}
-        {(isTrending || isPopular) && (
-          <div className="flex flex-wrap gap-2 mb-4">
-            {isTrending && (
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-orange-100 text-orange-800">
-                🔥 Trending
-              </span>
-            )}
-            {isPopular && (
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-purple-100 text-purple-800">
-                ⭐ Popular
-              </span>
-            )}
-          </div>
-        )}
+        <div className="flex flex-wrap gap-2 mb-4">
+          {isTrending && (
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-orange-100 text-orange-800">
+              🔥 Trending
+            </span>
+          )}
+          {isPopular && (
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-purple-100 text-purple-800">
+              ⭐ Popular
+            </span>
+          )}
+          {friendsAttending.length > 0 && (
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-green-100 text-green-800">
+              👥 {friendsAttending.length} {friendsAttending.length === 1 ? 'friend' : 'friends'} going
+            </span>
+          )}
+        </div>
 
         {/* Event Card */}
         <div
