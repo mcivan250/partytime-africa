@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { signUpWithEmail, signInWithEmail, signInWithPhone, verifyOTP, createWallet } from '@/lib/auth';
+import { signUpWithEmail, signInWithEmail, signInWithPhone, verifyOTP } from '@/lib/auth';
 
 export default function AuthPage() {
   const router = useRouter();
@@ -58,8 +58,7 @@ export default function AuthPage() {
     }
 
     try {
-      const user = await signUpWithEmail(formData.email, formData.password, formData.name);
-      await createWallet(user.id);
+      await signUpWithEmail(formData.email, formData.password, formData.name);
       setSuccess('Account created! Please check your email to verify your account.');
       setTimeout(() => router.push('/'), 2000);
     } catch (err: any) {
@@ -98,7 +97,6 @@ export default function AuthPage() {
       } else {
         const user = await verifyOTP(formData.phone, formData.otp);
         if (user) {
-          await createWallet(user.id);
           router.push('/');
         }
       }

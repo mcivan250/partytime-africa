@@ -40,6 +40,9 @@ export async function signUpWithEmail(email: string, password: string, name: str
       // Ignore duplicate key error, throw others
       throw profileError;
     }
+
+    // Create wallet after profile is created
+    await createWallet(authData.user.id);
   }
 
   return authData.user;
@@ -114,6 +117,30 @@ export async function updateProfile(userId: string, updates: Partial<AuthUser>) 
 
 // Create wallet on user signup
 export async function createWallet(userId: string) {
+  // Check if wallet already exists
+  const { data: existingWallet } = await supabase
+    .from('wallets')
+    .select('id')
+    .eq('user_id', userId)
+    .single();
+
+  if (existingWallet) {
+    // Wallet already exists, skip creation
+    return;
+  }
+
+  // Verify user exists first
+  const { data: user } = await supabase
+    .from('users')
+    .select('id')
+    .eq('id', userId)
+    .single();
+
+  if (!user) {
+    console.error('Cannot create wallet: user does not exist');
+    return;
+  }
+
   const { error } = await supabase
     .from('wallets')
     .insert([
@@ -127,6 +154,7 @@ export async function createWallet(userId: string) {
     ]);
 
   if (error && error.code !== '23505') { // Ignore duplicate key error
-    throw error;
+    console.error('Error creating wallet:', error);
+    // Don't throw - wallet creation is optional, shouldn't block signup
   }
 }
