@@ -110,13 +110,21 @@ export default function ProfilePage() {
                 )}
               </div>
 
-              {/* Edit Button */}
-              <button
-                onClick={handleSignOut}
-                className="mt-4 px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition"
-              >
-                Sign Out
-              </button>
+              {/* Edit Buttons */}
+              <div className="mt-4 flex space-x-2">
+                <Link
+                  href="/profile/edit"
+                  className="px-4 py-2 text-sm bg-purple-600 text-white hover:bg-purple-700 rounded-lg transition font-semibold"
+                >
+                  Edit Profile
+                </Link>
+                <button
+                  onClick={handleSignOut}
+                  className="px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition"
+                >
+                  Sign Out
+                </button>
+              </div>
             </div>
 
             {/* User Info */}
