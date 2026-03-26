@@ -15,15 +15,12 @@ export default function Home() {
 
   const loadTrendingEvents = async () => {
     try {
-      // Get events with most RSVPs
+      // Get upcoming events
       const { data: events, error } = await supabase
         .from('events')
-        .select(`
-          *,
-          rsvps(count)
-        `)
+        .select('*')
         .gte('date_time', new Date().toISOString())
-        .order('created_at', { ascending: false })
+        .order('date_time', { ascending: true })
         .limit(6);
 
       if (error) throw error;
