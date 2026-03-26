@@ -59,8 +59,10 @@ export default function AuthPage() {
 
     try {
       await signUpWithEmail(formData.email, formData.password, formData.name);
-      setSuccess('Account created! Please check your email to verify your account.');
-      setTimeout(() => router.push('/'), 2000);
+      // Auto sign in after signup
+      await signInWithEmail(formData.email, formData.password);
+      router.push('/profile');
+      router.refresh();
     } catch (err: any) {
       setError(err.message || 'Failed to sign up');
     } finally {
