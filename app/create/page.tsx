@@ -1,16 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase, generateSlug } from '@/lib/supabase';
 import { Event, THEMES, ANIMATIONS } from '@/lib/types';
 import ImageUpload from '@/components/ImageUpload';
+import { getCurrentUser } from '@/lib/auth';
 
 export default function CreateEventPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<Partial<Event>>({
     title: '',
@@ -25,6 +27,19 @@ export default function CreateEventPage() {
     image_path: '',
   });
 
+  useEffect(() => {
+    checkAuth();
+  }, []);
+
+  const checkAuth = async () => {
+    const user = await getCurrentUser();
+    if (!user) {
+      router.push('/auth');
+      return;
+    }
+    setUserId(user.id);
+  };
+
   const updateField = (field: keyof Event, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
@@ -35,18 +50,22 @@ export default function CreateEventPage() {
       return;
     }
 
+    if (!userId) {
+      setError('You must be logged in to create an event');
+      router.push('/auth');
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
       const slug = generateSlug(formData.title);
 
-      // For now, create event without auth (we'll add auth later)
-      // Using a dummy host_id for testing
       const eventData = {
         ...formData,
         slug,
-        host_id: '00000000-0000-0000-0000-000000000000', // Placeholder
+        host_id: userId,
       };
 
       const { data, error: insertError } = await supabase
