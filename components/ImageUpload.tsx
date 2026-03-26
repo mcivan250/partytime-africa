@@ -92,9 +92,10 @@ export default function ImageUpload({
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
-            className="px-6 py-3 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition"
+            className="px-6 py-3 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition flex items-center space-x-2"
           >
-            {uploading ? 'Uploading...' : preview ? 'Change Image' : 'Choose Image'}
+            <span className="text-xl">📷</span>
+            <span>{uploading ? 'Uploading...' : preview ? 'Change Image' : 'Choose Image'}</span>
           </button>
           <p className="text-xs text-gray-500 mt-2">
             JPG, PNG, GIF or WebP. Max 5MB.
