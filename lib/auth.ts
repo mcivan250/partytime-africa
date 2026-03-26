@@ -3,7 +3,7 @@ import { supabase } from './supabase';
 export interface AuthUser {
   id: string;
   email?: string;
-  phone?: string;
+  phone_number?: string;
   name: string;
   profile_photo_url?: string;
 }
@@ -85,7 +85,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
   return {
     id: profile.id,
     email: profile.email,
-    phone: profile.phone_number,
+    phone_number: profile.phone_number,
     name: profile.name,
     profile_photo_url: profile.profile_photo_url,
   };
