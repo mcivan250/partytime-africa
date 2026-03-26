@@ -26,10 +26,10 @@ export default function Navigation() {
   const navLinks = [
     { href: '/', label: 'Home', icon: '🏠' },
     { href: '/events', label: 'Events', icon: '🎉' },
+    { href: '/messages', label: 'Messages', icon: '💬' },
     { href: '/friends', label: 'Friends', icon: '👥' },
     { href: '/dashboard', label: 'Dashboard', icon: '📊' },
     { href: '/create', label: 'Create', icon: '➕' },
-    { href: '/profile', label: 'Profile', icon: '👤' },
   ];
 
   return (

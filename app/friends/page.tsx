@@ -247,12 +247,20 @@ export default function FriendsPage() {
                           )}
                         </div>
                       </div>
-                      <button
-                        onClick={() => handleRemoveFriend(friend?.id)}
-                        className="px-4 py-2 bg-red-50 text-red-600 rounded-lg font-semibold hover:bg-red-100 transition text-sm"
-                      >
-                        Remove
-                      </button>
+                      <div className="flex flex-col space-y-2">
+                        <Link
+                          href={`/messages/${friend?.id}`}
+                          className="px-4 py-2 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition text-sm text-center"
+                        >
+                          Message
+                        </Link>
+                        <button
+                          onClick={() => handleRemoveFriend(friend?.id)}
+                          className="px-4 py-2 bg-red-50 text-red-600 rounded-lg font-semibold hover:bg-red-100 transition text-sm"
+                        >
+                          Remove
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );
