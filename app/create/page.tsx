@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase, generateSlug } from '@/lib/supabase';
 import { Event, THEMES, ANIMATIONS } from '@/lib/types';
+import ImageUpload from '@/components/ImageUpload';
 
 export default function CreateEventPage() {
   const router = useRouter();
@@ -20,6 +21,8 @@ export default function CreateEventPage() {
     animation_effect: 'none',
     is_guest_list_public: true,
     is_comments_enabled: true,
+    image_url: '',
+    image_path: '',
   });
 
   const updateField = (field: keyof Event, value: any) => {
@@ -171,6 +174,16 @@ export default function CreateEventPage() {
                 />
               </div>
 
+              <ImageUpload
+                onUploadComplete={(url, path) => {
+                  updateField('image_url', url);
+                  updateField('image_path', path);
+                }}
+                currentImage={formData.image_url}
+                label="Event Poster"
+                className="mt-6"
+              />
+
               <button
                 onClick={() => setStep(2)}
                 disabled={!formData.title}
@@ -247,9 +260,19 @@ export default function CreateEventPage() {
 
               {/* Preview Card */}
               <div
-                className={`rounded-2xl bg-gradient-to-br ${selectedTheme.gradient} p-8 text-white shadow-2xl`}
+                className={`rounded-2xl bg-gradient-to-br ${selectedTheme.gradient} p-8 text-white shadow-2xl overflow-hidden relative`}
               >
-                <div className="text-center">
+                {formData.image_url && (
+                  <div className="absolute inset-0">
+                    <img
+                      src={formData.image_url}
+                      alt={formData.title}
+                      className="w-full h-full object-cover opacity-30"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-br from-black/60 to-black/40"></div>
+                  </div>
+                )}
+                <div className="text-center relative z-10">
                   <h3 className="text-3xl font-bold mb-4">
                     {formData.title || 'Your Event Title'}
                   </h3>

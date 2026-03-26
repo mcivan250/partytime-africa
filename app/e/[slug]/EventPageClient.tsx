@@ -170,9 +170,19 @@ export default function EventPageClient({ event }: EventPageClientProps) {
 
         {/* Event Card */}
         <div
-          className={`rounded-3xl bg-gradient-to-br ${selectedTheme.gradient} p-8 md:p-12 text-white shadow-2xl mb-6`}
+          className={`rounded-3xl bg-gradient-to-br ${selectedTheme.gradient} p-8 md:p-12 text-white shadow-2xl mb-6 overflow-hidden relative`}
         >
-          <div className="text-center">
+          {event.image_url && (
+            <div className="absolute inset-0">
+              <img
+                src={event.image_url}
+                alt={event.title}
+                className="w-full h-full object-cover opacity-40"
+              />
+              <div className="absolute inset-0 bg-gradient-to-br from-black/70 to-black/50"></div>
+            </div>
+          )}
+          <div className="text-center relative z-10">
             <h1 className="text-4xl md:text-5xl font-bold mb-6">{event.title}</h1>
 
             {event.description && (

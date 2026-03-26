@@ -16,6 +16,8 @@ export interface Event {
   is_guest_list_public?: boolean;
   is_comments_enabled?: boolean;
   rsvp_deadline?: string;
+  image_url?: string;
+  image_path?: string;
   created_at?: string;
   updated_at?: string;
 }
