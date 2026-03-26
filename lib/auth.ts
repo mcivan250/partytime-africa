@@ -17,18 +17,30 @@ export async function signUpWithEmail(email: string, password: string, name: str
   if (authError) throw authError;
   if (!authData.user) throw new Error('No user returned from signup');
 
-  // Create user profile
-  const { error: profileError } = await supabase
+  // Check if user profile already exists
+  const { data: existingProfile } = await supabase
     .from('users')
-    .insert([
-      {
-        id: authData.user.id,
-        email,
-        name,
-      },
-    ]);
+    .select('id')
+    .eq('id', authData.user.id)
+    .single();
 
-  if (profileError) throw profileError;
+  // Only create profile if it doesn't exist
+  if (!existingProfile) {
+    const { error: profileError } = await supabase
+      .from('users')
+      .insert([
+        {
+          id: authData.user.id,
+          email,
+          name,
+        },
+      ]);
+
+    if (profileError && profileError.code !== '23505') {
+      // Ignore duplicate key error, throw others
+      throw profileError;
+    }
+  }
 
   return authData.user;
 }
