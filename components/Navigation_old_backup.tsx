@@ -23,22 +23,14 @@ export default function Navigation() {
     return pathname === path;
   };
 
-  // Main navigation items (always visible)
-  const mainNavLinks = [
+  const navLinks = [
     { href: '/', label: 'Home', icon: '🏠' },
     { href: '/events', label: 'Events', icon: '🎉' },
     { href: '/messages', label: 'Messages', icon: '💬' },
-  ];
-
-  // Secondary navigation items (in menu)
-  const secondaryNavLinks = [
     { href: '/friends', label: 'Friends', icon: '👥' },
     { href: '/dashboard', label: 'Dashboard', icon: '📊' },
-    { href: '/wallet', label: 'Wallet', icon: '💰' },
-    { href: '/profile', label: 'Profile', icon: '👤' },
+    { href: '/create', label: 'Create', icon: '➕' },
   ];
-
-  const allNavLinks = [...mainNavLinks, ...secondaryNavLinks];
 
   return (
     <>
@@ -56,7 +48,7 @@ export default function Navigation() {
 
             {/* Main Navigation */}
             <div className="flex items-center space-x-1">
-              {allNavLinks.map((link) => (
+              {navLinks.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
@@ -107,15 +99,14 @@ export default function Navigation() {
         </div>
       </nav>
 
-      {/* Mobile Navigation - Bottom Bar (IMPROVED) */}
+      {/* Mobile Navigation - Bottom Bar */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
         <div className="flex items-center justify-around py-2">
-          {/* Main Navigation Items */}
-          {mainNavLinks.map((link) => (
+          {navLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
-              className={`flex flex-col items-center space-y-1 px-3 py-2 rounded-lg transition flex-1 ${
+              className={`flex flex-col items-center space-y-1 px-3 py-2 rounded-lg transition ${
                 isActive(link.href)
                   ? 'text-purple-600'
                   : 'text-gray-500'
@@ -125,56 +116,7 @@ export default function Navigation() {
               <span className="text-xs font-medium">{link.label}</span>
             </Link>
           ))}
-
-          {/* Create Button (Primary CTA) */}
-          <Link
-            href="/create"
-            className={`flex flex-col items-center space-y-1 px-3 py-2 rounded-lg transition flex-1 ${
-              isActive('/create')
-                ? 'text-purple-600'
-                : 'text-gray-500'
-            }`}
-          >
-            <span className="text-2xl">➕</span>
-            <span className="text-xs font-medium">Create</span>
-          </Link>
-
-          {/* Collapsible Menu Button */}
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className={`flex flex-col items-center space-y-1 px-3 py-2 rounded-lg transition flex-1 ${
-              mobileMenuOpen
-                ? 'text-purple-600'
-                : 'text-gray-500'
-            }`}
-          >
-            <span className="text-2xl">⋯</span>
-            <span className="text-xs font-medium">More</span>
-          </button>
         </div>
-
-        {/* Collapsible Menu */}
-        {mobileMenuOpen && (
-          <div className="border-t border-gray-200 bg-gray-50">
-            <div className="grid grid-cols-2 gap-2 p-3">
-              {secondaryNavLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition ${
-                    isActive(link.href)
-                      ? 'bg-purple-100 text-purple-600'
-                      : 'text-gray-600 hover:bg-gray-100'
-                  }`}
-                >
-                  <span className="text-xl">{link.icon}</span>
-                  <span className="font-medium text-sm">{link.label}</span>
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
       </nav>
 
       {/* Mobile Top Bar - Logo + User */}
@@ -212,7 +154,7 @@ export default function Navigation() {
         </div>
       </div>
 
-      {/* Spacer for mobile bottom nav (increased for collapsible menu) */}
+      {/* Spacer for mobile bottom nav */}
       <div className="md:hidden h-20"></div>
     </>
   );
