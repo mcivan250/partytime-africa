@@ -6,7 +6,13 @@ import { supabase } from '@/lib/supabase';
 
 export default function AffiliateGoldDashboard() {
   const { user } = useAuth();
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState<{
+    totalPoints: number;
+    totalReferrals: number;
+    totalEarnings: number;
+    rank: string;
+    recentRewards: any[];
+  }>({
     totalPoints: 0,
     totalReferrals: 0,
     totalEarnings: 0,
@@ -35,12 +41,14 @@ export default function AffiliateGoldDashboard() {
           .order('created_at', { ascending: false })
           .limit(10);
 
+        const rewards: any[] = rewardsData || [];
+
         setStats({
           totalPoints: pointsData?.balance || 0,
-          totalReferrals: rewardsData?.length || 0,
-          totalEarnings: (rewardsData?.length || 0) * 100,
-          rank: (rewardsData?.length || 0) > 50 ? 'Platinum' : (rewardsData?.length || 0) > 20 ? 'Gold' : 'Rising Star',
-          recentRewards: rewardsData || [],
+          totalReferrals: rewards.length || 0,
+          totalEarnings: (rewards.length || 0) * 100,
+          rank: (rewards.length || 0) > 50 ? 'Platinum' : (rewards.length || 0) > 20 ? 'Gold' : 'Rising Star',
+          recentRewards: rewards,
         });
       } catch (error) {
         console.error('Error fetching affiliate stats:', error);
