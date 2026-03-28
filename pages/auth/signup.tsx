@@ -45,7 +45,7 @@ const SignUpPage = () => {
               required
             />
           </div>
-          |error && <p className="text-red-500 text-xs italic mb-4">{error}</p>}
+          {error && <p className="text-red-500 text-xs italic mb-4">{error}</p>}
           <div className="flex items-center justify-between">
             <button
               type="submit"
