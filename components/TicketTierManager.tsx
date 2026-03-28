@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -58,85 +59,77 @@ export default function TicketTierManager({
   const totalCapacity = tiers.reduce((sum, t) => sum + Number(t.capacity), 0);
 
   return (
-    <div className="ticket-tier-manager">
-      <div className="manager-header">
-        <h3 className="text-xl font-bold mb-2">🎫 Ticket Tiers & Pricing</h3>
-        <p className="text-sm text-gray-600 mb-4">
+    <div className="ticket-tier-manager card p-6">
+      <div className="manager-header mb-6">
+        <h3 className="text-2xl font-display font-bold text-text-light mb-2">🎫 Ticket Tiers & Pricing</h3>
+        <p className="text-text-dark text-sm">
           Create different ticket types for your event (e.g., Early Bird, VIP, Tables).
         </p>
       </div>
 
-      <div className="tiers-list space-y-4">
+      <div className="tiers-list space-y-6">
         {tiers.map((tier, index) => (
-          <div key={tier.id} className="tier-card p-4 border rounded-lg bg-white shadow-sm relative">
+          <div key={tier.id} className="tier-card p-5 border border-border rounded-lg bg-primary shadow-md relative">
             <div className="flex justify-between items-center mb-4">
-              <span className="text-sm font-bold text-purple-600 uppercase tracking-wider">
+              <span className="text-sm font-bold text-accent uppercase tracking-wider">
                 Tier #{index + 1}
               </span>
               {tiers.length > 1 && (
                 <button
                   type="button"
                   onClick={() => removeTier(tier.id)}
-                  className="text-red-500 hover:text-red-700 text-sm font-medium"
+                  className="text-error hover:text-red-400 text-sm font-medium"
                 >
                   Remove Tier
                 </button>
               )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="form-group">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Tier Name
-                </label>
+            <div className="space-y-4">
+              <div className="form-group mb-0">
+                <label className="form-label">Tier Name</label>
                 <input
                   type="text"
                   value={tier.name}
                   onChange={(e) => updateTier(tier.id, 'name', e.target.value)}
                   placeholder="e.g., VIP Experience"
-                  className="w-full p-2 border rounded-md focus:ring-2 focus:ring-purple-500 outline-none"
+                  className="form-input"
                   required
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
-                <div className="form-group">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Price ({currency})
-                  </label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="form-group mb-0">
+                  <label className="form-label">Price ({currency})</label>
                   <input
                     type="number"
                     value={tier.price}
                     onChange={(e) => updateTier(tier.id, 'price', Number(e.target.value))}
                     min="0"
-                    className="w-full p-2 border rounded-md focus:ring-2 focus:ring-purple-500 outline-none"
+                    className="form-input"
                     required
                   />
                 </div>
-                <div className="form-group">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Capacity
-                  </label>
+                <div className="form-group mb-0">
+                  <label className="form-label">Capacity</label>
                   <input
                     type="number"
                     value={tier.capacity}
                     onChange={(e) => updateTier(tier.id, 'capacity', Number(e.target.value))}
                     min="1"
-                    className="w-full p-2 border rounded-md focus:ring-2 focus:ring-purple-500 outline-none"
+                    className="form-input"
                     required
                   />
                 </div>
               </div>
 
-              <div className="form-group md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  What's included? (Description)
-                </label>
+              <div className="form-group mb-0">
+                <label className="form-label">What's included? (Description)</label>
                 <textarea
                   value={tier.description}
                   onChange={(e) => updateTier(tier.id, 'description', e.target.value)}
                   placeholder="e.g., Free drink on arrival, VIP lounge access..."
-                  className="w-full p-2 border rounded-md focus:ring-2 focus:ring-purple-500 outline-none h-20 resize-none"
+                  className="form-textarea h-20 resize-none"
                 />
               </div>
             </div>
@@ -144,33 +137,21 @@ export default function TicketTierManager({
         ))}
       </div>
 
-      <div className="manager-footer mt-6 flex flex-col md:flex-row justify-between items-center gap-4">
+      <div className="manager-footer mt-8 flex flex-col md:flex-row justify-between items-center gap-4">
         <button
           type="button"
           onClick={addTier}
-          className="w-full md:w-auto px-6 py-2 bg-purple-600 text-white font-bold rounded-full hover:bg-purple-700 transition-colors shadow-md"
+          className="btn btn-secondary w-full md:w-auto px-6 py-3"
         >
           + Add Another Ticket Type
         </button>
 
-        <div className="total-summary p-3 bg-purple-50 rounded-lg border border-purple-100">
-          <span className="text-sm text-purple-800 font-medium">
-            Total Event Capacity: <strong>{totalCapacity}</strong> tickets
+        <div className="total-summary p-3 rounded-lg border border-border bg-primary">
+          <span className="text-sm text-text-light font-medium">
+            Total Event Capacity: <strong className="text-accent">{totalCapacity}</strong> tickets
           </span>
         </div>
       </div>
-
-      <style jsx>{`
-        .ticket-tier-manager {
-          background: #fdfdfd;
-          padding: 20px;
-          border-radius: 12px;
-          border: 1px solid #eee;
-        }
-        .tier-card {
-          border-left: 4px solid #7c3aed;
-        }
-      `}</style>
     </div>
   );
 }

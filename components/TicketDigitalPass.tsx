@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useRef } from 'react';
@@ -30,7 +31,7 @@ export default function TicketDigitalPass({
     if (passRef.current) {
       const canvas = await html2canvas(passRef.current, {
         scale: 2,
-        backgroundColor: '#ffffff',
+        backgroundColor: '#1a1a1a',
         logging: false,
       });
       const link = document.createElement('a');
@@ -53,62 +54,62 @@ export default function TicketDigitalPass({
   });
 
   return (
-    <div className="ticket-pass-container p-4">
+    <div className="ticket-pass-container p-4 bg-primary min-h-screen flex items-center justify-center">
       <div 
         ref={passRef}
-        className="ticket-pass bg-white rounded-2xl shadow-2xl overflow-hidden max-w-sm mx-auto border-2 border-purple-100"
+        className="ticket-pass card rounded-2xl overflow-hidden max-w-sm mx-auto border border-border"
       >
-        {/* Header Section - Afrocentric Gradient */}
-        <div className="pass-header p-6 bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400 text-white relative">
+        {/* Header Section - Black Luxury */}
+        <div className="pass-header p-6 bg-secondary text-text-light relative">
           <div className="flex justify-between items-start mb-4">
-            <span className="text-xs font-bold uppercase tracking-widest opacity-80">
-              Official Event Pass
+            <span className="text-xs font-bold uppercase tracking-widest opacity-80 text-accent">
+              Party Time Africa
             </span>
             <span className="text-xs font-mono opacity-80">
               #{ticket.id.slice(0, 8).toUpperCase()}
             </span>
           </div>
-          <h2 className="text-2xl font-black mb-1 leading-tight">{ticket.event_name}</h2>
-          <div className="flex items-center gap-2 text-sm font-medium opacity-90">
+          <h2 className="text-2xl font-display font-bold mb-1 leading-tight text-text-light">{ticket.event_name}</h2>
+          <div className="flex items-center gap-2 text-sm font-medium opacity-90 text-text-dark">
             <span>📍 {ticket.event_location}</span>
           </div>
           
-          {/* Decorative Pattern Overlay */}
-          <div className="absolute top-0 right-0 w-32 h-32 opacity-10 pointer-events-none">
+          {/* Decorative Pattern Overlay - Gold Accents */}
+          <div className="absolute top-0 right-0 w-32 h-32 opacity-10 pointer-events-none text-accent">
             <svg viewBox="0 0 100 100" className="w-full h-full">
-              <pattern id="afro-pattern" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
-                <circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" strokeWidth="2" />
-                <path d="M10 2 L10 18 M2 10 L18 10" stroke="currentColor" strokeWidth="1" />
+              <pattern id="luxury-pattern" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
+                <circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" strokeWidth="1" />
+                <path d="M10 2 L10 18 M2 10 L18 10" stroke="currentColor" strokeWidth="0.5" />
               </pattern>
-              <rect width="100" height="100" fill="url(#afro-pattern)" />
+              <rect width="100" height="100" fill="url(#luxury-pattern)" />
             </svg>
           </div>
         </div>
 
         {/* Info Section */}
-        <div className="pass-info p-6 space-y-6 bg-white">
+        <div className="pass-info p-6 space-y-6 bg-primary">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-[10px] uppercase font-bold text-gray-400 block mb-1">Date</label>
-              <span className="text-sm font-bold text-gray-800">{formattedDate}</span>
+              <label className="text-[10px] uppercase font-bold text-text-dark block mb-1">Date</label>
+              <span className="text-sm font-bold text-text-light">{formattedDate}</span>
             </div>
             <div>
-              <label className="text-[10px] uppercase font-bold text-gray-400 block mb-1">Time</label>
-              <span className="text-sm font-bold text-gray-800">{formattedTime}</span>
+              <label className="text-[10px] uppercase font-bold text-text-dark block mb-1">Time</label>
+              <span className="text-sm font-bold text-text-light">{formattedTime}</span>
             </div>
             <div>
-              <label className="text-[10px] uppercase font-bold text-gray-400 block mb-1">Tier</label>
-              <span className="text-sm font-bold text-purple-600">{ticket.tier_name}</span>
+              <label className="text-[10px] uppercase font-bold text-text-dark block mb-1">Tier</label>
+              <span className="text-sm font-bold text-accent">{ticket.tier_name}</span>
             </div>
             <div>
-              <label className="text-[10px] uppercase font-bold text-gray-400 block mb-1">Buyer</label>
-              <span className="text-sm font-bold text-gray-800">{ticket.buyer_name}</span>
+              <label className="text-[10px] uppercase font-bold text-text-dark block mb-1">Holder</label>
+              <span className="text-sm font-bold text-text-light">{ticket.buyer_name}</span>
             </div>
           </div>
 
           {/* QR Code Section */}
-          <div className="qr-section flex flex-col items-center py-4 border-t-2 border-dashed border-gray-100">
-            <div className="bg-white p-3 rounded-xl shadow-inner border border-gray-100">
+          <div className="qr-section flex flex-col items-center py-4 border-t border-dashed border-border">
+            <div className="bg-text-light p-3 rounded-xl shadow-inner border border-border">
               <QRCode 
                 value={ticket.qr_code_data} 
                 size={160}
@@ -117,23 +118,23 @@ export default function TicketDigitalPass({
                 renderAs="svg"
               />
             </div>
-            <p className="mt-4 text-[10px] font-medium text-gray-400 text-center uppercase tracking-widest">
+            <p className="mt-4 text-[10px] font-medium text-text-dark text-center uppercase tracking-widest">
               Scan at entry for verification
             </p>
           </div>
         </div>
 
         {/* Footer - Receipt Info */}
-        <div className="pass-footer p-4 bg-gray-50 border-t border-gray-100 flex justify-between items-center">
+        <div className="pass-footer p-4 bg-secondary border-t border-border flex justify-between items-center">
           <div className="text-left">
-            <label className="text-[9px] uppercase font-bold text-gray-400 block">Total Paid</label>
-            <span className="text-sm font-black text-gray-800">
+            <label className="text-[9px] uppercase font-bold text-text-dark block">Total Paid</label>
+            <span className="text-sm font-black text-accent">
               {ticket.currency} {ticket.purchase_price.toLocaleString()}
             </span>
           </div>
           <div className="text-right">
-            <label className="text-[9px] uppercase font-bold text-gray-400 block">Order ID</label>
-            <span className="text-[10px] font-mono text-gray-500">
+            <label className="text-[9px] uppercase font-bold text-text-dark block">Order ID</label>
+            <span className="text-[10px] font-mono text-text-dark">
               {ticket.order_id.slice(0, 13)}...
             </span>
           </div>
@@ -144,15 +145,15 @@ export default function TicketDigitalPass({
         <div className="actions mt-8 flex flex-col gap-3 max-w-sm mx-auto">
           <button 
             onClick={downloadPass}
-            className="w-full py-4 bg-purple-600 text-white font-black rounded-2xl hover:bg-purple-700 transition-all shadow-xl flex items-center justify-center gap-2"
+            className="btn btn-primary w-full py-4 text-lg"
           >
             📥 Download Ticket Pass
           </button>
           <div className="flex gap-2">
-            <button className="flex-1 py-3 bg-white border-2 border-gray-100 text-gray-600 font-bold rounded-xl hover:bg-gray-50 transition-all text-sm">
+            <button className="btn btn-secondary flex-1 py-3 text-sm">
               🗓️ Add to Calendar
             </button>
-            <button className="flex-1 py-3 bg-white border-2 border-gray-100 text-gray-600 font-bold rounded-xl hover:bg-gray-50 transition-all text-sm">
+            <button className="btn btn-secondary flex-1 py-3 text-sm">
               📧 Email Receipt
             </button>
           </div>
@@ -161,7 +162,7 @@ export default function TicketDigitalPass({
 
       <style jsx>{`
         .ticket-pass {
-          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+          font-family: var(--font-family-primary);
         }
         .pass-header {
           clip-path: polygon(0 0, 100% 0, 100% 90%, 0 100%);
