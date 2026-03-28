@@ -39,10 +39,9 @@ export async function generateQRCode(ticketNumber: string, eventId: string): Pro
       timestamp: new Date().toISOString(),
     });
 
+    // Use the correct options for qrcode library
     const qrCodeDataUrl = await QRCode.toDataURL(qrData, {
       errorCorrectionLevel: 'H',
-      type: 'image/png',
-      quality: 0.95,
       margin: 1,
       width: 300,
     });
