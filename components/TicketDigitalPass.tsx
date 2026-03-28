@@ -4,32 +4,46 @@ import React, { useEffect, useRef } from 'react';
 import QRCode from 'qrcode';
 
 interface TicketDigitalPassProps {
-  eventName: string;
-  eventDate: string;
-  ticketTier: string;
-  ticketId: string;
-  userName: string;
-  orderId: string;
-  totalPaid: number;
-  currency: string;
+  eventName?: string;
+  eventDate?: string;
+  ticketTier?: string;
+  ticketId?: string;
+  userName?: string;
+  orderId?: string;
+  totalPaid?: number;
+  currency?: string;
+  ticket?: any;
+  compact?: boolean;
 }
 
 export default function TicketDigitalPass({
-  eventName,
-  eventDate,
-  ticketTier,
-  ticketId,
-  userName,
-  orderId,
-  totalPaid,
-  currency,
+  eventName = 'Party Time Africa Event',
+  eventDate = new Date().toLocaleDateString(),
+  ticketTier = 'Premium',
+  ticketId = 'TICKET-001',
+  userName = 'Guest',
+  orderId = 'ORDER-001',
+  totalPaid = 0,
+  currency = 'USD',
+  ticket,
+  compact = false,
 }: TicketDigitalPassProps) {
   const qrCodeRef = useRef<HTMLCanvasElement>(null);
 
+  // If ticket object is passed, extract properties from it
+  const finalTicketId = ticket?.id || ticket?.ticketId || ticketId;
+  const finalEventName = ticket?.eventName || eventName;
+  const finalEventDate = ticket?.eventDate || eventDate;
+  const finalTicketTier = ticket?.tier || ticket?.ticketTier || ticketTier;
+  const finalUserName = ticket?.userName || userName;
+  const finalOrderId = ticket?.orderId || orderId;
+  const finalTotalPaid = ticket?.totalPaid || totalPaid;
+  const finalCurrency = ticket?.currency || currency;
+
   useEffect(() => {
     if (qrCodeRef.current) {
-      QRCode.toCanvas(qrCodeRef.current, ticketId, {
-        width: 200,
+      QRCode.toCanvas(qrCodeRef.current, finalTicketId, {
+        width: compact ? 120 : 200,
         margin: 2,
         color: {
           dark: '#d4af37',
@@ -37,17 +51,49 @@ export default function TicketDigitalPass({
         },
       });
     }
-  }, [ticketId]);
+  }, [finalTicketId, compact]);
 
   const handleDownload = () => {
     const canvas = qrCodeRef.current;
     if (canvas) {
       const link = document.createElement('a');
       link.href = canvas.toDataURL('image/png');
-      link.download = `${eventName}-ticket-${ticketId}.png`;
+      link.download = `${finalEventName}-ticket-${finalTicketId}.png`;
       link.click();
     }
   };
+
+  if (compact) {
+    return (
+      <div
+        style={{
+          background: 'linear-gradient(135deg, #d4af37 0%, #9d7e1f 50%, #1a1a1a 100%)',
+          borderRadius: '8px',
+          padding: '1rem',
+          maxWidth: '300px',
+          color: '#ffffff',
+          fontFamily: "'Inter', sans-serif",
+          boxShadow: '0 5px 20px rgba(0, 0, 0, 0.3)',
+        }}
+      >
+        <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem' }}>{finalEventName}</h3>
+        <div style={{ textAlign: 'center', marginBottom: '0.5rem' }}>
+          <canvas
+            ref={qrCodeRef}
+            style={{
+              background: '#ffffff',
+              padding: '0.5rem',
+              borderRadius: '4px',
+              display: 'inline-block',
+            }}
+          />
+        </div>
+        <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.85rem', opacity: 0.9 }}>
+          {finalTicketTier} • {finalTicketId}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -82,21 +128,21 @@ export default function TicketDigitalPass({
       >
         <div style={{ marginBottom: '1rem' }}>
           <p style={{ margin: '0 0 0.25rem 0', opacity: 0.8, fontSize: '0.9rem' }}>EVENT</p>
-          <p style={{ margin: 0, fontSize: '1.3rem', fontWeight: 'bold' }}>{eventName}</p>
+          <p style={{ margin: 0, fontSize: '1.3rem', fontWeight: 'bold' }}>{finalEventName}</p>
         </div>
         <div style={{ marginBottom: '1rem' }}>
           <p style={{ margin: '0 0 0.25rem 0', opacity: 0.8, fontSize: '0.9rem' }}>DATE</p>
-          <p style={{ margin: 0, fontSize: '1.1rem' }}>{eventDate}</p>
+          <p style={{ margin: 0, fontSize: '1.1rem' }}>{finalEventDate}</p>
         </div>
         <div style={{ marginBottom: '1rem' }}>
           <p style={{ margin: '0 0 0.25rem 0', opacity: 0.8, fontSize: '0.9rem' }}>TIER</p>
           <p style={{ margin: 0, fontSize: '1.1rem', fontWeight: 'bold', color: '#d4af37' }}>
-            {ticketTier}
+            {finalTicketTier}
           </p>
         </div>
         <div>
           <p style={{ margin: '0 0 0.25rem 0', opacity: 0.8, fontSize: '0.9rem' }}>GUEST</p>
-          <p style={{ margin: 0, fontSize: '1.1rem' }}>{userName}</p>
+          <p style={{ margin: 0, fontSize: '1.1rem' }}>{finalUserName}</p>
         </div>
       </div>
 
@@ -126,16 +172,16 @@ export default function TicketDigitalPass({
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
           <span>Order ID:</span>
-          <span style={{ fontWeight: 'bold' }}>{orderId}</span>
+          <span style={{ fontWeight: 'bold' }}>{finalOrderId}</span>
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
           <span>Ticket ID:</span>
-          <span style={{ fontWeight: 'bold' }}>{ticketId}</span>
+          <span style={{ fontWeight: 'bold' }}>{finalTicketId}</span>
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid rgba(255, 255, 255, 0.2)', paddingTop: '0.5rem', marginTop: '0.5rem' }}>
           <span>Total Paid:</span>
           <span style={{ fontWeight: 'bold', color: '#d4af37' }}>
-            {currency} {totalPaid.toFixed(2)}
+            {finalCurrency} {finalTotalPaid.toFixed(2)}
           </span>
         </div>
       </div>
@@ -174,4 +220,3 @@ export default function TicketDigitalPass({
     </div>
   );
 }
-
