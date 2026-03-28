@@ -38,7 +38,7 @@ export function generateAffiliateLink(momentId: string, userId: string): string 
     ref: userId,
     utm_source: 'moment',
     utm_medium: 'social',
-  });
+  } );
   return `${baseUrl}?${params.toString()}`;
 }
 
@@ -119,8 +119,8 @@ export async function addPartyPoints(
       const { data: updated, error } = await supabase
         .from('party_points')
         .update({
-          total_points: existing.total_points + points,
-          available_points: existing.available_points + points,
+          total_points: (existing.total_points || 0) + points,
+          available_points: (existing.available_points || 0) + points,
           updated_at: new Date().toISOString(),
         })
         .eq('user_id', userId)
@@ -283,14 +283,28 @@ export async function getTopAffiliates(limit: number = 10): Promise<any[]> {
   try {
     const { data, error } = await supabase
       .from('affiliate_rewards')
-      .select('user_id, COUNT(*) as referral_count, SUM(reward_value) as total_rewards')
-      .eq('status', 'claimed')
-      .group_by('user_id')
-      .order('total_rewards', { ascending: false })
-      .limit(limit);
+      .select('user_id, reward_value')
+      .eq('status', 'claimed');
 
     if (error) throw error;
-    return data || [];
+    
+    const grouped: { [key: string]: any } = {};
+    (data || []).forEach((reward: any) => {
+      if (!grouped[reward.user_id]) {
+        grouped[reward.user_id] = {
+          user_id: reward.user_id,
+          referral_count: 0,
+          total_rewards: 0,
+        };
+      }
+      grouped[reward.user_id].referral_count += 1;
+      grouped[reward.user_id].total_rewards += reward.reward_value || 0;
+    });
+    
+    // Sort by total_rewards descending
+    const result = Object.values(grouped).sort((a: any, b: any) => b.total_rewards - a.total_rewards);
+    
+    return result.slice(0, limit);
   } catch (error) {
     console.error('Error fetching top affiliates:', error);
     return [];
