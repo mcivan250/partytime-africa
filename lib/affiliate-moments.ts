@@ -38,7 +38,7 @@ export function generateAffiliateLink(momentId: string, userId: string): string 
     ref: userId,
     utm_source: 'moment',
     utm_medium: 'social',
-  } );
+  });
   return `${baseUrl}?${params.toString()}`;
 }
 
@@ -119,8 +119,8 @@ export async function addPartyPoints(
       const { data: updated, error } = await supabase
         .from('party_points')
         .update({
-          total_points: (existing.total_points || 0) + points,
-          available_points: (existing.available_points || 0) + points,
+          total_points: existing.total_points + points,
+          available_points: existing.available_points + points,
           updated_at: new Date().toISOString(),
         })
         .eq('user_id', userId)
