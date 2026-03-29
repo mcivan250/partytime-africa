@@ -1,11 +1,9 @@
-'use client';
-
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/contexts/AuthContext';
-import { THEMES } from '@/lib/types';
+import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../contexts/AuthContext';
+import { THEMES } from '../../lib/types';
 
 interface EventDetail {
   id: string;
@@ -180,7 +178,7 @@ export default function EventDetailPage() {
           <div style={{ textAlign: 'center', padding: '2rem' }}>
             <div style={{ fontSize: '5rem', marginBottom: '1rem' }}>🎉</div>
             <span style={{ color: 'white', fontWeight: 'bold', fontSize: '1.2rem', textTransform: 'uppercase', letterSpacing: '0.15em' }}>
-              {event.theme || 'Party Time'}
+              {THEMES.find(t => t.id === event.theme)?.name || 'Party'}
             </span>
           </div>
         )}

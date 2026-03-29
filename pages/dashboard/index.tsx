@@ -1,183 +1,151 @@
-'use client';
-
 import React, { useEffect, useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/contexts/AuthContext';
+import Link from 'next/link';
+import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../lib/supabase';
+import { Event } from '../../lib/types';
 
-export default function DashboardPage() {
-  const { user, signOut } = useAuth();
+const DashboardPage: React.FC = () => {
+  const { user, loading: userLoading } = useAuth();
   const router = useRouter();
-  const [myEvents, setMyEvents] = useState<any[]>([]);
-  const [myRsvps, setMyRsvps] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [hostedEvents, setHostedEvents] = useState<Event[]>([]);
+  const [rsvpedEvents, setRsvpedEvents] = useState<Event[]>([]);
+  const [loadingEvents, setLoadingEvents] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!user) {
+    if (!userLoading && !user) {
       router.push('/auth/signin');
-      return;
     }
-    fetchDashboardData();
-  }, [user]);
+    if (user) {
+      fetchUserEvents();
+    }
+  }, [user, userLoading]);
 
-  const fetchDashboardData = async () => {
-    if (!user) return;
-    setLoading(true);
+  const fetchUserEvents = async () => {
+    setLoadingEvents(true);
+    setError(null);
     try {
-      // Fetch events hosted by user
-      const { data: events } = await supabase
+      // Fetch hosted events
+      const { data: hostedData, error: hostedError } = await supabase
         .from('events')
         .select('*')
-        .eq('host_id', user.id)
+        .eq('host_id', user?.id)
         .order('date_time', { ascending: false });
 
-      setMyEvents(events || []);
+      if (hostedError) throw hostedError;
+      setHostedEvents(hostedData || []);
 
-      // Fetch user's RSVPs with event details
-      const { data: rsvps } = await supabase
+      // Fetch RSVP'd events
+      const { data: rsvpData, error: rsvpError } = await supabase
         .from('rsvps')
         .select('*, events(*)')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+        .eq('user_id', user?.id)
+        .in('status', ['going', 'maybe']);
 
-      setMyRsvps(rsvps || []);
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error);
+      if (rsvpError) throw rsvpError;
+      setRsvpedEvents(rsvpData?.map((rsvp: any) => rsvp.events) || []);
+
+    } catch (err: any) {
+      console.error('Error fetching user events:', err);
+      setError(err.message || 'Failed to fetch events');
     } finally {
-      setLoading(false);
+      setLoadingEvents(false);
     }
   };
 
-  if (!user) return null;
+  if (userLoading || !user) {
+    return <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">Loading dashboard...</div>;
+  }
 
-  return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-primary)', color: 'var(--color-text-light)' }}>
-      {/* Navigation */}
-      <nav style={{ backgroundColor: 'var(--color-secondary)', borderBottom: '1px solid var(--color-border)', position: 'sticky', top: 0, zIndex: 50 }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '1rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Link href="/" style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-accent)', textDecoration: 'none' }}>
-            Party Time Africa
-          </Link>
-          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-            <Link href="/events" className="btn btn-secondary" style={{ fontSize: '0.85rem' }}>Events</Link>
-            <button onClick={() => signOut()} className="btn btn-secondary" style={{ fontSize: '0.85rem' }}>Sign Out</button>
+  const EventCard = ({ event }: { event: Event }) => {
+    const themeClasses = {
+      OCEAN: 'from-blue-500 to-teal-400',
+      GALAXY: 'from-purple-500 to-indigo-600',
+      SUNSET: 'from-orange-500 to-red-600',
+      ANKARA: 'from-yellow-500 to-orange-400',
+      FIRE: 'from-red-600 to-yellow-500',
+    };
+
+    const formatDate = (dateStr: string) => {
+      const date = new Date(dateStr);
+      return {
+        day: date.toLocaleDateString('en-US', { day: 'numeric' }),
+        month: date.toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
+        full: date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }),
+        time: date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+      };
+    };
+
+    const dateInfo = formatDate(event.date_time);
+
+    return (
+      <Link href={`/events/${event.id}`} className="block">
+        <div className="bg-gray-800 rounded-lg shadow-lg overflow-hidden transform hover:scale-105 transition-transform duration-300 cursor-pointer">
+          <div className={`bg-gradient-to-br ${themeClasses[event.theme]} h-32 flex items-center justify-center text-center p-4 relative`}>
+            <h3 className="text-xl font-bold text-white">{event.name}</h3>
+            <div className="absolute top-3 right-3 bg-gray-900 bg-opacity-70 rounded-md p-2 text-sm">
+              <div className="text-yellow-400 font-bold">{dateInfo.month}</div>
+              <div className="text-white text-lg font-bold leading-none">{dateInfo.day}</div>
+            </div>
+          </div>
+          <div className="p-4">
+            <p className="text-gray-400 text-sm mb-1">{dateInfo.full} at {dateInfo.time}</p>
+            <p className="text-gray-300 text-sm truncate">{event.location_address}</p>
           </div>
         </div>
-      </nav>
+      </Link>
+    );
+  };
 
-      <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '2rem 1.5rem' }}>
-        {/* Welcome Header */}
-        <div style={{ marginBottom: '2rem' }}>
-          <h1 style={{ fontSize: '2rem', fontFamily: 'var(--font-family-display)', color: 'var(--color-accent)', marginBottom: '0.5rem' }}>
-            Welcome back, {user.user_metadata?.name || user.email?.split('@')[0] || 'Party Lover'}!
-          </h1>
-          <p style={{ color: 'var(--color-text-dark)' }}>Manage your events and RSVPs from here.</p>
-        </div>
+  return (
+    <div className="min-h-screen bg-gray-900 text-white p-4 sm:p-8">
+      <div className="max-w-7xl mx-auto">
+        <h1 className="text-4xl font-bold text-center mb-8">👋 Welcome, {user?.email}!</h1>
 
-        {/* Quick Actions */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-          <Link href="/events/create-with-tiers" className="card" style={{ textAlign: 'center', textDecoration: 'none', cursor: 'pointer', transition: 'transform 0.2s' }}>
-            <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🎉</div>
-            <h3 style={{ color: 'var(--color-accent)', marginBottom: '0.25rem' }}>Create Event</h3>
-            <p style={{ color: 'var(--color-text-dark)', fontSize: '0.85rem' }}>Host your next party</p>
-          </Link>
-          <Link href="/events" className="card" style={{ textAlign: 'center', textDecoration: 'none', cursor: 'pointer', transition: 'transform 0.2s' }}>
-            <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🔍</div>
-            <h3 style={{ color: 'var(--color-accent)', marginBottom: '0.25rem' }}>Explore Events</h3>
-            <p style={{ color: 'var(--color-text-dark)', fontSize: '0.85rem' }}>Find parties near you</p>
-          </Link>
-          <Link href="/profile" className="card" style={{ textAlign: 'center', textDecoration: 'none', cursor: 'pointer', transition: 'transform 0.2s' }}>
-            <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>👤</div>
-            <h3 style={{ color: 'var(--color-accent)', marginBottom: '0.25rem' }}>My Profile</h3>
-            <p style={{ color: 'var(--color-text-dark)', fontSize: '0.85rem' }}>Edit your details</p>
-          </Link>
-        </div>
-
-        {loading ? (
-          <p style={{ color: 'var(--color-text-dark)', textAlign: 'center', padding: '2rem' }}>Loading your data...</p>
-        ) : (
-          <>
-            {/* My Events Section */}
-            <div style={{ marginBottom: '2rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                <h2 style={{ fontSize: '1.5rem', fontFamily: 'var(--font-family-display)', color: 'var(--color-text-light)' }}>
-                  My Events ({myEvents.length})
-                </h2>
-                <Link href="/events/create-with-tiers" style={{ color: 'var(--color-accent)', fontSize: '0.9rem' }}>+ Create New</Link>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* Hosted Events */}
+          <div>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-bold">Your Hosted Events</h2>
+              <Link href="/events/create-with-tiers" className="bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-2 px-4 rounded-md text-sm">
+                + Create New Event
+              </Link>
+            </div>
+            {loadingEvents ? (
+              <p>Loading your events...</p>
+            ) : hostedEvents.length === 0 ? (
+              <p className="text-gray-400">You haven't hosted any events yet.</p>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {hostedEvents.map(event => (
+                  <EventCard key={event.id} event={event} />
+                ))}
               </div>
+            )}
+          </div>
 
-              {myEvents.length === 0 ? (
-                <div className="card" style={{ textAlign: 'center', padding: '2rem' }}>
-                  <p style={{ color: 'var(--color-text-dark)', marginBottom: '1rem' }}>You haven't created any events yet.</p>
-                  <Link href="/events/create-with-tiers" className="btn btn-primary">Create Your First Event</Link>
-                </div>
-              ) : (
-                <div style={{ display: 'grid', gap: '1rem' }}>
-                  {myEvents.map((event) => (
-                    <Link key={event.id} href={`/events/${event.id}`} style={{ textDecoration: 'none' }}>
-                      <div className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
-                        <div>
-                          <h3 style={{ color: 'var(--color-text-light)', marginBottom: '0.25rem' }}>{event.title}</h3>
-                          <p style={{ color: 'var(--color-text-dark)', fontSize: '0.85rem' }}>
-                            📅 {new Date(event.date_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                            &nbsp;&nbsp;📍 {event.location_address}
-                          </p>
-                        </div>
-                        <span style={{ color: 'var(--color-accent)', fontSize: '1.2rem' }}>→</span>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
+          {/* RSVP'd Events */}
+          <div>
+            <h2 className="text-2xl font-bold mb-4">Your RSVPs</h2>
+            {loadingEvents ? (
+              <p>Loading your RSVPs...</p>
+            ) : rsvpedEvents.length === 0 ? (
+              <p className="text-gray-400">You haven't RSVP'd to any events yet.</p>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {rsvpedEvents.map(event => (
+                  <EventCard key={event.id} event={event} />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
 
-            {/* My RSVPs Section */}
-            <div style={{ marginBottom: '2rem' }}>
-              <h2 style={{ fontSize: '1.5rem', fontFamily: 'var(--font-family-display)', color: 'var(--color-text-light)', marginBottom: '1rem' }}>
-                My RSVPs ({myRsvps.length})
-              </h2>
-
-              {myRsvps.length === 0 ? (
-                <div className="card" style={{ textAlign: 'center', padding: '2rem' }}>
-                  <p style={{ color: 'var(--color-text-dark)', marginBottom: '1rem' }}>You haven't RSVP'd to any events yet.</p>
-                  <Link href="/events" className="btn btn-primary">Browse Events</Link>
-                </div>
-              ) : (
-                <div style={{ display: 'grid', gap: '1rem' }}>
-                  {myRsvps.map((rsvp) => {
-                    const event = rsvp.events;
-                    if (!event) return null;
-                    const statusColors: Record<string, string> = { going: 'var(--color-success)', maybe: 'var(--color-accent)', cant_go: 'var(--color-error)' };
-                    const statusLabels: Record<string, string> = { going: 'Going', maybe: 'Maybe', cant_go: "Can't Go" };
-                    return (
-                      <Link key={rsvp.id || `${rsvp.event_id}-${rsvp.user_id}`} href={`/events/${event.id}`} style={{ textDecoration: 'none' }}>
-                        <div className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
-                          <div>
-                            <h3 style={{ color: 'var(--color-text-light)', marginBottom: '0.25rem' }}>{event.title}</h3>
-                            <p style={{ color: 'var(--color-text-dark)', fontSize: '0.85rem' }}>
-                              📅 {new Date(event.date_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                              &nbsp;&nbsp;📍 {event.location_address}
-                            </p>
-                          </div>
-                          <span style={{ color: statusColors[rsvp.status] || 'var(--color-text-dark)', fontWeight: 'bold', fontSize: '0.85rem' }}>
-                            {statusLabels[rsvp.status] || rsvp.status}
-                          </span>
-                        </div>
-                      </Link>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </>
-        )}
+        {error && <p className="text-red-500 text-center mt-8">Error: {error}</p>}
       </div>
-
-      {/* Footer */}
-      <footer style={{ padding: '2rem', textAlign: 'center', borderTop: '1px solid var(--color-border)' }}>
-        <p style={{ color: 'var(--color-text-dark)' }}>© 2026 Party Time Africa. All rights reserved.</p>
-      </footer>
     </div>
   );
-}
+};
+
+export default DashboardPage;

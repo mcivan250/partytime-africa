@@ -1,135 +1,181 @@
-'use client';
-
 import React, { useEffect, useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/contexts/AuthContext';
+import Link from 'next/link';
+import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
 
-export default function ProfilePage() {
-  const { user, signOut } = useAuth();
+const ProfilePage: React.FC = () => {
+  const { user, loading: userLoading, signOut } = useAuth();
   const router = useRouter();
   const [profile, setProfile] = useState<any>(null);
+  const [loadingProfile, setLoadingProfile] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState('');
+  const [bio, setBio] = useState('');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (!user) {
+    if (!userLoading && !user) {
       router.push('/auth/signin');
-      return;
     }
-    fetchProfile();
-  }, [user]);
+    if (user) {
+      fetchProfile();
+    }
+  }, [user, userLoading]);
 
   const fetchProfile = async () => {
-    if (!user) return;
-    const { data } = await supabase.from('users').select('*').eq('id', user.id).single();
-    if (data) {
+    setLoadingProfile(true);
+    setError(null);
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', user?.id)
+        .single();
+
+      if (error) throw error;
       setProfile(data);
       setName(data.name || '');
+      setBio(data.bio || '');
+    } catch (err: any) {
+      console.error('Error fetching profile:', err);
+      setError(err.message || 'Failed to fetch profile');
+    } finally {
+      setLoadingProfile(false);
     }
   };
 
   const handleSave = async () => {
     if (!user) return;
     setSaving(true);
+    setError(null);
     try {
-      const { error } = await supabase.from('users').upsert({ id: user.id, name, email: user.email });
+      const { error } = await supabase
+        .from('users')
+        .upsert({ id: user.id, name, bio }, { onConflict: 'id' });
+
       if (error) throw error;
       setEditing(false);
-      fetchProfile();
-    } catch (err) {
+      fetchProfile(); // Re-fetch to ensure latest data
+    } catch (err: any) {
       console.error('Error saving profile:', err);
+      setError(err.message || 'Failed to save profile');
     } finally {
       setSaving(false);
     }
   };
 
-  if (!user) return null;
+  if (userLoading || !user) {
+    return <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">Loading profile...</div>;
+  }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-primary)', color: 'var(--color-text-light)' }}>
-      {/* Navigation */}
-      <nav style={{ backgroundColor: 'var(--color-secondary)', borderBottom: '1px solid var(--color-border)', position: 'sticky', top: 0, zIndex: 50 }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '1rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Link href="/" style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-accent)', textDecoration: 'none' }}>
-            Party Time Africa
-          </Link>
-          <div style={{ display: 'flex', gap: '0.75rem' }}>
-            <Link href="/dashboard" className="btn btn-secondary" style={{ fontSize: '0.85rem' }}>Dashboard</Link>
-          </div>
-        </div>
-      </nav>
+    <div className="min-h-screen bg-gray-900 text-white p-4 sm:p-8">
+      <div className="max-w-3xl mx-auto bg-gray-800 rounded-lg shadow-lg p-6 sm:p-8">
+        <h1 className="text-3xl sm:text-4xl font-bold text-center mb-8">Your Profile</h1>
 
-      <div style={{ maxWidth: '600px', margin: '0 auto', padding: '2rem 1.5rem' }}>
-        <h1 style={{ fontSize: '2rem', fontFamily: 'var(--font-family-display)', color: 'var(--color-accent)', textAlign: 'center', marginBottom: '2rem' }}>
-          My Profile
-        </h1>
+        {loadingProfile ? (
+          <p className="text-center">Loading profile data...</p>
+        ) : error ? (
+          <p className="text-red-500 text-center">Error: {error}</p>
+        ) : profile ? (
+          <div className="space-y-6">
+            {/* Avatar */}
+            <div className="text-center mb-6">
+              <div className="w-24 h-24 rounded-full bg-yellow-500 flex items-center justify-center mx-auto text-gray-900 text-4xl font-bold">
+                {(profile.name || user.email || '?')[0].toUpperCase()}
+              </div>
+              <p className="text-xl font-semibold mt-2">{profile.name || user.email}</p>
+            </div>
 
-        {/* Avatar */}
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <div style={{
-            width: '100px', height: '100px', borderRadius: '50%',
-            backgroundColor: 'var(--color-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            margin: '0 auto', fontSize: '2.5rem', color: 'var(--color-primary)', fontWeight: 'bold'
-          }}>
-            {(profile?.name || user.email || '?')[0].toUpperCase()}
-          </div>
-        </div>
+            <div className="form-group">
+              <label htmlFor="email" className="block text-lg font-medium text-gray-300 mb-2">Email</label>
+              <input
+                type="email"
+                id="email"
+                value={user.email || ''}
+                className="w-full p-3 rounded-md bg-gray-700 border border-gray-600 text-gray-400 cursor-not-allowed"
+                disabled
+              />
+            </div>
 
-        <div className="card">
-          <div className="form-group">
-            <label className="form-label">Name</label>
-            {editing ? (
-              <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="form-input" placeholder="Your name" />
-            ) : (
-              <p style={{ color: 'var(--color-text-light)', fontSize: '1.1rem' }}>{profile?.name || 'Not set'}</p>
-            )}
-          </div>
+            <div className="form-group">
+              <label htmlFor="name" className="block text-lg font-medium text-gray-300 mb-2">Name</label>
+              {editing ? (
+                <input
+                  type="text"
+                  id="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full p-3 rounded-md bg-gray-700 border border-gray-600 focus:ring-yellow-500 focus:border-yellow-500 text-white"
+                  placeholder="Your name"
+                />
+              ) : (
+                <p className="p-3 rounded-md bg-gray-700 text-white">{profile.name || 'Not set'}</p>
+              )}
+            </div>
 
-          <div className="form-group">
-            <label className="form-label">Email</label>
-            <p style={{ color: 'var(--color-text-light)', fontSize: '1.1rem' }}>{user.email}</p>
-          </div>
+            <div className="form-group">
+              <label htmlFor="bio" className="block text-lg font-medium text-gray-300 mb-2">Bio</label>
+              {editing ? (
+                <textarea
+                  id="bio"
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
+                  rows={3}
+                  className="w-full p-3 rounded-md bg-gray-700 border border-gray-600 focus:ring-yellow-500 focus:border-yellow-500 text-white"
+                  placeholder="Tell us about yourself..."
+                ></textarea>
+              ) : (
+                <p className="p-3 rounded-md bg-gray-700 text-white whitespace-pre-wrap">{profile.bio || 'Not set'}</p>
+              )}
+            </div>
 
-          <div className="form-group">
-            <label className="form-label">Member Since</label>
-            <p style={{ color: 'var(--color-text-dark)' }}>
-              {profile?.created_at ? new Date(profile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'Unknown'}
-            </p>
-          </div>
-
-          <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
-            {editing ? (
-              <>
-                <button onClick={handleSave} disabled={saving} className="btn btn-primary" style={{ flex: 1, opacity: saving ? 0.6 : 1 }}>
-                  {saving ? 'Saving...' : 'Save Changes'}
+            <div className="flex gap-4 mt-6">
+              {editing ? (
+                <>
+                  <button
+                    onClick={handleSave}
+                    className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-3 px-4 rounded-md transition-colors duration-200"
+                    disabled={saving}
+                  >
+                    {saving ? 'Saving...' : 'Save Changes'}
+                  </button>
+                  <button
+                    onClick={() => { setEditing(false); setName(profile.name || ''); setBio(profile.bio || ''); }}
+                    className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-4 rounded-md transition-colors duration-200"
+                  >
+                    Cancel
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => setEditing(true)}
+                  className="w-full bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-3 px-4 rounded-md transition-colors duration-200"
+                >
+                  Edit Profile
                 </button>
-                <button onClick={() => { setEditing(false); setName(profile?.name || ''); }} className="btn btn-secondary" style={{ flex: 1 }}>
-                  Cancel
-                </button>
-              </>
-            ) : (
-              <button onClick={() => setEditing(true)} className="btn btn-primary" style={{ flex: 1 }}>
-                Edit Profile
-              </button>
-            )}
-          </div>
-        </div>
+              )}
+            </div>
 
-        {/* Sign Out */}
-        <div style={{ textAlign: 'center', marginTop: '2rem' }}>
-          <button onClick={() => { signOut(); router.push('/'); }} className="btn btn-secondary">
-            Sign Out
-          </button>
+            <button
+              onClick={signOut}
+              className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-4 rounded-md transition-colors duration-200 mt-4"
+            >
+              Sign Out
+            </button>
+          </div>
+        ) : (
+          <p className="text-center">No profile data found.</p>
+        )}
+
+        <div className="mt-8 text-center">
+          <Link href="/dashboard" className="text-yellow-500 hover:underline">← Back to Dashboard</Link>
         </div>
       </div>
-
-      {/* Footer */}
-      <footer style={{ padding: '2rem', textAlign: 'center', borderTop: '1px solid var(--color-border)' }}>
-        <p style={{ color: 'var(--color-text-dark)' }}>© 2026 Party Time Africa. All rights reserved.</p>
-      </footer>
     </div>
   );
-}
+};
+
+export default ProfilePage;

@@ -1,14 +1,11 @@
-'use client';
-
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { supabase } from '@/lib/supabase';
-import { THEMES } from '@/lib/types';
+import { supabase } from '../../lib/supabase';
+import { THEMES } from '../../lib/types';
 
 interface EventItem {
   id: string;
-  title: string;
-  slug: string;
+  name: string;
   description: string;
   date_time: string;
   location_address: string;
@@ -32,7 +29,7 @@ export default function EventsPage() {
     try {
       let query = supabase
         .from('events')
-        .select('id, title, slug, description, date_time, location_address, theme, image_url, host_id, max_capacity')
+        .select('id, name, description, date_time, location_address, theme, image_url, host_id, max_capacity')
         .order('date_time', { ascending: true });
 
       if (filter === 'upcoming') {
@@ -128,12 +125,12 @@ export default function EventsPage() {
                     {/* Event Image / Theme Banner */}
                     <div className={`event-card-image ${getThemeGradient(event.theme)}`}>
                       {event.image_url ? (
-                        <img src={event.image_url} alt={event.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <img src={event.image_url} alt={event.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       ) : (
                         <div style={{ textAlign: 'center', padding: '1rem' }}>
                           <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🎉</div>
                           <span style={{ color: 'white', fontWeight: 'bold', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                            {event.theme || 'Party'}
+                            {THEMES.find(t => t.id === event.theme)?.name || 'Party'}
                           </span>
                         </div>
                       )}
@@ -150,7 +147,7 @@ export default function EventsPage() {
 
                     {/* Event Body */}
                     <div className="event-card-body">
-                      <h3 className="event-card-title">{event.title}</h3>
+                      <h3 className="event-card-title">{event.name}</h3>
                       <div className="event-card-meta">
                         <span>📅 {dateInfo.full} at {dateInfo.time}</span>
                         <span>📍 {event.location_address}</span>
