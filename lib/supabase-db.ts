@@ -6,9 +6,9 @@
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-console.log("Supabase URL (lib/supabase-db.ts):", supabaseUrl);
+
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
-console.log("Supabase Key (lib/supabase-db.ts):", supabaseKey ? "SET" : "NOT SET");
+
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
 

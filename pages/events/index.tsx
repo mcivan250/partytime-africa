@@ -31,6 +31,7 @@ export default function EventsPage() {
 
       setLoading(true);
       setError(null);
+      console.log("Supabase client in EventsPage:", supabase);
       const { success, events: fetchedEvents, error: fetchError } = await getEvents();
       console.log("getEvents result:", { success, fetchedEvents, fetchError });
 
