@@ -17,7 +17,7 @@ interface Event {
 }
 
 export default function EventsPage() {
-  console.log("EventsPage component rendered.");
+
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -25,11 +25,14 @@ export default function EventsPage() {
 
   useEffect(() => {
     console.log("EventsPage useEffect triggered.");
+
     const fetchEvents = async () => {
       console.log("fetchEvents function called.");
+
       setLoading(true);
       setError(null);
       const { success, events: fetchedEvents, error: fetchError } = await getEvents();
+      console.log("getEvents result:", { success, fetchedEvents, fetchError });
 
       if (success && fetchedEvents) {
         const now = new Date();
