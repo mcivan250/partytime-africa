@@ -1,3 +1,4 @@
+
 /**
  * Supabase Database Integration
  * Handles wallet, transaction, and ticket management
@@ -5,29 +6,16 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-
-
-
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-console.log("Supabase URL (lib/supabase-db.ts):", supabaseUrl);
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
 if (!supabaseUrl) {
   console.error("Supabase URL is not set in environment variables.");
 }
 
-
-
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-console.log("Supabase Key (lib/supabase-db.ts):", supabaseKey ? "SET" : "NOT SET");
 if (!supabaseKey) {
   console.error("Supabase Anon Key is not set in environment variables.");
 }
-
-
-
-
-
-
-
 
 export const supabase = createClient(supabaseUrl || "", supabaseKey || "");
 
@@ -400,20 +388,14 @@ export async function getEvents() {
       .select('*')
       .order("date_time", { ascending: true });
 
-    console.log("getEvents: Fetched events data:", events);
-
-
-
-      if (error) {
-
-        console.error("getEvents: Error fetching events (inner):", error);
-        return { success: false, error: error.message };
-      }
+    if (error) {
+      console.error("getEvents: Error fetching events:", error);
+      return { success: false, error: error.message };
+    }
 
     return { success: true, events };
   } catch (error) {
-    console.error("Error in getEvents:", error);
-    console.error("getEvents: Error in try-catch block:", error);
+    console.error('Error in getEvents:', error);
     return { success: false, error: "Failed to get events" };
   }
 }
@@ -424,21 +406,19 @@ export async function getEvents() {
 export async function getEventById(eventId: string) {
   try {
     const { data: event, error } = await supabase
-      .from("events")
-      .select("*")
-      .eq("id", eventId)
+      .from('events')
+      .select('*')
+      .eq('id', eventId)
       .single();
 
-      if (error) {
-
-        console.error("getEventById: Error fetching event (inner):", error);
-        return { success: false, error: error.message };};
-      }
+    if (error) {
+      console.error("getEventById: Error fetching event:", error);
+      return { success: false, error: error.message };
+    }
 
     return { success: true, event };
   } catch (error) {
     console.error('Error in getEventById:', error);
-    console.error("getEventById: Error in try-catch block:", error);
     return { success: false, error: "Failed to get event by ID" };
   }
 }
