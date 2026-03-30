@@ -10,8 +10,10 @@ import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 console.log("Supabase URL (lib/supabase-db.ts):", supabaseUrl);
+
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 console.log("Supabase Key (lib/supabase-db.ts):", supabaseKey ? "SET" : "NOT SET");
+
 
 
 
@@ -388,10 +390,10 @@ export async function getEvents() {
       .select('*')
       .order('date_time', { ascending: true });
 
-    console.log("getEvents: Fetched events data:", events);
+
 
       if (error) {
-        console.error("getEvents: Error fetching events:", error);
+
         return { success: false, error: error.message };
       }
 
@@ -414,7 +416,7 @@ export async function getEventById(eventId: string) {
       .single();
 
       if (error) {
-        console.error("getEvents: Error fetching events:", error);
+
         return { success: false, error: error.message };
       }
 
