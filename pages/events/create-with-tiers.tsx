@@ -13,7 +13,7 @@ const CreateEventPage: React.FC = () => {
   const [eventDate, setEventDate] = useState('');
   const [eventTime, setEventTime] = useState('');
   const [eventLocation, setEventLocation] = useState('');
-  const [eventTheme, setEventTheme] = useState<EventTheme>('OCEAN');
+  const [eventTheme, setEventTheme] = useState<EventTheme>('ocean');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -145,11 +145,11 @@ const CreateEventPage: React.FC = () => {
               onChange={(e) => setEventTheme(e.target.value as EventTheme)}
               className="w-full p-3 rounded-md bg-gray-700 border border-gray-600 focus:ring-yellow-500 focus:border-yellow-500 text-white"
             >
-              <option value="OCEAN">Ocean</option>
-              <option value="GALAXY">Galaxy</option>
-              <option value="SUNSET">Sunset</option>
-              <option value="ANKARA">Ankara</option>
-              <option value="FIRE">Fire</option>
+              <option value="ocean">Ocean</option>
+              <option value="galaxy">Galaxy</option>
+              <option value="sunset">Sunset</option>
+              <option value="ankara">Ankara</option>
+              <option value="fire">Fire</option>
             </select>
           </div>
 
