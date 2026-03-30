@@ -1,9 +1,10 @@
+
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import { useAuth } from '../../contexts/AuthContext';
-import { supabase } from '../../lib/supabase';
-import { Event } from '../../lib/types';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase, getEventById } from '@/lib/supabase-db';
+import { Event } from '@/lib/types';
 
 const DashboardPage: React.FC = () => {
   const { user, loading: userLoading } = useAuth();
@@ -20,7 +21,7 @@ const DashboardPage: React.FC = () => {
     if (user) {
       fetchUserEvents();
     }
-  }, [user, userLoading]);
+  }, [user, userLoading, router]);
 
   const fetchUserEvents = async () => {
     setLoadingEvents(true);
@@ -39,12 +40,24 @@ const DashboardPage: React.FC = () => {
       // Fetch RSVP'd events
       const { data: rsvpData, error: rsvpError } = await supabase
         .from('rsvps')
-        .select('*, events(*)')
+        .select('event_id')
         .eq('user_id', user?.id)
         .in('status', ['going', 'maybe']);
 
       if (rsvpError) throw rsvpError;
-      setRsvpedEvents(rsvpData?.map((rsvp: any) => rsvp.events) || []);
+
+      const rsvpEventIds = rsvpData?.map((rsvp: any) => rsvp.event_id) || [];
+      const fetchedRsvpEvents: Event[] = [];
+
+      for (const eventId of rsvpEventIds) {
+        const { success, event: rsvpEvent, error: rsvpEventError } = await getEventById(eventId);
+        if (success && rsvpEvent) {
+          fetchedRsvpEvents.push(rsvpEvent);
+        } else if (rsvpEventError) {
+          console.error(`Error fetching RSVP event ${eventId}:`, rsvpEventError);
+        }
+      }
+      setRsvpedEvents(fetchedRsvpEvents);
 
     } catch (err: any) {
       console.error('Error fetching user events:', err);
@@ -59,12 +72,12 @@ const DashboardPage: React.FC = () => {
   }
 
   const EventCard = ({ event }: { event: Event }) => {
-    const themeClasses = {
-      OCEAN: 'from-blue-500 to-teal-400',
-      GALAXY: 'from-purple-500 to-indigo-600',
-      SUNSET: 'from-orange-500 to-red-600',
-      ANKARA: 'from-yellow-500 to-orange-400',
-      FIRE: 'from-red-600 to-yellow-500',
+    const themeClasses: { [key: string]: string } = {
+      ocean: 'from-blue-500 to-teal-400',
+      galaxy: 'from-purple-500 to-indigo-600',
+      sunset: 'from-orange-500 to-red-600',
+      ankara: 'from-yellow-500 to-orange-400',
+      fire: 'from-red-600 to-yellow-500',
     };
 
     const formatDate = (dateStr: string) => {
@@ -82,7 +95,7 @@ const DashboardPage: React.FC = () => {
     return (
       <Link href={`/events/${event.id}`} className="block">
         <div className="bg-gray-800 rounded-lg shadow-lg overflow-hidden transform hover:scale-105 transition-transform duration-300 cursor-pointer">
-          <div className={`bg-gradient-to-br ${themeClasses[(event.theme as keyof typeof themeClasses) || 'SUNSET']} h-32 flex items-center justify-center text-center p-4 relative`}>
+          <div className={`bg-gradient-to-br ${themeClasses[event.theme] || themeClasses.sunset} h-32 flex items-center justify-center text-center p-4 relative`}>
             <h3 className="text-xl font-bold text-white">{event.title}</h3>
             <div className="absolute top-3 right-3 bg-gray-900 bg-opacity-70 rounded-md p-2 text-sm">
               <div className="text-yellow-400 font-bold">{dateInfo.month}</div>

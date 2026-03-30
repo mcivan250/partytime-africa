@@ -368,3 +368,48 @@ export async function updateWalletBalance(userId: string, newBalance: number) {
     return { success: false, error: 'Failed to update wallet balance' };
   }
 }
+
+/**
+ * Get all events
+ */
+export async function getEvents() {
+  try {
+    const { data: events, error } = await supabase
+      .from('events')
+      .select('*')
+      .order('date_time', { ascending: true });
+
+    if (error) {
+      console.error('Error getting events:', error);
+      return { success: false, error: error.message };
+    }
+
+    return { success: true, events };
+  } catch (error) {
+    console.error('Error in getEvents:', error);
+    return { success: false, error: 'Failed to get events' };
+  }
+}
+
+/**
+ * Get event by ID
+ */
+export async function getEventById(eventId: string) {
+  try {
+    const { data: event, error } = await supabase
+      .from('events')
+      .select('*')
+      .eq('id', eventId)
+      .single();
+
+    if (error) {
+      console.error('Error getting event by ID:', error);
+      return { success: false, error: error.message };
+    }
+
+    return { success: true, event };
+  } catch (error) {
+    console.error('Error in getEventById:', error);
+    return { success: false, error: 'Failed to get event by ID' };
+  }
+}
