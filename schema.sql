@@ -204,3 +204,149 @@ CREATE TRIGGER update_events_updated_at BEFORE UPDATE ON events
 
 CREATE TRIGGER update_rsvps_updated_at BEFORE UPDATE ON rsvps 
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Wallets table
+CREATE TABLE wallets (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+    balance BIGINT DEFAULT 0, -- Balance in UGX (smallest unit)
+    currency TEXT DEFAULT 'UGX',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Transactions table
+CREATE TABLE transactions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    type TEXT NOT NULL CHECK (type IN ('payment', 'earning', 'deposit', 'withdrawal')),
+    amount BIGINT NOT NULL, -- Amount in UGX
+    status TEXT NOT NULL DEFAULT 'completed' CHECK (status IN ('completed', 'pending', 'failed')),
+    description TEXT,
+    reference_id TEXT, -- Flutterwave transaction ID
+    metadata JSONB, -- Additional data (event_id, ticket_tier, etc.)
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Tickets table
+CREATE TABLE tickets (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    event_id UUID REFERENCES events(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    tier TEXT NOT NULL CHECK (tier IN ('early_bird', 'regular', 'vip')),
+    quantity INTEGER NOT NULL DEFAULT 1,
+    price_per_ticket BIGINT NOT NULL, -- Price in UGX
+    total_price BIGINT NOT NULL, -- Total price in UGX
+    transaction_id UUID REFERENCES transactions(id),
+    status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'used', 'cancelled')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Payment requests table (for Flutterwave integration)
+CREATE TABLE payment_requests (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    event_id UUID REFERENCES events(id) ON DELETE CASCADE,
+    amount BIGINT NOT NULL, -- Amount in UGX
+    currency TEXT DEFAULT 'UGX',
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'completed', 'failed')),
+    flutterwave_link TEXT, -- Payment link from Flutterwave
+    flutterwave_tx_ref TEXT, -- Flutterwave transaction reference
+    metadata JSONB, -- Additional data
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Affiliate commissions table
+CREATE TABLE affiliate_commissions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    referrer_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    ticket_id UUID REFERENCES tickets(id) ON DELETE CASCADE,
+    commission_amount BIGINT NOT NULL, -- Commission in UGX
+    commission_rate DECIMAL(5, 2) DEFAULT 10.0, -- Percentage
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'paid')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Indexes for performance
+CREATE INDEX idx_wallets_user_id ON wallets(user_id);
+CREATE INDEX idx_transactions_user_id ON transactions(user_id);
+CREATE INDEX idx_transactions_type ON transactions(type);
+CREATE INDEX idx_transactions_status ON transactions(status);
+CREATE INDEX idx_transactions_created_at ON transactions(created_at);
+CREATE INDEX idx_tickets_event_id ON tickets(event_id);
+CREATE INDEX idx_tickets_user_id ON tickets(user_id);
+CREATE INDEX idx_tickets_status ON tickets(status);
+CREATE INDEX idx_payment_requests_user_id ON payment_requests(user_id);
+CREATE INDEX idx_payment_requests_status ON payment_requests(status);
+CREATE INDEX idx_affiliate_commissions_referrer_id ON affiliate_commissions(referrer_id);
+CREATE INDEX idx_affiliate_commissions_status ON affiliate_commissions(status);
+
+-- Enable Row Level Security
+ALTER TABLE wallets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tickets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE payment_requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE affiliate_commissions ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies for Wallets
+CREATE POLICY "Users can view own wallet" 
+    ON wallets FOR SELECT 
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "System can update wallet balance" 
+    ON wallets FOR UPDATE 
+    USING (true);
+
+-- RLS Policies for Transactions
+CREATE POLICY "Users can view own transactions" 
+    ON transactions FOR SELECT 
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "System can insert transactions" 
+    ON transactions FOR INSERT 
+    WITH CHECK (true);
+
+-- RLS Policies for Tickets
+CREATE POLICY "Users can view own tickets" 
+    ON tickets FOR SELECT 
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Event hosts can view all tickets for their events" 
+    ON tickets FOR SELECT 
+    USING (
+        EXISTS (
+            SELECT 1 FROM events 
+            WHERE events.id = tickets.event_id 
+            AND events.host_id = auth.uid()
+        )
+    );
+
+-- RLS Policies for Payment Requests
+CREATE POLICY "Users can view own payment requests" 
+    ON payment_requests FOR SELECT 
+    USING (auth.uid() = user_id);
+
+-- RLS Policies for Affiliate Commissions
+CREATE POLICY "Users can view own commissions" 
+    ON affiliate_commissions FOR SELECT 
+    USING (auth.uid() = referrer_id);
+
+-- Triggers for updated_at
+CREATE TRIGGER update_wallets_updated_at BEFORE UPDATE ON wallets 
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_transactions_updated_at BEFORE UPDATE ON transactions 
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_tickets_updated_at BEFORE UPDATE ON tickets 
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_payment_requests_updated_at BEFORE UPDATE ON payment_requests 
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_affiliate_commissions_updated_at BEFORE UPDATE ON affiliate_commissions 
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
