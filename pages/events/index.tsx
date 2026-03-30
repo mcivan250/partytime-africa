@@ -1,9 +1,8 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { getEvents, supabase } from '@/lib/supabase-db';
+import { getEvents } from '@/lib/supabase-db';
 import { THEMES } from '@/lib/types';
 
 interface Event {
@@ -17,44 +16,29 @@ interface Event {
 }
 
 export default function EventsPage() {
-
-
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'upcoming' | 'all' | 'past'>('upcoming');
 
   useEffect(() => {
-
-
     const fetchEvents = async () => {
-
-
       setLoading(true);
       setError(null);
-      console.log("Supabase client in EventsPage useEffect:", supabase);
-
       const { success, events: fetchedEvents, error: fetchError } = await getEvents();
-
-
       if (success && fetchedEvents) {
-        const now = new Date();
-        const sortedEvents = fetchedEvents.sort((a, b) => new Date(a.date_time).getTime() - new Date(b.date_time).getTime());
-
-        setEvents(sortedEvents);
+        setEvents(fetchedEvents);
       } else {
         setError(fetchError || 'Failed to fetch events');
       }
       setLoading(false);
     };
-
     fetchEvents();
   }, []);
 
   const filteredEvents = events.filter((event) => {
     const eventDate = new Date(event.date_time);
     const now = new Date();
-
     if (filter === 'upcoming') {
       return eventDate > now;
     } else if (filter === 'past') {
@@ -63,21 +47,6 @@ export default function EventsPage() {
       return true;
     }
   });
-
-  const getThemeGradient = (theme: string) => {
-    const found = THEMES.find(t => t.id === theme);
-    return found ? `theme-${found.id}` : 'theme-fire';
-  };
-
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return {
-      day: date.toLocaleDateString('en-US', { day: 'numeric' }),
-      month: date.toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
-      time: date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-      full: date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }),
-    };
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pb-24">
@@ -169,7 +138,14 @@ export default function EventsPage() {
             ))}
           </div>
         )}
+
+        <div className="mt-8 p-4 bg-slate-800/50 border border-slate-700 rounded-lg">
+          <h3 className="text-lg font-bold text-white">Debug Info</h3>
+          <p className="text-gray-400 text-sm">Supabase URL: {process.env.NEXT_PUBLIC_SUPABASE_URL}</p>
+          <p className="text-gray-400 text-sm">Supabase Key: {process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}</p>
+        </div>
       </div>
     </div>
   );
+}
 }
