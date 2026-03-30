@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { getEvents } from '@/lib/supabase-db';
+import { getEvents, supabase } from '@/lib/supabase-db';
 import { THEMES } from '@/lib/types';
 
 interface Event {
@@ -17,7 +17,7 @@ interface Event {
 }
 
 export default function EventsPage() {
-  console.log("EventsPage component is rendering.");
+
 
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
@@ -25,16 +25,17 @@ export default function EventsPage() {
   const [filter, setFilter] = useState<'upcoming' | 'all' | 'past'>('upcoming');
 
   useEffect(() => {
-    console.log("EventsPage useEffect triggered.");
+
 
     const fetchEvents = async () => {
-      console.log("fetchEvents function called.");
+
 
       setLoading(true);
       setError(null);
-      console.log("Supabase client in EventsPage:", supabase);
+      console.log("Supabase client in EventsPage useEffect:", supabase);
+
       const { success, events: fetchedEvents, error: fetchError } = await getEvents();
-      console.log("getEvents result:", { success, fetchedEvents, fetchError });
+
 
       if (success && fetchedEvents) {
         const now = new Date();
