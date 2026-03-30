@@ -6,6 +6,7 @@ import { useRouter } from 'next/router';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { THEMES } from '../../lib/types';
+import { purchaseTickets } from '../../lib/ticket-purchase';
 
 interface EventDetail {
   id: string;
@@ -46,6 +47,8 @@ export default function EventDetailPage() {
   const [guests, setGuests] = useState<Guest[]>([]);
   const [selectedTicket, setSelectedTicket] = useState('regular');
   const [quantity, setQuantity] = useState(1);
+  const [purchaseLoading, setPurchaseLoading] = useState(false);
+  const [purchaseMessage, setPurchaseMessage] = useState('');
 
   const ticketTiers = {
     'early-bird': { name: 'Early Bird', price: 75000, discount: '25% off' },
