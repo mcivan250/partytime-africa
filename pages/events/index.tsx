@@ -23,7 +23,9 @@ export default function EventsPage() {
   const [filter, setFilter] = useState<'upcoming' | 'all' | 'past'>('upcoming');
 
   useEffect(() => {
+    console.log("EventsPage useEffect triggered.");
     const fetchEvents = async () => {
+      console.log("fetchEvents function called.");
       setLoading(true);
       setError(null);
       const { success, events: fetchedEvents, error: fetchError } = await getEvents();
