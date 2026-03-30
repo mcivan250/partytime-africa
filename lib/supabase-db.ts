@@ -8,20 +8,26 @@ import { createClient } from '@supabase/supabase-js';
 
 
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-console.log("Supabase URL (lib/supabase-db.ts):", supabaseUrl);
-
-
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
-console.log("Supabase Key (lib/supabase-db.ts):", supabaseKey ? "SET" : "NOT SET");
-
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+if (!supabaseUrl) {
+  console.error("Supabase URL is not set in environment variables.");
+}
 
 
 
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+if (!supabaseKey) {
+  console.error("Supabase Anon Key is not set in environment variables.");
+}
 
 
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+
+
+
+
+
+export const supabase = createClient(supabaseUrl || "", supabaseKey || "");
 
 /**
  * Get or create user wallet
