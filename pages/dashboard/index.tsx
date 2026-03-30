@@ -83,7 +83,7 @@ const DashboardPage: React.FC = () => {
       <Link href={`/events/${event.id}`} className="block">
         <div className="bg-gray-800 rounded-lg shadow-lg overflow-hidden transform hover:scale-105 transition-transform duration-300 cursor-pointer">
           <div className={`bg-gradient-to-br ${themeClasses[event.theme]} h-32 flex items-center justify-center text-center p-4 relative`}>
-            <h3 className="text-xl font-bold text-white">{event.name}</h3>
+            <h3 className="text-xl font-bold text-white">{event.title}</h3>
             <div className="absolute top-3 right-3 bg-gray-900 bg-opacity-70 rounded-md p-2 text-sm">
               <div className="text-yellow-400 font-bold">{dateInfo.month}</div>
               <div className="text-white text-lg font-bold leading-none">{dateInfo.day}</div>
