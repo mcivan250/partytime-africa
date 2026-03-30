@@ -3,74 +3,44 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
-
-interface Transaction {
-  id: string;
-  type: 'deposit' | 'withdrawal' | 'earning' | 'payment';
-  amount: number;
-  status: 'completed' | 'pending' | 'failed';
-  description: string;
-  created_at: string;
-}
+import { useWalletUpdates } from '@/hooks/useWalletUpdates';
 
 export default function WalletPage() {
   const { user } = useAuth();
-  const [balance, setBalance] = useState(0);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { wallet, transactions, loading, error } = useWalletUpdates(user?.id || null);
+  const [activeTab, setActiveTab] = useState<'balance' | 'transactions' | 'affiliate'>('balance');
 
-  useEffect(() => {
-    if (user) {
-      fetchWalletData();
-    }
-  }, [user]);
+  const balance = wallet?.balance || 150000;
 
-  const fetchWalletData = async () => {
-    setLoading(true);
-    try {
-      // In a real app, we would fetch from a 'wallets' and 'transactions' table
-      // For MVP/Demo, we'll simulate some data if the tables don't exist yet
-      setBalance(150000); // 150,000 UGX
-      
-      const demoTransactions: Transaction[] = [
-        {
-          id: '1',
-          type: 'earning',
-          amount: 25000,
-          status: 'completed',
-          description: 'Affiliate commission: Skyline Brunch',
-          created_at: new Date().toISOString()
-        },
-        {
-          id: '2',
-          type: 'payment',
-          amount: -50000,
-          status: 'completed',
-          description: 'Ticket Purchase: Ankara After Dark',
-          created_at: new Date(Date.now() - 86400000).toISOString()
-        },
-        {
-          id: '3',
-          type: 'deposit',
-          amount: 100000,
-          status: 'completed',
-          description: 'Mobile Money Deposit',
-          created_at: new Date(Date.now() - 172800000).toISOString()
-        }
-      ];
-      setTransactions(demoTransactions);
-    } catch (error) {
-      console.error('Error fetching wallet data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Calculate affiliate earnings
+  const affiliateEarnings = transactions
+    .filter((t) => t.type === 'earning' && t.status === 'completed')
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  // Calculate total spent
+  const totalSpent = Math.abs(
+    transactions
+      .filter((t) => t.type === 'payment' && t.status === 'completed')
+      .reduce((sum, t) => sum + t.amount, 0)
+  );
 
   if (loading) {
     return (
       <div className="min-h-screen bg-primary flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-accent"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-primary flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-400 mb-4">{error}</p>
+          <Link href="/dashboard" className="text-accent hover:text-yellow-300">
+            Back to Dashboard
+          </Link>
+        </div>
       </div>
     );
   }
@@ -112,51 +82,112 @@ export default function WalletPage() {
         <div className="grid grid-cols-2 gap-4">
           <div className="card p-4 bg-secondary border-border/50">
             <p className="text-text-dark text-xs uppercase mb-1">Total Earned</p>
-            <p className="text-xl font-bold text-accent">45,000 UGX</p>
+            <p className="text-xl font-bold text-accent">{affiliateEarnings.toLocaleString()} UGX</p>
           </div>
           <div className="card p-4 bg-secondary border-border/50">
-            <p className="text-text-dark text-xs uppercase mb-1">Pending</p>
-            <p className="text-xl font-bold text-yellow-500">12,500 UGX</p>
+            <p className="text-text-dark text-xs uppercase mb-1">Total Spent</p>
+            <p className="text-xl font-bold text-yellow-500">{totalSpent.toLocaleString()} UGX</p>
           </div>
         </div>
 
-        {/* Transaction History */}
-        <div className="space-y-4">
-          <h3 className="text-xl font-display font-bold px-2">Transaction History</h3>
-          <div className="space-y-2">
-            {transactions.map((tx) => (
-              <div key={tx.id} className="card p-4 bg-secondary border-border/30 flex items-center justify-between hover:border-accent/50 transition-colors">
-                <div className="flex items-center gap-4">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg ${
-                    tx.amount > 0 ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'
-                  }`}>
-                    {tx.type === 'earning' ? '💰' : tx.type === 'deposit' ? '📥' : tx.type === 'payment' ? '🎫' : '📤'}
-                  </div>
-                  <div>
-                    <p className="font-semibold text-sm md:text-base">{tx.description}</p>
-                    <p className="text-text-dark text-xs">
-                      {new Date(tx.created_at).toLocaleDateString()} • {tx.status}
-                    </p>
-                  </div>
-                </div>
-                <div className={`font-bold ${tx.amount > 0 ? 'text-green-500' : 'text-text-light'}`}>
-                  {tx.amount > 0 ? '+' : ''}{tx.amount.toLocaleString()}
-                </div>
+        {/* Tabs */}
+        <div className="flex gap-2 border-b border-border">
+          <button
+            onClick={() => setActiveTab('balance')}
+            className={`px-4 py-3 font-semibold border-b-2 transition ${
+              activeTab === 'balance'
+                ? 'border-accent text-accent'
+                : 'border-transparent text-text-dark hover:text-text-light'
+            }`}
+          >
+            Balance
+          </button>
+          <button
+            onClick={() => setActiveTab('transactions')}
+            className={`px-4 py-3 font-semibold border-b-2 transition ${
+              activeTab === 'transactions'
+                ? 'border-accent text-accent'
+                : 'border-transparent text-text-dark hover:text-text-light'
+            }`}
+          >
+            Transactions ({transactions.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('affiliate')}
+            className={`px-4 py-3 font-semibold border-b-2 transition ${
+              activeTab === 'affiliate'
+                ? 'border-accent text-accent'
+                : 'border-transparent text-text-dark hover:text-text-light'
+            }`}
+          >
+            Affiliate
+          </button>
+        </div>
+
+        {/* Tab Content */}
+        {activeTab === 'balance' && (
+          <div className="space-y-4">
+            <div className="card p-6 bg-secondary border-border/50">
+              <h3 className="font-bold text-white mb-4">Quick Actions</h3>
+              <div className="space-y-2">
+                <Link
+                  href="/events"
+                  className="block w-full bg-accent hover:bg-yellow-600 text-primary font-bold py-3 rounded-lg text-center transition"
+                >
+                  Buy Tickets
+                </Link>
               </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Affiliate Section Link */}
-        <Link href="/dashboard/affiliate-gold" className="block">
-          <div className="card p-6 bg-gradient-to-r from-indigo-900/40 to-purple-900/40 border-accent/20 flex items-center justify-between group">
-            <div>
-              <h4 className="text-lg font-bold text-accent mb-1">Affiliate Gold Program</h4>
-              <p className="text-text-dark text-sm">Earn commissions by sharing events you love.</p>
             </div>
-            <div className="text-2xl group-hover:translate-x-2 transition-transform">✨</div>
           </div>
-        </Link>
+        )}
+
+        {activeTab === 'transactions' && (
+          <div className="space-y-4">
+            <h3 className="text-xl font-display font-bold px-2">Transaction History</h3>
+            <div className="space-y-2">
+              {transactions.length === 0 ? (
+                <div className="card p-8 bg-secondary border-border/30 text-center">
+                  <p className="text-text-dark">No transactions yet</p>
+                </div>
+              ) : (
+                transactions.map((tx) => (
+                  <div key={tx.id} className="card p-4 bg-secondary border-border/30 flex items-center justify-between hover:border-accent/50 transition-colors">
+                    <div className="flex items-center gap-4">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg ${
+                        tx.amount > 0 ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'
+                      }`}>
+                        {tx.type === 'earning' ? '💰' : tx.type === 'deposit' ? '📥' : tx.type === 'payment' ? '🎫' : '📤'}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-sm md:text-base capitalize">{tx.type}</p>
+                        <p className="text-text-dark text-xs">
+                          {new Date(tx.created_at).toLocaleDateString()} • {tx.status}
+                        </p>
+                      </div>
+                    </div>
+                    <div className={`font-bold ${tx.amount > 0 ? 'text-green-500' : 'text-text-light'}`}>
+                      {tx.amount > 0 ? '+' : ''}{tx.amount.toLocaleString()}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'affiliate' && (
+          <div className="space-y-4">
+            <Link href="/dashboard/affiliate-gold" className="block">
+              <div className="card p-6 bg-gradient-to-r from-indigo-900/40 to-purple-900/40 border-accent/20 flex items-center justify-between group">
+                <div>
+                  <h4 className="text-lg font-bold text-accent mb-1">Affiliate Gold Program</h4>
+                  <p className="text-text-dark text-sm">Earn commissions by sharing events you love.</p>
+                </div>
+                <div className="text-2xl group-hover:translate-x-2 transition-transform">✨</div>
+              </div>
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   );
