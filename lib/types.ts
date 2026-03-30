@@ -42,6 +42,8 @@ export interface User {
   updated_at?: string;
 }
 
+export type EventTheme = 'sunset' | 'galaxy' | 'ocean' | 'forest' | 'fire' | 'ankara' | 'royal' | 'gold';
+
 export const THEMES = [
   { id: 'sunset', name: 'Sunset', gradient: 'from-orange-400 via-pink-500 to-purple-600' },
   { id: 'galaxy', name: 'Galaxy', gradient: 'from-indigo-900 via-purple-900 to-pink-900' },

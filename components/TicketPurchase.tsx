@@ -68,7 +68,7 @@ export default function TicketPurchase({
               <p className="font-bold text-sm">{info.name}</p>
               <p className="text-xs text-text-dark">{info.description}</p>
               <p className="text-sm font-semibold text-accent mt-2">
-                {formatPrice(calculateTicketPrice(basePrice, tier), currency)}
+                {formatPrice(calculateTicketPrice(basePrice, tier as 'vip' | 'regular' | 'early-bird'), currency)}
               </p>
             </button>
           ))}
