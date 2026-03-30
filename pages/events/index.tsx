@@ -26,15 +26,19 @@ export default function EventsPage() {
       setError(null);
       try {
         const { success, events: fetchedEvents, error: fetchError } = await getEvents();
+        console.log('Supabase getEvents raw response:', { success, fetchedEvents, fetchError });
         console.log('getEvents response:', { success, fetchedEvents, fetchError });
 
         if (success && fetchedEvents) {
+          console.log('Successfully fetched events:', fetchedEvents);
           setEvents(fetchedEvents);
         } else {
+          console.error('Error fetching events:', fetchError);
           setError(fetchError || 'Failed to fetch events');
         }
-      } catch (e) {
-        console.error('Error in fetchEvents:', e);
+      } catch (e: any) {
+        console.error('Caught exception in fetchEvents:', e);
+        setError(e.message || 'An unexpected error occurred.');
         setError('An unexpected error occurred.');
       } finally {
         setLoading(false);
