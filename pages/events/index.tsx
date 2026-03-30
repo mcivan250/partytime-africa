@@ -17,6 +17,8 @@ interface Event {
 
 export default function EventsPage() {
   console.log("EventsPage component rendered.");
+  console.log("Supabase client in EventsPage component:", supabase);
+  console.log("EventsPage component rendered.");
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -144,11 +146,7 @@ export default function EventsPage() {
           </div>
         )}
 
-        <div className="mt-8 p-4 bg-slate-800/50 border border-slate-700 rounded-lg">
-          <h3 className="text-lg font-bold text-white">Debug Info</h3>
-          <p className="text-gray-400 text-sm">Supabase URL: {process.env.NEXT_PUBLIC_SUPABASE_URL}</p>
-          <p className="text-gray-400 text-sm">Supabase Key: {process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'SET' : 'NOT SET'}</p>
-        </div>
+
       </div>
     </div>
   );
