@@ -379,10 +379,10 @@ export async function getEvents() {
       .select('*')
       .order('date_time', { ascending: true });
 
-    if (error) {
-      console.error('Error getting events:', error);
-      return { success: false, error: error.message };
-    }
+      if (error) {
+        console.error("Supabase Error in getEvents:", error.message);
+        return { success: false, error: error.message };
+      }
 
     return { success: true, events };
   } catch (error) {
@@ -402,10 +402,10 @@ export async function getEventById(eventId: string) {
       .eq('id', eventId)
       .single();
 
-    if (error) {
-      console.error('Error getting event by ID:', error);
-      return { success: false, error: error.message };
-    }
+      if (error) {
+        console.error("Supabase Error in getEventById:", error.message);
+        return { success: false, error: error.message };
+      }
 
     return { success: true, event };
   } catch (error) {
