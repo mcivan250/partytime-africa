@@ -8,19 +8,11 @@ import { createClient } from '@supabase/supabase-js';
 
 
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-if (!supabaseUrl) {
-  console.error("NEXT_PUBLIC_SUPABASE_URL is not set");
-  throw new Error("NEXT_PUBLIC_SUPABASE_URL is not set");
-}
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 
 
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-if (!supabaseKey) {
-  console.error("NEXT_PUBLIC_SUPABASE_ANON_KEY is not set");
-  throw new Error("NEXT_PUBLIC_SUPABASE_ANON_KEY is not set");
-}
-console.log("Supabase Key (lib/supabase-db.ts):", supabaseKey ? "SET" : "NOT SET");
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+
 
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
@@ -395,7 +387,7 @@ export async function getEvents() {
       .order('date_time', { ascending: true });
 
       if (error) {
-        console.error("Supabase Error in getEvents:", error.message);
+        
         return { success: false, error: error.message };
       }
 
@@ -418,7 +410,7 @@ export async function getEventById(eventId: string) {
       .single();
 
       if (error) {
-        console.error("Supabase Error in getEventById:", error.message);
+        
         return { success: false, error: error.message };
       }
 
