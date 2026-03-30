@@ -40,13 +40,13 @@ const CreateEventPage: React.FC = () => {
 
     try {
       const newEvent = await createEvent({
-        host_id: user.id,
-        name: eventName,
+        slug: eventName.toLowerCase().replace(/\s+/g, '-'),
+        title: eventName,
         description: eventDescription,
         date_time: `${eventDate}T${eventTime}:00`,
         location_address: eventLocation,
-        theme: eventTheme,
-      });
+        theme: eventTheme.toLowerCase(),
+      }, user.id);
       router.push(`/events/${newEvent.id}`);
     } catch (err: any) {
       setError(err.message || 'Failed to create event');
