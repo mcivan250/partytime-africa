@@ -407,13 +407,12 @@ export async function getEvents() {
       if (error) {
 
         console.error("getEvents: Error fetching events (inner):", error);
-        console.error("getEventById: Error fetching event (inner):", error);
         return { success: false, error: error.message };
       }
 
     return { success: true, events };
   } catch (error) {
-    console.error('Error in getEvents:', error);
+    console.error("Error in getEvents:", error);
     console.error("getEvents: Error in try-catch block:", error);
     return { success: false, error: "Failed to get events" };
   }
@@ -425,16 +424,15 @@ export async function getEvents() {
 export async function getEventById(eventId: string) {
   try {
     const { data: event, error } = await supabase
-      .from('events')
-      .select('*')
-      .eq('id', eventId)
+      .from("events")
+      .select("*")
+      .eq("id", eventId)
       .single();
 
       if (error) {
 
-        console.error("getEvents: Error fetching events (inner):", error);
         console.error("getEventById: Error fetching event (inner):", error);
-        return { success: false, error: error.message };
+        return { success: false, error: error.message };};
       }
 
     return { success: true, event };
