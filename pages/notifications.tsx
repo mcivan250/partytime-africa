@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface Notification {
@@ -12,10 +13,13 @@ interface Notification {
   icon: string;
   timestamp: string;
   read: boolean;
+  link?: string;
+  eventId?: string;
 }
 
 export default function NotificationsPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -38,6 +42,8 @@ export default function NotificationsPage() {
           icon: '🎉',
           timestamp: new Date().toISOString(),
           read: false,
+          link: '/events/2f8e1c13-e3a1-48af-8b8f-3148b4ee857f',
+          eventId: '2f8e1c13-e3a1-48af-8b8f-3148b4ee857f',
         },
         {
           id: '2',
@@ -47,6 +53,7 @@ export default function NotificationsPage() {
           icon: '💰',
           timestamp: new Date(Date.now() - 3600000).toISOString(),
           read: false,
+          link: '/wallet',
         },
         {
           id: '3',
@@ -56,6 +63,7 @@ export default function NotificationsPage() {
           icon: '👥',
           timestamp: new Date(Date.now() - 86400000).toISOString(),
           read: true,
+          link: '/friends',
         },
         {
           id: '4',
@@ -65,6 +73,7 @@ export default function NotificationsPage() {
           icon: '💬',
           timestamp: new Date(Date.now() - 172800000).toISOString(),
           read: true,
+          link: '/messages',
         },
       ];
       setNotifications(demoNotifications);
@@ -81,6 +90,13 @@ export default function NotificationsPage() {
         notif.id === id ? { ...notif, read: true } : notif
       )
     );
+  };
+
+  const handleNotificationClick = (notif: Notification) => {
+    markAsRead(notif.id);
+    if (notif.link) {
+      router.push(notif.link);
+    }
   };
 
   const formatTime = (timestamp: string) => {
@@ -124,7 +140,7 @@ export default function NotificationsPage() {
           notifications.map((notif) => (
             <div
               key={notif.id}
-              onClick={() => markAsRead(notif.id)}
+              onClick={() => handleNotificationClick(notif)}
               className={`p-4 hover:bg-secondary/50 transition-colors cursor-pointer border-l-4 ${
                 notif.read ? 'border-border/20' : 'border-accent'
               }`}
