@@ -17,6 +17,7 @@ interface Event {
 }
 
 export default function EventsPage() {
+  console.log("EventsPage component is rendering.");
 
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
