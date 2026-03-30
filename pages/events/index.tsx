@@ -146,7 +146,7 @@ export default function EventsPage() {
         <div className="mt-8 p-4 bg-slate-800/50 border border-slate-700 rounded-lg">
           <h3 className="text-lg font-bold text-white">Debug Info</h3>
           <p className="text-gray-400 text-sm">Supabase URL: {process.env.NEXT_PUBLIC_SUPABASE_URL}</p>
-          <p className="text-gray-400 text-sm">Supabase Key: {process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}</p>
+          <p className="text-gray-400 text-sm">Supabase Key: {process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'SET' : 'NOT SET'}</p>
         </div>
       </div>
     </div>

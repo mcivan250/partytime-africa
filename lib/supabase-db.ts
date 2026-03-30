@@ -5,13 +5,21 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-console.log("Supabase URL (lib/supabase-db.ts):", process.env.NEXT_PUBLIC_SUPABASE_URL);
-console.log("Supabase Key (lib/supabase-db.ts):", process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-console.log("Supabase URL (lib/supabase-db.ts):", supabaseUrl);
 
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+if (!supabaseUrl) {
+  console.error("NEXT_PUBLIC_SUPABASE_URL is not set");
+  throw new Error("NEXT_PUBLIC_SUPABASE_URL is not set");
+}
+
+
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+if (!supabaseKey) {
+  console.error("NEXT_PUBLIC_SUPABASE_ANON_KEY is not set");
+  throw new Error("NEXT_PUBLIC_SUPABASE_ANON_KEY is not set");
+}
 console.log("Supabase Key (lib/supabase-db.ts):", supabaseKey ? "SET" : "NOT SET");
 
 
