@@ -210,7 +210,7 @@ export default function LuxuryPaymentCheckout({
                 value={cardNumber}
                 onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
                 placeholder="4242 4242 4242 4242"
-                maxLength="19"
+                maxLength={19}
                 className="w-full p-3 rounded-lg border border-border bg-primary text-text-light placeholder-text-dark font-mono"
                 required
               />
@@ -225,7 +225,7 @@ export default function LuxuryPaymentCheckout({
                   value={cardExpiry}
                   onChange={(e) => setCardExpiry(formatExpiry(e.target.value))}
                   placeholder="MM/YY"
-                  maxLength="5"
+                  maxLength={5}
                   className="w-full p-3 rounded-lg border border-border bg-primary text-text-light placeholder-text-dark font-mono"
                   required
                 />
@@ -237,7 +237,7 @@ export default function LuxuryPaymentCheckout({
                   value={cardCVC}
                   onChange={(e) => setCardCVC(e.target.value.replace(/[^0-9]/g, '').slice(0, 4))}
                   placeholder="123"
-                  maxLength="4"
+                  maxLength={4}
                   className="w-full p-3 rounded-lg border border-border bg-primary text-text-light placeholder-text-dark font-mono"
                   required
                 />

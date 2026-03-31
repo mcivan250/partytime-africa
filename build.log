@@ -1,0 +1,21 @@
+
+> app@0.1.0 build
+> next build
+
+▲ Next.js 16.2.1 (Turbopack)
+- Environments: .env.local
+
+  Running TypeScript ...
+Failed to type check.
+
+./components/LuxuryPaymentCheckout.tsx:213:17
+Type error: Type 'string' is not assignable to type 'number'.
+
+  [90m211 |[0m                 onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
+  [90m212 |[0m                 placeholder=[32m"4242 4242 4242 4242"[0m
+[31m[1m>[0m [90m213 |[0m                 maxLength=[32m"19"[0m
+  [90m    |[0m                 [31m[1m^[0m
+  [90m214 |[0m                 className=[32m"w-full p-3 rounded-lg border border-border bg-primary text-tex...[0m
+  [90m215 |[0m                 required
+  [90m216 |[0m               />
+Next.js build worker exited with code: 1 and signal: null

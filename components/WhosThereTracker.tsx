@@ -95,12 +95,12 @@ export default function WhosThereTracker({ eventId }: WhosThereTrackerProps) {
   const updateUserStatus = async (status: 'arrived' | 'on-way' | 'interested') => {
     setUserStatus(status);
     try {
-      const { data: session } = await supabase.auth.getSession();
-      if (!session?.user) return;
+      const { data } = await supabase.auth.getSession();
+      if (!data?.session?.user) return;
 
       await supabase.from('event_attendees').upsert({
         event_id: eventId,
-        user_id: session.user.id,
+        user_id: data.session.user.id,
         status,
         arrived_at: status === 'arrived' ? new Date().toISOString() : null,
       });
