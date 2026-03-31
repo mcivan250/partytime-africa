@@ -196,6 +196,53 @@ export default function HomePage() {
         </div>
       </div>
 
+      {/* The Vibe Feed Section - Social Discovery */}
+      <section className="py-16 md:py-20 bg-gradient-to-br from-accent/10 to-nude/10 border-b border-border">
+        <div className="container max-w-6xl mx-auto px-4 md:px-6">
+          <div className="mb-12 text-center">
+            <h2 className="text-4xl md:text-5xl font-display font-bold text-text-light mb-4">🔥 The Vibe - Live Discovery</h2>
+            <p className="text-text-dark text-lg max-w-2xl mx-auto">Swipe through trending events, see who's there, and join the hottest vibes in real-time.</p>
+          </div>
+          <div className="flex flex-col md:flex-row gap-8 items-center">
+            <div className="flex-1">
+              <div className="relative bg-secondary rounded-2xl border-2 border-accent/30 overflow-hidden h-96 flex items-center justify-center">
+                <div className="text-center">
+                  <div className="text-6xl mb-4">📱</div>
+                  <p className="text-text-light font-semibold mb-2">Swipe. Discover. Vibe.</p>
+                  <p className="text-text-dark text-sm">Experience events like never before</p>
+                </div>
+              </div>
+            </div>
+            <div className="flex-1 space-y-6">
+              <div className="flex items-start gap-4">
+                <div className="text-3xl">🔥</div>
+                <div>
+                  <h3 className="text-xl font-bold text-text-light mb-1">Trending Events</h3>
+                  <p className="text-text-dark">See what's hot right now with real-time engagement metrics.</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-4">
+                <div className="text-3xl">👥</div>
+                <div>
+                  <h3 className="text-xl font-bold text-text-light mb-1">Who's There</h3>
+                  <p className="text-text-dark">Check live attendance and vibe scores before you go.</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-4">
+                <div className="text-3xl">💬</div>
+                <div>
+                  <h3 className="text-xl font-bold text-text-light mb-1">Engage & Connect</h3>
+                  <p className="text-text-dark">Like, comment, and share your favorite events with friends.</p>
+                </div>
+              </div>
+              <Link href="/vibe" className="btn btn-primary px-8 py-4 text-lg font-semibold inline-block hover:scale-105 transition-transform duration-300">
+                Enter The Vibe 🚀
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Trending Events Section - Visually rich feed */}
       <section className="py-16 md:py-20 bg-secondary border-b border-border">
         <div className="container max-w-6xl mx-auto px-4 md:px-6">

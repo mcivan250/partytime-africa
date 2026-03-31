@@ -11,6 +11,8 @@ import MerchandiseCheckout from '../../components/MerchandiseCheckout';
 import TableBookingWidget from '../../components/TableBookingWidget';
 import PlaylistEmbedder from '../../components/PlaylistEmbedder';
 import QRCodeCheckIn from '../../components/QRCodeCheckIn';
+import VIPConcierge from '../../components/VIPConcierge';
+import WhosThereTracker from '../../components/WhosThereTracker';
 
 interface EventDetail {
   id: string;
@@ -443,6 +445,16 @@ export default function EventDetailPage() {
         <div className="bg-secondary border border-border/30 rounded-xl p-4 mb-6">
           <h3 className="text-lg font-bold text-text-light mb-4">🪑 Reserve a Table</h3>
           <TableBookingWidget eventId={event.id} />
+        </div>
+
+        {/* Who's There - Real-Time Tracker */}
+        <div className="bg-secondary border border-border/30 rounded-xl p-4 mb-6">
+          <WhosThereTracker eventId={event.id} />
+        </div>
+
+        {/* VIP Concierge - Bottle Service */}
+        <div className="bg-secondary border border-border/30 rounded-xl p-4 mb-6">
+          <VIPConcierge eventId={event.id} />
         </div>
 
         {/* QR Code Check-In (for organizers) */}
