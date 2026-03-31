@@ -1,9 +1,12 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
+import { useRealtimeMessages } from '@/hooks/useRealtimeMessages';
+import MediaUpload from '@/components/MediaUpload';
+import MediaMessage from '@/components/MediaMessage';
 
 interface Message {
   id: string;
@@ -11,6 +14,8 @@ interface Message {
   content: string;
   created_at: string;
   read: boolean;
+  media_url?: string;
+  media_type?: 'image' | 'video' | 'audio';
 }
 
 interface Conversation {
@@ -32,22 +37,11 @@ export default function ConversationPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [selectedMedia, setSelectedMedia] = useState<{ url: string; type: 'image' | 'video' | 'audio' } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (conversationId) {
-      fetchConversation();
-      // Set up polling for new messages
-      const interval = setInterval(fetchConversation, 3000);
-      return () => clearInterval(interval);
-    }
-  }, [conversationId]);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [conversation?.messages]);
-
-  const fetchConversation = async () => {
+  // Fetch initial conversation data
+  const fetchConversation = useCallback(async () => {
     if (!conversationId) return;
 
     try {
@@ -66,10 +60,59 @@ export default function ConversationPage() {
     } finally {
       setLoading(false);
     }
+  }, [conversationId]);
+
+  useEffect(() => {
+    if (conversationId) {
+      fetchConversation();
+    }
+  }, [conversationId, fetchConversation]);
+
+  // Handle new messages from real-time subscription
+  const handleNewMessage = useCallback((newMessage: Message) => {
+    setConversation((prev) =>
+      prev
+        ? {
+            ...prev,
+            messages: [...prev.messages, newMessage],
+          }
+        : null
+    );
+  }, []);
+
+  // Handle message read status updates
+  const handleMessageRead = useCallback((messageId: string) => {
+    setConversation((prev) =>
+      prev
+        ? {
+            ...prev,
+            messages: prev.messages.map((msg) =>
+              msg.id === messageId ? { ...msg, read: true } : msg
+            ),
+          }
+        : null
+    );
+  }, []);
+
+  // Set up real-time subscriptions
+  useRealtimeMessages(
+    conversationId as string,
+    user?.id,
+    handleNewMessage,
+    handleMessageRead
+  );
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [conversation?.messages]);
+
+  const handleMediaUpload = (url: string, type: 'image' | 'video' | 'audio') => {
+    setSelectedMedia({ url, type });
   };
 
   const handleSendMessage = async () => {
-    if (!messageInput.trim() || !conversation || sending) return;
+    if (!messageInput.trim() && !selectedMedia) return;
+    if (sending || !conversation) return;
 
     setSending(true);
     try {
@@ -80,6 +123,8 @@ export default function ConversationPage() {
         },
         body: JSON.stringify({
           message: messageInput,
+          mediaUrl: selectedMedia?.url || null,
+          mediaType: selectedMedia?.type || null,
         }),
       });
 
@@ -87,7 +132,8 @@ export default function ConversationPage() {
 
       if (data.success) {
         setMessageInput('');
-        await fetchConversation();
+        setSelectedMedia(null);
+        // Message will be added via real-time subscription
       } else {
         setError(data.error || 'Failed to send message');
       }
@@ -167,7 +213,16 @@ export default function ConversationPage() {
                     : 'bg-secondary text-text-light'
                 }`}
               >
-                <p>{message.content}</p>
+                {message.media_url && message.media_type && (
+                  <div className="mb-2">
+                    <MediaMessage
+                      url={message.media_url}
+                      type={message.media_type}
+                      caption={message.content}
+                    />
+                  </div>
+                )}
+                {message.content && <p>{message.content}</p>}
                 <p className={`text-xs mt-1 ${
                   message.sender_id === user?.id
                     ? 'text-primary/70'
@@ -182,9 +237,47 @@ export default function ConversationPage() {
         <div ref={messagesEndRef} />
       </div>
 
+      {/* Media Preview */}
+      {selectedMedia && (
+        <div className="bg-secondary border-t border-border/30 p-4">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm text-text-dark">Media selected</p>
+            <button
+              onClick={() => setSelectedMedia(null)}
+              className="text-accent hover:text-accent/80 text-sm"
+            >
+              Remove
+            </button>
+          </div>
+          <div className="max-w-xs">
+            {selectedMedia.type === 'image' && (
+              <img
+                src={selectedMedia.url}
+                alt="Preview"
+                className="rounded-lg w-full h-auto max-h-40 object-cover"
+              />
+            )}
+            {selectedMedia.type === 'video' && (
+              <video
+                src={selectedMedia.url}
+                className="rounded-lg w-full h-auto max-h-40"
+              />
+            )}
+            {selectedMedia.type === 'audio' && (
+              <audio
+                src={selectedMedia.url}
+                controls
+                className="rounded-lg w-full"
+              />
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Message Input */}
       <div className="fixed bottom-20 left-0 right-0 bg-secondary border-t border-border/30 p-4">
         <div className="flex gap-2 max-w-2xl mx-auto">
+          <MediaUpload onUpload={handleMediaUpload} disabled={sending} />
           <input
             type="text"
             value={messageInput}
@@ -200,7 +293,7 @@ export default function ConversationPage() {
           />
           <button
             onClick={handleSendMessage}
-            disabled={!messageInput.trim() || sending}
+            disabled={(!messageInput.trim() && !selectedMedia) || sending}
             className="bg-accent hover:bg-accent/90 disabled:bg-accent/50 text-primary font-bold px-4 py-2 rounded-lg transition-colors"
           >
             {sending ? '...' : 'Send'}

@@ -7,6 +7,8 @@ interface Message {
   content: string;
   created_at: string;
   read: boolean;
+  media_url?: string;
+  media_type?: 'image' | 'video' | 'audio';
 }
 
 export default async function handler(
@@ -49,6 +51,8 @@ async function handleGetMessages(
         message_text,
         read,
         created_at,
+        media_url,
+        media_type,
         sender:sender_id(id, user_metadata)
       `)
       .or(`and(sender_id.eq.${user.id},receiver_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},receiver_id.eq.${user.id})`)
@@ -63,12 +67,14 @@ async function handleGetMessages(
       .eq('receiver_id', user.id)
       .eq('sender_id', otherUserId);
 
-    const formattedMessages: Message[] = messages?.map((msg) => ({
+    const formattedMessages: Message[] = messages?.map((msg: any) => ({
       id: msg.id,
       sender_id: msg.sender_id,
       content: msg.message_text,
       created_at: msg.created_at,
       read: msg.read,
+      media_url: msg.media_url,
+      media_type: msg.media_type,
     })) || [];
 
     // Get other user info
@@ -87,8 +93,8 @@ async function handleGetMessages(
         messages: formattedMessages,
         other_user: {
           id: otherUserId,
-          name: otherUser?.user_metadata?.full_name || 'Unknown User',
-          profile_photo_url: otherUser?.user_metadata?.profile_photo_url || null,
+          name: (otherUser as any)?.user_metadata?.full_name || 'Unknown User',
+          profile_photo_url: (otherUser as any)?.user_metadata?.profile_photo_url || null,
         },
       },
     });
@@ -110,10 +116,10 @@ async function handleSendMessage(
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const { message } = req.body;
+    const { message, mediaUrl, mediaType } = req.body;
 
-    if (!message || message.trim().length === 0) {
-      return res.status(400).json({ error: 'Message cannot be empty' });
+    if (!message?.trim() && !mediaUrl) {
+      return res.status(400).json({ error: 'Message or media is required' });
     }
 
     // Parse conversation ID to get the other user ID
@@ -126,7 +132,9 @@ async function handleSendMessage(
       .insert({
         sender_id: user.id,
         receiver_id: receiverId,
-        message_text: message,
+        message_text: message || '',
+        media_url: mediaUrl || null,
+        media_type: mediaType || null,
         read: false,
       })
       .select()
@@ -142,6 +150,8 @@ async function handleSendMessage(
         content: newMessage.message_text,
         created_at: newMessage.created_at,
         read: newMessage.read,
+        media_url: newMessage.media_url,
+        media_type: newMessage.media_type,
       },
     });
   } catch (error: any) {
