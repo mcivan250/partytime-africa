@@ -41,7 +41,7 @@ export default function TableBookingWidget({ eventId }: { eventId: string }) {
     try {
       setLoading(true);
       const { data, error: fetchError } = await supabase
-        .from('venue_layouts')
+        .from('event_venue_layouts')
         .select('layout_data')
         .eq('event_id', eventId)
         .single();
