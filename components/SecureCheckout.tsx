@@ -67,8 +67,8 @@ export default function SecureCheckout({
           quantity,
           pricePerTicket: discountedPrice,
           customerEmail: user.email,
-          customerName: user.name,
-          customerPhone: user.phone_number || '+256700000000',
+          customerName: user.user_metadata?.full_name || user.email,
+          customerPhone: user.user_metadata?.phone_number || '+256700000000',
         }),
       });
 
