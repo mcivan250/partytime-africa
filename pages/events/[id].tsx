@@ -121,6 +121,50 @@ export default function EventDetailPage() {
     }
   };
 
+  const handleBuyTickets = async () => {
+    if (!user) {
+      router.push('/auth/signin');
+      return;
+    }
+    if (!event) return;
+
+    setPurchaseLoading(true);
+    setPurchaseMessage('');
+    try {
+      const response = await fetch('/api/purchase-ticket', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          eventId: event.id,
+          ticketTier: selectedTicket,
+          quantity,
+          totalAmount: totalPrice,
+          customerEmail: user.email,
+          customerName: user.user_metadata?.full_name || user.email,
+          customerPhone: user.user_metadata?.phone_number || '+256700000000',
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Payment failed');
+      }
+
+      setPurchaseMessage('✓ Payment successful! Your tickets have been issued.');
+      setTimeout(() => {
+        router.push('/dashboard');
+      }, 2000);
+    } catch (error: any) {
+      console.error('Payment error:', error);
+      setPurchaseMessage('✗ Payment failed: ' + (error.message || 'An error occurred'));
+    } finally {
+      setPurchaseLoading(false);
+    }
+  };
+
   const handleRSVP = async (status: 'going' | 'maybe' | 'cant_go') => {
     if (!user) {
       router.push('/auth/signin');
@@ -309,8 +353,31 @@ export default function EventDetailPage() {
             </div>
           </div>
 
-          <button className="w-full bg-accent hover:bg-accent/90 text-primary font-bold py-3 rounded-lg transition-colors">
-            💳 Buy Tickets
+          {purchaseMessage && (
+            <div className={`mb-4 p-3 rounded-lg text-sm font-semibold ${
+              purchaseMessage.includes('✓')
+                ? 'bg-green-500/10 border border-green-500/30 text-green-400'
+                : 'bg-red-500/10 border border-red-500/30 text-red-400'
+            }`}>
+              {purchaseMessage}
+            </div>
+          )}
+          <button
+            onClick={handleBuyTickets}
+            disabled={purchaseLoading}
+            className="w-full bg-accent hover:bg-accent/90 disabled:bg-accent/50 text-primary font-bold py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
+          >
+            {purchaseLoading ? (
+              <>
+                <span className="animate-spin">⏳</span>
+                Processing...
+              </>
+            ) : (
+              <>
+                <span>💳</span>
+                Buy Tickets
+              </>
+            )}
           </button>
         </div>
 
