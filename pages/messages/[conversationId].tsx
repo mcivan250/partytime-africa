@@ -30,11 +30,16 @@ export default function ConversationPage() {
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [messageInput, setMessageInput] = useState('');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (conversationId) {
       fetchConversation();
+      // Set up polling for new messages
+      const interval = setInterval(fetchConversation, 3000);
+      return () => clearInterval(interval);
     }
   }, [conversationId]);
 
@@ -43,85 +48,55 @@ export default function ConversationPage() {
   }, [conversation?.messages]);
 
   const fetchConversation = async () => {
-    setLoading(true);
+    if (!conversationId) return;
+
     try {
-      // Demo conversation data
-      const demoConversation: Conversation = {
-        id: conversationId as string,
-        other_user: {
-          id: 'u1',
-          name: 'Sarah M.',
-          profile_photo_url: null,
-        },
-        messages: [
-          {
-            id: '1',
-            sender_id: 'u1',
-            content: 'Hey! Are you coming to the Skyline Brunch tomorrow?',
-            created_at: new Date(Date.now() - 3600000).toISOString(),
-            read: true,
-          },
-          {
-            id: '2',
-            sender_id: user?.id || 'current-user',
-            content: 'Yeah! I already got my tickets. See you there!',
-            created_at: new Date(Date.now() - 1800000).toISOString(),
-            read: true,
-          },
-          {
-            id: '3',
-            sender_id: 'u1',
-            content: 'Are you still coming to the Skyline Brunch?',
-            created_at: new Date().toISOString(),
-            read: false,
-          },
-        ],
-      };
-      setConversation(demoConversation);
-    } catch (error) {
-      console.error('Error fetching conversation:', error);
+      const response = await fetch(`/api/messages/${conversationId}`);
+      const data = await response.json();
+
+      if (data.success) {
+        setConversation(data.conversation);
+        setError(null);
+      } else {
+        setError(data.error || 'Failed to fetch conversation');
+      }
+    } catch (err: any) {
+      console.error('Error fetching conversation:', err);
+      setError(err.message || 'An error occurred');
     } finally {
       setLoading(false);
     }
   };
 
   const handleSendMessage = async () => {
-    if (!messageInput.trim() || !conversation) return;
+    if (!messageInput.trim() || !conversation || sending) return;
 
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      sender_id: user?.id || 'current-user',
-      content: messageInput,
-      created_at: new Date().toISOString(),
-      read: true,
-    };
+    setSending(true);
+    try {
+      const response = await fetch(`/api/messages/${conversationId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: messageInput,
+        }),
+      });
 
-    setConversation({
-      ...conversation,
-      messages: [...conversation.messages, newMessage],
-    });
+      const data = await response.json();
 
-    setMessageInput('');
-
-    // Simulate receiving a reply after 2 seconds
-    setTimeout(() => {
-      const reply: Message = {
-        id: (Date.now() + 1).toString(),
-        sender_id: conversation.other_user.id,
-        content: 'That sounds great! Looking forward to it! 🎉',
-        created_at: new Date().toISOString(),
-        read: false,
-      };
-
-      setConversation((prev) =>
-        prev
-          ? {
-              ...prev,
-              messages: [...prev.messages, reply],
-            }
-          : null
-      );
-    }, 2000);
+      if (data.success) {
+        setMessageInput('');
+        await fetchConversation();
+      } else {
+        setError(data.error || 'Failed to send message');
+      }
+    } catch (err: any) {
+      console.error('Error sending message:', err);
+      setError(err.message || 'An error occurred');
+    } finally {
+      setSending(false);
+    }
   };
 
   const formatTime = (timestamp: string) => {
@@ -163,33 +138,47 @@ export default function ConversationPage() {
         <h1 className="text-2xl font-bold text-text-light">{conversation.other_user.name}</h1>
       </div>
 
+      {/* Error Message */}
+      {error && (
+        <div className="mx-4 mt-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+          <p className="text-red-400 text-sm">{error}</p>
+        </div>
+      )}
+
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {conversation.messages.map((message) => (
-          <div
-            key={message.id}
-            className={`flex ${
-              message.sender_id === user?.id ? 'justify-end' : 'justify-start'
-            }`}
-          >
+        {conversation.messages.length === 0 ? (
+          <div className="text-center p-12 text-text-dark">
+            <p className="text-4xl mb-4">💬</p>
+            <p>No messages yet. Start the conversation!</p>
+          </div>
+        ) : (
+          conversation.messages.map((message) => (
             <div
-              className={`max-w-xs px-4 py-2 rounded-lg ${
-                message.sender_id === user?.id
-                  ? 'bg-accent text-primary'
-                  : 'bg-secondary text-text-light'
+              key={message.id}
+              className={`flex ${
+                message.sender_id === user?.id ? 'justify-end' : 'justify-start'
               }`}
             >
-              <p>{message.content}</p>
-              <p className={`text-xs mt-1 ${
-                message.sender_id === user?.id
-                  ? 'text-primary/70'
-                  : 'text-text-dark'
-              }`}>
-                {formatTime(message.created_at)}
-              </p>
+              <div
+                className={`max-w-xs px-4 py-2 rounded-lg ${
+                  message.sender_id === user?.id
+                    ? 'bg-accent text-primary'
+                    : 'bg-secondary text-text-light'
+                }`}
+              >
+                <p>{message.content}</p>
+                <p className={`text-xs mt-1 ${
+                  message.sender_id === user?.id
+                    ? 'text-primary/70'
+                    : 'text-text-dark'
+                }`}>
+                  {formatTime(message.created_at)}
+                </p>
+              </div>
             </div>
-          </div>
-        ))}
+          ))
+        )}
         <div ref={messagesEndRef} />
       </div>
 
@@ -201,19 +190,20 @@ export default function ConversationPage() {
             value={messageInput}
             onChange={(e) => setMessageInput(e.target.value)}
             onKeyPress={(e) => {
-              if (e.key === 'Enter') {
+              if (e.key === 'Enter' && !sending) {
                 handleSendMessage();
               }
             }}
             placeholder="Type a message..."
-            className="flex-1 bg-primary border border-border/30 rounded-lg px-4 py-2 text-text-light placeholder-text-dark focus:outline-none focus:border-accent"
+            disabled={sending}
+            className="flex-1 bg-primary border border-border/30 rounded-lg px-4 py-2 text-text-light placeholder-text-dark focus:outline-none focus:border-accent disabled:opacity-50"
           />
           <button
             onClick={handleSendMessage}
-            disabled={!messageInput.trim()}
+            disabled={!messageInput.trim() || sending}
             className="bg-accent hover:bg-accent/90 disabled:bg-accent/50 text-primary font-bold px-4 py-2 rounded-lg transition-colors"
           >
-            Send
+            {sending ? '...' : 'Send'}
           </button>
         </div>
       </div>

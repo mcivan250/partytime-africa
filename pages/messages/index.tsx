@@ -21,6 +21,7 @@ export default function MessagesPage() {
   const { user } = useAuth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -30,46 +31,19 @@ export default function MessagesPage() {
 
   const fetchConversations = async () => {
     setLoading(true);
+    setError(null);
     try {
-      // Simulate conversation data for MVP/Demo
-      const demoConversations: Conversation[] = [
-        {
-          id: '1',
-          last_message: "Are you still coming to the Skyline Brunch?",
-          last_message_at: new Date().toISOString(),
-          unread_count: 2,
-          other_user: {
-            id: 'u1',
-            name: "Sarah M.",
-            profile_photo_url: null
-          }
-        },
-        {
-          id: '2',
-          last_message: "The vibes at Ankara After Dark were insane!",
-          last_message_at: new Date(Date.now() - 3600000).toISOString(),
-          unread_count: 0,
-          other_user: {
-            id: 'u2',
-            name: "James K.",
-            profile_photo_url: null
-          }
-        },
-        {
-          id: '3',
-          last_message: "See you at the Rooftop Bar tonight!",
-          last_message_at: new Date(Date.now() - 86400000).toISOString(),
-          unread_count: 0,
-          other_user: {
-            id: 'u3',
-            name: "Amara T.",
-            profile_photo_url: null
-          }
-        }
-      ];
-      setConversations(demoConversations);
-    } catch (error) {
-      console.error('Error fetching conversations:', error);
+      const response = await fetch('/api/messages/conversations');
+      const data = await response.json();
+
+      if (data.success) {
+        setConversations(data.conversations);
+      } else {
+        setError(data.error || 'Failed to fetch conversations');
+      }
+    } catch (err: any) {
+      console.error('Error fetching conversations:', err);
+      setError(err.message || 'An error occurred');
     } finally {
       setLoading(false);
     }
@@ -105,6 +79,13 @@ export default function MessagesPage() {
           <span className="absolute left-4 top-1/2 -translate-y-1/2 opacity-50">🔍</span>
         </div>
       </div>
+
+      {/* Error Message */}
+      {error && (
+        <div className="mx-4 mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+          <p className="text-red-400 text-sm">{error}</p>
+        </div>
+      )}
 
       {/* Conversations List */}
       <div className="flex-1 overflow-y-auto">
