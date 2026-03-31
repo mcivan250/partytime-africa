@@ -20,7 +20,7 @@ interface AnalyticsData {
   };
 }
 
-export default function EventAnalyticsDashboard({ eventId }: { eventId: string }) {
+export default function EventAnalyticsDashboard({ eventId, userId }: { eventId?: string; userId?: string }) {
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState<'today' | 'week' | 'month' | 'all'>('all');

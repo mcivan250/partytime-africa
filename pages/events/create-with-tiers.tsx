@@ -1,8 +1,14 @@
-import React, { useState } from 'react';
+'use client';
+
+import { useState } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '../../contexts/AuthContext';
 import { createEvent } from '../../lib/events';
 import { EventTheme } from '../../lib/types';
+import { supabase } from '../../lib/supabase';
+import MerchandiseManager from '../../components/MerchandiseManager';
+import PlaylistEmbedder from '../../components/PlaylistEmbedder';
+import DragDropVenueLayout from '../../components/DragDropVenueLayout';
 
 const CreateEventPage: React.FC = () => {
   const { user } = useAuth();
@@ -14,8 +20,11 @@ const CreateEventPage: React.FC = () => {
   const [eventTime, setEventTime] = useState('');
   const [eventLocation, setEventLocation] = useState('');
   const [eventTheme, setEventTheme] = useState<EventTheme>('ocean');
+  const [eventPrice, setEventPrice] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [step, setStep] = useState<'basic' | 'advanced'>('basic');
+  const [createdEventId, setCreatedEventId] = useState<string | null>(null);
 
   if (!user) {
     return (
@@ -47,7 +56,12 @@ const CreateEventPage: React.FC = () => {
         location_address: eventLocation,
         theme: eventTheme.toLowerCase(),
       }, user.id);
-      router.push(`/events/${newEvent.id}`);
+      // Store price in event metadata or separate table if needed
+      if (eventPrice) {
+        await supabase.from('events').update({ metadata: { price: parseFloat(eventPrice) } }).eq('id', newEvent.id);
+      }
+      setCreatedEventId(newEvent.id);
+      setStep('advanced');
     } catch (err: any) {
       setError(err.message || 'Failed to create event');
     } finally {
@@ -55,11 +69,19 @@ const CreateEventPage: React.FC = () => {
     }
   };
 
+  const handleFinish = () => {
+    if (createdEventId) {
+      router.push(`/events/${createdEventId}`);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-900 text-white p-4 sm:p-8">
-      <div className="max-w-3xl mx-auto bg-gray-800 rounded-lg shadow-lg p-6 sm:p-8">
-        <h1 className="text-3xl sm:text-4xl font-bold text-center mb-8">Create Your Event</h1>
+      <div className="max-w-4xl mx-auto bg-gray-800 rounded-lg shadow-lg p-6 sm:p-8">
+        <h1 className="text-3xl sm:text-4xl font-bold text-center mb-2">Create Your Event</h1>
+        <p className="text-center text-gray-400 mb-8">Step {step === 'basic' ? '1' : '2'} of 2</p>
 
+        {step === 'basic' && (
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label htmlFor="eventName" className="block text-lg font-medium text-gray-300 mb-2">
@@ -135,22 +157,39 @@ const CreateEventPage: React.FC = () => {
             />
           </div>
 
-          <div>
-            <label htmlFor="eventTheme" className="block text-lg font-medium text-gray-300 mb-2">
-              Theme
-            </label>
-            <select
-              id="eventTheme"
-              value={eventTheme}
-              onChange={(e) => setEventTheme(e.target.value as EventTheme)}
-              className="w-full p-3 rounded-md bg-gray-700 border border-gray-600 focus:ring-yellow-500 focus:border-yellow-500 text-white"
-            >
-              <option value="ocean">Ocean</option>
-              <option value="galaxy">Galaxy</option>
-              <option value="sunset">Sunset</option>
-              <option value="ankara">Ankara</option>
-              <option value="fire">Fire</option>
-            </select>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div>
+              <label htmlFor="eventTheme" className="block text-lg font-medium text-gray-300 mb-2">
+                Theme
+              </label>
+              <select
+                id="eventTheme"
+                value={eventTheme}
+                onChange={(e) => setEventTheme(e.target.value as EventTheme)}
+                className="w-full p-3 rounded-md bg-gray-700 border border-gray-600 focus:ring-yellow-500 focus:border-yellow-500 text-white"
+              >
+                <option value="ocean">Ocean</option>
+                <option value="galaxy">Galaxy</option>
+                <option value="sunset">Sunset</option>
+                <option value="ankara">Ankara</option>
+                <option value="fire">Fire</option>
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="eventPrice" className="block text-lg font-medium text-gray-300 mb-2">
+                Ticket Price (UGX)
+              </label>
+              <input
+                type="number"
+                id="eventPrice"
+                value={eventPrice}
+                onChange={(e) => setEventPrice(e.target.value)}
+                placeholder="e.g., 50000"
+                min="0"
+                className="w-full p-3 rounded-md bg-gray-700 border border-gray-600 focus:ring-yellow-500 focus:border-yellow-500 text-white"
+              />
+            </div>
           </div>
 
           {error && <p className="text-red-500 text-center">{error}</p>}
@@ -160,9 +199,42 @@ const CreateEventPage: React.FC = () => {
             className="w-full bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-3 px-4 rounded-md transition-colors duration-200"
             disabled={loading}
           >
-            {loading ? 'Creating Event...' : 'Create Event'}
+            {loading ? 'Creating Event...' : 'Continue to Add Extras'}
           </button>
         </form>
+        )}
+
+        {step === 'advanced' && createdEventId && (
+        <div className="space-y-8">
+          <div className="bg-gray-700 rounded-lg p-6">
+            <h2 className="text-2xl font-bold mb-6">Add Event Extras</h2>
+            
+            <div className="space-y-8">
+              <div>
+                <h3 className="text-xl font-bold mb-4">🎵 Add Playlists</h3>
+                <PlaylistEmbedder eventId={createdEventId} />
+              </div>
+
+              <div className="border-t border-gray-600 pt-8">
+                <h3 className="text-xl font-bold mb-4">🛍️ Add Merchandise</h3>
+                <MerchandiseManager eventId={createdEventId} />
+              </div>
+
+              <div className="border-t border-gray-600 pt-8">
+                <h3 className="text-xl font-bold mb-4">🪑 Venue Layout</h3>
+                <DragDropVenueLayout eventId={createdEventId} />
+              </div>
+            </div>
+          </div>
+
+          <button
+            onClick={handleFinish}
+            className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-md transition-colors duration-200"
+          >
+            ✓ Finish and View Event
+          </button>
+        </div>
+        )}
       </div>
     </div>
   );

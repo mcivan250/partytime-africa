@@ -22,7 +22,7 @@ interface ReferralData {
   commissionRate: number;
 }
 
-export default function ReferralSystem({ eventId }: { eventId: string }) {
+export default function ReferralSystem({ eventId, userId }: { eventId?: string; userId?: string }) {
   const { user } = useAuth();
   const [referralData, setReferralData] = useState<ReferralData | null>(null);
   const [loading, setLoading] = useState(true);

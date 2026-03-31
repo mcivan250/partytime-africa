@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase, getEventById } from '@/lib/supabase-db';
 import { Event } from '@/lib/types';
+import EventAnalyticsDashboard from '@/components/EventAnalyticsDashboard';
+import ReferralSystem from '@/components/ReferralSystem';
 
 const DashboardPage: React.FC = () => {
   const { user, loading: userLoading } = useAuth();
@@ -156,6 +158,18 @@ const DashboardPage: React.FC = () => {
         </div>
 
         {error && <p className="text-red-500 text-center mt-8">Error: {error}</p>}
+      </div>
+
+      {/* Analytics Section */}
+      <div className="max-w-7xl mx-auto mt-12 border-t border-gray-700 pt-8">
+        <h2 className="text-3xl font-bold mb-8">📊 Event Analytics</h2>
+        <EventAnalyticsDashboard userId={user?.id} />
+      </div>
+
+      {/* Referral System Section */}
+      <div className="max-w-7xl mx-auto mt-12 border-t border-gray-700 pt-8">
+        <h2 className="text-3xl font-bold mb-8">💰 Referral Program</h2>
+        <ReferralSystem userId={user?.id} />
       </div>
     </div>
   );

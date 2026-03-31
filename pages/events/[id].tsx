@@ -7,6 +7,10 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { THEMES } from '../../lib/types';
 import { purchaseTickets } from '../../lib/ticket-purchase';
+import MerchandiseCheckout from '../../components/MerchandiseCheckout';
+import TableBookingWidget from '../../components/TableBookingWidget';
+import PlaylistEmbedder from '../../components/PlaylistEmbedder';
+import QRCodeCheckIn from '../../components/QRCodeCheckIn';
 
 interface EventDetail {
   id: string;
@@ -422,6 +426,32 @@ export default function EventDetailPage() {
             })}
           </div>
         </div>
+
+        {/* Playlists */}
+        <div className="bg-secondary border border-border/30 rounded-xl p-4 mb-6">
+          <h3 className="text-lg font-bold text-text-light mb-4">🎵 Event Playlists</h3>
+          <PlaylistEmbedder eventId={event.id} />
+        </div>
+
+        {/* Merchandise */}
+        <div className="bg-secondary border border-border/30 rounded-xl p-4 mb-6">
+          <h3 className="text-lg font-bold text-text-light mb-4">🛍️ Merchandise</h3>
+          <MerchandiseCheckout eventId={event.id} />
+        </div>
+
+        {/* Table Booking */}
+        <div className="bg-secondary border border-border/30 rounded-xl p-4 mb-6">
+          <h3 className="text-lg font-bold text-text-light mb-4">🪑 Reserve a Table</h3>
+          <TableBookingWidget eventId={event.id} />
+        </div>
+
+        {/* QR Code Check-In (for organizers) */}
+        {user?.id === event.host_id && (
+          <div className="bg-secondary border border-border/30 rounded-xl p-4 mb-6">
+            <h3 className="text-lg font-bold text-text-light mb-4">📱 Check-In Scanner</h3>
+            <QRCodeCheckIn eventId={event.id} />
+          </div>
+        )}
 
         {/* Event Details */}
         <div className="bg-secondary border border-border/30 rounded-xl p-4 mb-6 space-y-4">
