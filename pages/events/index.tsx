@@ -53,9 +53,7 @@ export default function EventsPage() {
       <h1 className="text-3xl font-bold mb-4">Events</h1>
       {loading && <p>Loading...</p>}
       {error && <p className="text-red-500">Error: {error}</p>}
-      <pre className="bg-gray-800 p-4 rounded-lg overflow-x-auto">
-        {JSON.stringify({ events, loading, error }, null, 2)}
-      </pre>
+
       <ul>
         {events.map((event) => (
           <li key={event.id} className="border-b border-gray-700 py-2">
