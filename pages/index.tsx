@@ -1,9 +1,8 @@
-'use client';
-
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import Image from 'next/image';
 
 interface EventStats {
   totalEvents: number;
@@ -11,30 +10,58 @@ interface EventStats {
   totalRSVPs: number;
 }
 
+interface Event {
+  id: string;
+  name: string;
+  description: string;
+  date: string;
+  time: string;
+  location: string;
+  poster_url?: string;
+  theme?: string;
+}
+
 export default function HomePage() {
   const { user } = useAuth();
   const [stats, setStats] = useState<EventStats>({
-    totalEvents: 150,
-    totalUsers: 5000,
-    totalRSVPs: 50000,
+    totalEvents: 0,
+    totalUsers: 0,
+    totalRSVPs: 0,
   });
+  const [trendingEvents, setTrendingEvents] = useState<Event[]>([]);
 
   useEffect(() => {
     fetchStats();
+    fetchTrendingEvents();
   }, []);
 
   const fetchStats = async () => {
     try {
-      const { data: events } = await supabase.from('events').select('id', { count: 'exact' });
-      const { data: users } = await supabase.from('users').select('id', { count: 'exact' });
+      const { count: eventsCount } = await supabase.from('events').select('id', { count: 'exact', head: true });
+      const { count: usersCount } = await supabase.from('users').select('id', { count: 'exact', head: true });
       
       setStats({
-        totalEvents: events?.length || 150,
-        totalUsers: users?.length || 5000,
-        totalRSVPs: 50000, // This would come from RSVPs table if it exists
+        totalEvents: eventsCount || 0,
+        totalUsers: usersCount || 0,
+        totalRSVPs: 50000, // Placeholder, ideally from RSVPs table
       });
     } catch (error) {
       console.error('Error fetching stats:', error);
+    }
+  };
+
+  const fetchTrendingEvents = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('events')
+        .select('id, name, description, date, time, location, poster_url, theme')
+        .order('created_at', { ascending: false })
+        .limit(3);
+
+      if (error) throw error;
+      setTrendingEvents(data || []);
+    } catch (error) {
+      console.error('Error fetching trending events:', error);
     }
   };
 
@@ -90,12 +117,12 @@ export default function HomePage() {
   ];
 
   return (
-    <div className="min-h-screen bg-primary text-text-light overflow-x-hidden">
-      {/* Navigation */}
+    <div className="min-h-screen bg-primary text-text-light overflow-x-hidden font-body">
+      {/* Navigation - Retain existing structure but apply new styles */}
       <nav className="bg-secondary border-b border-border sticky top-0 z-50 backdrop-blur-sm bg-opacity-95">
         <div className="container max-w-6xl mx-auto px-4 md:px-6 py-4 flex justify-between items-center">
-          <Link href="/" className="text-xl md:text-2xl font-display font-bold text-accent hover:text-yellow-300 transition-colors">
-            🎉 Party Time Africa
+          <Link href="/" className="text-xl md:text-2xl font-display font-bold text-accent hover:text-accent-light transition-colors">
+            🎉 PartyTime Africa
           </Link>
           <div className="flex gap-2 md:gap-4">
             {user ? (
@@ -121,31 +148,30 @@ export default function HomePage() {
         </div>
       </nav>
 
-      {/* Hero Section - Partiful Inspired */}
-      <section className="relative bg-gradient-to-br from-secondary via-primary to-secondary py-16 md:py-24 overflow-hidden">
-        {/* Background decoration */}
-        <div className="absolute inset-0 opacity-10">
+      {/* Hero Section - Luxurious and inviting */}
+      <section className="relative bg-gradient-to-br from-primary via-secondary to-primary py-20 md:py-32 overflow-hidden">
+        <div className="absolute inset-0 opacity-20">
           <div className="absolute top-0 left-1/4 w-96 h-96 bg-accent rounded-full blur-3xl"></div>
-          <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-accent rounded-full blur-3xl"></div>
+          <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-nude rounded-full blur-3xl"></div>
         </div>
 
         <div className="container max-w-6xl mx-auto px-4 md:px-6 relative z-10">
-          <div className="text-center mb-12">
-            <div className="inline-block mb-4 px-4 py-2 bg-accent bg-opacity-10 rounded-full border border-accent border-opacity-30">
-              <span className="text-accent text-sm font-semibold">✨ 100K+ Ratings</span>
+          <div className="text-center mb-16">
+            <div className="inline-block mb-6 px-5 py-2 bg-accent bg-opacity-10 rounded-full border border-accent border-opacity-30">
+              <span className="text-accent text-sm font-semibold uppercase tracking-wide">✨ Experience Luxury Events</span>
             </div>
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-display font-bold mb-6 text-accent leading-tight">
-              Celebrate in Style
+            <h1 className="text-5xl md:text-7xl lg:text-8xl font-display font-bold mb-8 text-text-light leading-tight drop-shadow-lg">
+              Your Night, Elevated.
             </h1>
-            <p className="text-lg md:text-xl text-text-dark mb-8 md:mb-12 max-w-3xl mx-auto leading-relaxed">
-              The easiest way to discover, create, and manage unforgettable events. Premium ticketing, affiliate rewards, and real-time analytics—all in one platform.
+            <p className="text-lg md:text-xl text-text-dark mb-12 max-w-4xl mx-auto leading-relaxed">
+              Discover, create, and manage exclusive events with unparalleled elegance. From VIP access to seamless ticketing, elevate every moment.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/events/create-with-tiers" className="btn btn-primary px-8 py-4 text-lg w-full sm:w-auto text-center font-semibold hover:scale-105 transition-transform">
-                🚀 Create Your Event
+              <Link href="/events/create-with-tiers" className="btn btn-primary px-10 py-4 text-lg w-full sm:w-auto text-center font-semibold hover:scale-105 transition-transform duration-300">
+                🚀 Create Your Exclusive Event
               </Link>
-              <Link href="/events" className="btn btn-secondary px-8 py-4 text-lg w-full sm:w-auto text-center font-semibold hover:bg-border transition-colors">
-                Explore Events
+              <Link href="/events" className="btn btn-secondary px-10 py-4 text-lg w-full sm:w-auto text-center font-semibold hover:bg-border-light transition-colors duration-300">
+                Explore Curated Events
               </Link>
             </div>
           </div>
@@ -155,47 +181,66 @@ export default function HomePage() {
       {/* Social Proof - Stats Bar */}
       <div className="bg-primary py-12 md:py-16 border-y border-border/50">
         <div className="container max-w-6xl mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12 text-center">
-          <div className="group hover:scale-105 transition-transform">
-            <div className="text-4xl md:text-5xl font-bold text-accent mb-2">{stats.totalEvents}+</div>
-            <div className="text-text-dark uppercase tracking-widest text-sm font-semibold">Events This Month</div>
+          <div className="group hover:scale-105 transition-transform duration-300">
+            <div className="text-5xl md:text-6xl font-bold text-accent mb-2">{stats.totalEvents}+</div>
+            <div className="text-text-dark uppercase tracking-widest text-sm font-semibold">Exclusive Events</div>
           </div>
-          <div className="group hover:scale-105 transition-transform">
-            <div className="text-4xl md:text-5xl font-bold text-accent mb-2">{stats.totalUsers}K+</div>
-            <div className="text-text-dark uppercase tracking-widest text-sm font-semibold">Active Users</div>
+          <div className="group hover:scale-105 transition-transform duration-300">
+            <div className="text-5xl md:text-6xl font-bold text-accent mb-2">{stats.totalUsers}K+</div>
+            <div className="text-text-dark uppercase tracking-widest text-sm font-semibold">Elite Members</div>
           </div>
-          <div className="group hover:scale-105 transition-transform">
-            <div className="text-4xl md:text-5xl font-bold text-accent mb-2">{stats.totalRSVPs}K+</div>
-            <div className="text-text-dark uppercase tracking-widest text-sm font-semibold">Guests Connected</div>
+          <div className="group hover:scale-105 transition-transform duration-300">
+            <div className="text-5xl md:text-6xl font-bold text-accent mb-2">{stats.totalRSVPs}K+</div>
+            <div className="text-text-dark uppercase tracking-widest text-sm font-semibold">Guests Attended</div>
           </div>
         </div>
       </div>
 
-      {/* Trending Events Section */}
+      {/* Trending Events Section - Visually rich feed */}
       <section className="py-16 md:py-20 bg-secondary border-b border-border">
         <div className="container max-w-6xl mx-auto px-4 md:px-6">
-          <div className="mb-12">
-            <h2 className="text-3xl md:text-4xl font-display font-bold text-accent mb-2">Trending Now 🔥</h2>
-            <p className="text-text-dark">The hottest events happening in Kampala right now</p>
+          <div className="mb-12 text-center">
+            <h2 className="text-4xl md:text-5xl font-display font-bold text-text-light mb-4">Trending Experiences 🔥</h2>
+            <p className="text-text-dark text-lg max-w-2xl mx-auto">Discover the most sought-after events and exclusive gatherings.</p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="card p-0 overflow-hidden hover:border-accent transition-all duration-300 group cursor-pointer">
-                <div className="h-40 bg-gradient-to-br from-accent to-yellow-600 flex items-center justify-center relative">
-                  <div className="text-5xl">🎉</div>
-                  <div className="absolute top-3 right-3 bg-black bg-opacity-70 px-3 py-1 rounded text-accent text-sm font-bold">
-                    MAR 30
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {trendingEvents.length > 0 ? (
+              trendingEvents.map((event) => (
+                <Link href={`/events/${event.id}`} key={event.id} className="group block card p-0 overflow-hidden hover:border-accent transition-all duration-300 cursor-pointer">
+                  <div className="relative h-64 w-full overflow-hidden">
+                    <Image 
+                      src={event.poster_url || `/images/event-placeholder-${Math.floor(Math.random() * 3) + 1}.jpg`} 
+                      alt={event.name} 
+                      layout="fill" 
+                      objectFit="cover" 
+                      className="transition-transform duration-500 group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/20"></div>
+                    <div className="absolute bottom-4 left-4 right-4">
+                      <h3 className="text-xl font-display font-bold text-text-light mb-1 drop-shadow">{event.name}</h3>
+                      <p className="text-text-dark text-sm drop-shadow">{event.location} • {new Date(event.date).toLocaleDateString()}</p>
+                    </div>
+                    <div className="absolute top-4 right-4 bg-primary/70 backdrop-blur-sm px-3 py-1 rounded-full text-accent text-xs font-bold uppercase">
+                      {new Date(event.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </div>
                   </div>
-                </div>
-                <div className="p-4">
-                  <h3 className="text-lg font-display font-bold mb-2">Event Title</h3>
-                  <p className="text-text-dark text-sm mb-4">Discover the best nightlife experience...</p>
-                  <div className="text-accent font-semibold text-sm">View Details →</div>
-                </div>
-              </div>
-            ))}
+                  <div className="p-6">
+                    <p className="text-text-dark text-sm line-clamp-2">{event.description}</p>
+                    <div className="mt-4 text-accent font-semibold text-sm flex items-center gap-2">
+                      View Details 
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3" />
+                      </svg>
+                    </div>
+                  </div>
+                </Link>
+              ))
+            ) : (
+              <p className="col-span-3 text-center text-text-dark">No trending events found. Be the first to create one!</p>
+            )}
           </div>
-          <div className="text-center mt-10">
-            <Link href="/events" className="btn btn-primary px-8 py-3">
+          <div className="text-center mt-16">
+            <Link href="/events" className="btn btn-primary px-10 py-4 text-lg font-semibold">
               Explore All Events
             </Link>
           </div>
@@ -206,17 +251,17 @@ export default function HomePage() {
       <section className="py-16 md:py-20 bg-primary border-b border-border">
         <div className="container max-w-6xl mx-auto px-4 md:px-6">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-display font-bold text-accent mb-4">
-              Powerful Features, Easy to Use
+            <h2 className="text-4xl md:text-5xl font-display font-bold text-text-light mb-4">
+              Unrivaled Features, Seamless Experience
             </h2>
-            <p className="text-text-dark max-w-2xl mx-auto">
-              Everything you need to create, manage, and discover unforgettable events
+            <p className="text-text-dark text-lg max-w-3xl mx-auto">
+              Everything you need to create, manage, and discover unforgettable events with a touch of class.
             </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {features.map((feature, idx) => (
-              <div key={idx} className="card p-6 border border-border/50 hover:border-accent hover:shadow-lg transition-all duration-300 group">
-                <div className="text-5xl mb-4 group-hover:scale-110 transition-transform">{feature.icon}</div>
+              <div key={idx} className="card p-8 border border-border/50 hover:border-accent hover:shadow-xl transition-all duration-300 group">
+                <div className="text-6xl mb-6 group-hover:scale-110 transition-transform duration-300 text-accent">{feature.icon}</div>
                 <h3 className="text-xl font-display font-bold mb-3 text-text-light">{feature.title}</h3>
                 <p className="text-text-dark leading-relaxed">{feature.description}</p>
               </div>
@@ -229,22 +274,22 @@ export default function HomePage() {
       <section className="py-16 md:py-20 bg-secondary border-b border-border">
         <div className="container max-w-6xl mx-auto px-4 md:px-6">
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-display font-bold text-accent mb-4">
-              Loved by Event Enthusiasts
+            <h2 className="text-4xl md:text-5xl font-display font-bold text-text-light mb-4">
+              Endorsed by Elite Event-Goers
             </h2>
-            <p className="text-text-dark">See what our community has to say</p>
+            <p className="text-text-dark text-lg max-w-2xl mx-auto">Hear what our discerning community has to say about their PartyTime Africa experience.</p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {testimonials.map((testimonial, idx) => (
-              <div key={idx} className="card p-6 border border-border/50 hover:border-accent transition-all">
+              <div key={idx} className="card p-8 border border-border/50 hover:border-accent transition-all duration-300">
                 <div className="flex items-center mb-4">
                   {[...Array(5)].map((_, i) => (
-                    <span key={i} className="text-accent">⭐</span>
+                    <span key={i} className="text-accent text-xl">⭐</span>
                   ))}
                 </div>
-                <p className="text-text-light mb-4 italic">"{testimonial.quote}"</p>
+                <p className="text-text-light mb-4 italic text-lg">"{testimonial.quote}"</p>
                 <div>
-                  <p className="font-semibold text-accent">{testimonial.author}</p>
+                  <p className="font-semibold text-accent text-lg">{testimonial.author}</p>
                   <p className="text-text-dark text-sm">{testimonial.role}</p>
                 </div>
               </div>
@@ -256,14 +301,14 @@ export default function HomePage() {
       {/* CTA Section */}
       <section className="py-16 md:py-20 bg-gradient-to-r from-accent/10 to-accent/5 border-b border-border">
         <div className="container max-w-4xl mx-auto px-4 md:px-6 text-center">
-          <h2 className="text-3xl md:text-4xl font-display font-bold text-accent mb-4">
-            Ready to Celebrate?
+          <h2 className="text-4xl md:text-5xl font-display font-bold text-text-light mb-4">
+            Ready to Elevate Your Experience?
           </h2>
           <p className="text-text-light mb-8 text-lg">
-            Join thousands of event enthusiasts discovering and creating amazing experiences
+            Join our exclusive community and start discovering or creating unforgettable events today.
           </p>
-          <Link href="/auth/signup" className="btn btn-primary px-8 py-4 text-lg font-semibold">
-            Get Started Free
+          <Link href="/auth/signup" className="btn btn-primary px-10 py-4 text-lg font-semibold">
+            Join the Elite
           </Link>
         </div>
       </section>
@@ -271,7 +316,7 @@ export default function HomePage() {
       {/* Footer */}
       <footer className="py-12 bg-primary border-t border-border text-center">
         <div className="container max-w-6xl mx-auto px-4 md:px-6">
-          <p className="text-text-dark mb-6">© 2026 Party Time Africa. All rights reserved.</p>
+          <p className="text-text-dark mb-6">© 2026 PartyTime Africa. All rights reserved.</p>
           <div className="flex justify-center gap-6 flex-wrap">
             <Link href="/terms" className="text-text-dark hover:text-accent transition-colors">Terms</Link>
             <Link href="/privacy" className="text-text-dark hover:text-accent transition-colors">Privacy</Link>

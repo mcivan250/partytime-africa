@@ -9,6 +9,7 @@ import { supabase } from '../../lib/supabase';
 import MerchandiseManager from '../../components/MerchandiseManager';
 import PlaylistEmbedder from '../../components/PlaylistEmbedder';
 import DragDropVenueLayout from '../../components/DragDropVenueLayout';
+import PosterUpload from '../../components/PosterUpload';
 
 const CreateEventPage: React.FC = () => {
   const { user } = useAuth();
@@ -211,6 +212,11 @@ const CreateEventPage: React.FC = () => {
             
             <div className="space-y-8">
               <div>
+                <h3 className="text-xl font-bold mb-4">🎨 Event Poster</h3>
+                <PosterUpload eventId={createdEventId} />
+              </div>
+
+              <div className="border-t border-gray-600 pt-8">
                 <h3 className="text-xl font-bold mb-4">🎵 Add Playlists</h3>
                 <PlaylistEmbedder eventId={createdEventId} />
               </div>

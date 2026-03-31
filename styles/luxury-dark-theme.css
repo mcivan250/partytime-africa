@@ -1,20 +1,23 @@
 @import "tailwindcss";
 
 /* ============================================
-   GLOBAL STYLES - BLACK LUXURY THEME
+   GLOBAL STYLES - BLACK LUXURY THEME (Kardashian Aesthetic)
    ============================================ */
 
 :root {
-  --color-primary: #1a1a1a;
-  --color-secondary: #0a0a0a;
-  --color-accent: #d4af37;
-  --color-text-light: #e0e0e0;
-  --color-text-dark: #888888;
-  --color-border: #333333;
-  --color-success: #4ade80;
-  --color-error: #ef4444;
+  --color-primary: #1A1A1A; /* Dark mode background, primary surfaces. */
+  --color-secondary: #2C2C2C; /* Card backgrounds, secondary sections. */
+  --color-accent: #C5A35A; /* Call-to-action buttons, highlights, important icons. */
+  --color-text-light: #FFFFFF; /* Main text, headings. */
+  --color-text-dark: #B0B0B0; /* Subheadings, descriptions, inactive states. */
+  --color-border: #444444; /* Border colors */
+  --color-success: #4CAF50; /* Success messages, positive feedback. */
+  --color-error: #FF4D4D; /* Error messages, destructive actions. */
+  --color-nude: #E0DCD7; /* Subtle highlights, selected states, secondary buttons. */
+
   --font-family-primary: 'Inter', sans-serif;
-  --font-family-display: 'Playfair Display', serif;
+  --font-family-display: 'Montserrat', sans-serif;
+
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
   --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.15);
@@ -22,14 +25,14 @@
 }
 
 @theme {
-  --color-primary: #1a1a1a;
-  --color-secondary: #0a0a0a;
-  --color-accent: #d4af37;
-  --color-text-light: #e0e0e0;
-  --color-text-dark: #888888;
-  --color-border: #333333;
-  --color-success: #4ade80;
-  --color-error: #ef4444;
+  --color-primary: #1A1A1A;
+  --color-secondary: #2C2C2C;
+  --color-accent: #C5A35A;
+  --color-text-light: #FFFFFF;
+  --color-text-dark: #B0B0B0;
+  --color-border: #444444;
+  --color-success: #4CAF50;
+  --color-error: #FF4D4D;
 }
 
 body {
@@ -151,7 +154,7 @@ a:hover {
 .form-textarea:focus,
 .form-select:focus {
   border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.2);
+  box-shadow: 0 0 0 3px rgba(197, 163, 90, 0.2); /* Using Accent Gold with transparency */
   outline: none;
 }
 
@@ -194,17 +197,17 @@ a:hover {
 }
 
 /* ============================================
-   THEME GRADIENTS
+   THEME GRADIENTS (Updated to match new palette)
    ============================================ */
 
-.theme-sunset { background: linear-gradient(135deg, #f97316, #ec4899, #9333ea); }
-.theme-galaxy { background: linear-gradient(135deg, #312e81, #581c87, #831843); }
-.theme-ocean { background: linear-gradient(135deg, #60a5fa, #14b8a6, #06b6d4); }
-.theme-forest { background: linear-gradient(135deg, #15803d, #059669, #0d9488); }
-.theme-fire { background: linear-gradient(135deg, #dc2626, #f97316, #eab308); }
-.theme-ankara { background: linear-gradient(135deg, #ca8a04, #dc2626, #15803d); }
-.theme-royal { background: linear-gradient(135deg, #581c87, #3730a3, #1e3a5f); }
-.theme-gold { background: linear-gradient(135deg, #a16207, #d97706, #c2410c); }
+.theme-sunset { background: linear-gradient(135deg, #C5A35A, #E0DCD7, #1A1A1A); }
+.theme-galaxy { background: linear-gradient(135deg, #1A1A1A, #2C2C2C, #B0B0B0); }
+.theme-ocean { background: linear-gradient(135deg, #C5A35A, #444444, #1A1A1A); }
+.theme-forest { background: linear-gradient(135deg, #4CAF50, #2C2C2C, #1A1A1A); }
+.theme-fire { background: linear-gradient(135deg, #FF4D4D, #C5A35A, #1A1A1A); }
+.theme-ankara { background: linear-gradient(135deg, #C5A35A, #FF4D4D, #4CAF50); }
+.theme-royal { background: linear-gradient(135deg, #2C2C2C, #1A1A1A, #B0B0B0); }
+.theme-gold { background: linear-gradient(135deg, #C5A35A, #E0DCD7, #B0B0B0); }
 
 /* ============================================
    EVENT CARD STYLES
