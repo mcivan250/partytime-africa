@@ -9,8 +9,10 @@
         "lint": "eslint"
     },
     "dependencies": {
+        "@sendgrid/mail": "^8.1.6",
         "@supabase/supabase-js": "^2.100.0",
         "@types/bcryptjs": "^2.4.6",
+        "axios": "^1.14.0",
         "bcryptjs": "^3.0.3",
         "dotenv": "^17.3.1",
         "formidable": "^3.5.4",
@@ -19,7 +21,9 @@
         "qrcode": "^1.5.3",
         "react": "19.2.4",
         "react-dom": "19.2.4",
+        "stripe": "^21.0.1",
         "ts-node": "^10.9.2",
+        "twilio": "^5.13.1",
         "vercel": "^50.37.3"
     },
     "devDependencies": {
