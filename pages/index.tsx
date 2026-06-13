@@ -90,3 +90,5 @@ export default function HomePage() {
     </div>
   );
 }
+
+// Forced change to trigger git detection
