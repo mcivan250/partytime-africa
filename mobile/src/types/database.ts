@@ -1,0 +1,1215 @@
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
+
+export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.5"
+  }
+  public: {
+    Tables: {
+      announcements: {
+        Row: {
+          author_id: string
+          body: string
+          created_at: string
+          event_id: string
+          id: string
+        }
+        Insert: {
+          author_id: string
+          body: string
+          created_at?: string
+          event_id: string
+          id?: string
+        }
+        Update: {
+          author_id?: string
+          body?: string
+          created_at?: string
+          event_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "announcements_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "announcements_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      co_hosts: {
+        Row: {
+          can_edit: boolean
+          event_id: string
+          profile_id: string
+        }
+        Insert: {
+          can_edit?: boolean
+          event_id: string
+          profile_id: string
+        }
+        Update: {
+          can_edit?: boolean
+          event_id?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "co_hosts_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_hosts_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      comments: {
+        Row: {
+          body: string
+          created_at: string
+          event_id: string
+          id: string
+          profile_id: string | null
+          rsvp_id: string | null
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          event_id: string
+          id?: string
+          profile_id?: string | null
+          rsvp_id?: string | null
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          event_id?: string
+          id?: string
+          profile_id?: string | null
+          rsvp_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comments_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comments_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comments_rsvp_id_fkey"
+            columns: ["rsvp_id"]
+            isOneToOne: false
+            referencedRelation: "rsvps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_answers: {
+        Row: {
+          answer: string
+          id: string
+          question_id: string
+          rsvp_id: string
+        }
+        Insert: {
+          answer: string
+          id?: string
+          question_id: string
+          rsvp_id: string
+        }
+        Update: {
+          answer?: string
+          id?: string
+          question_id?: string
+          rsvp_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "event_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_answers_rsvp_id_fkey"
+            columns: ["rsvp_id"]
+            isOneToOne: false
+            referencedRelation: "rsvps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_polls: {
+        Row: {
+          closes_at: string | null
+          event_id: string
+          id: string
+          question: string
+        }
+        Insert: {
+          closes_at?: string | null
+          event_id: string
+          id?: string
+          question?: string
+        }
+        Update: {
+          closes_at?: string | null
+          event_id?: string
+          id?: string
+          question?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_polls_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_questions: {
+        Row: {
+          event_id: string
+          id: string
+          options: Json | null
+          position: number
+          prompt: string
+          qtype: Database["public"]["Enums"]["question_type"]
+          required: boolean
+        }
+        Insert: {
+          event_id: string
+          id?: string
+          options?: Json | null
+          position?: number
+          prompt: string
+          qtype?: Database["public"]["Enums"]["question_type"]
+          required?: boolean
+        }
+        Update: {
+          event_id?: string
+          id?: string
+          options?: Json | null
+          position?: number
+          prompt?: string
+          qtype?: Database["public"]["Enums"]["question_type"]
+          required?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_questions_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      events: {
+        Row: {
+          address: string | null
+          allow_comments: boolean
+          allow_guest_photos: boolean
+          capacity: number | null
+          cover_url: string | null
+          created_at: string
+          currency: string
+          description: string | null
+          ends_at: string | null
+          guest_list_visible: boolean
+          host_id: string
+          id: string
+          is_ticketed: boolean
+          lat: number | null
+          lng: number | null
+          rsvp_deadline: string | null
+          slug: string
+          starts_at: string | null
+          status: Database["public"]["Enums"]["event_status"]
+          theme: string
+          timezone: string
+          title: string
+          venue_name: string | null
+          visibility: Database["public"]["Enums"]["event_visibility"]
+        }
+        Insert: {
+          address?: string | null
+          allow_comments?: boolean
+          allow_guest_photos?: boolean
+          capacity?: number | null
+          cover_url?: string | null
+          created_at?: string
+          currency?: string
+          description?: string | null
+          ends_at?: string | null
+          guest_list_visible?: boolean
+          host_id: string
+          id?: string
+          is_ticketed?: boolean
+          lat?: number | null
+          lng?: number | null
+          rsvp_deadline?: string | null
+          slug: string
+          starts_at?: string | null
+          status?: Database["public"]["Enums"]["event_status"]
+          theme?: string
+          timezone?: string
+          title: string
+          venue_name?: string | null
+          visibility?: Database["public"]["Enums"]["event_visibility"]
+        }
+        Update: {
+          address?: string | null
+          allow_comments?: boolean
+          allow_guest_photos?: boolean
+          capacity?: number | null
+          cover_url?: string | null
+          created_at?: string
+          currency?: string
+          description?: string | null
+          ends_at?: string | null
+          guest_list_visible?: boolean
+          host_id?: string
+          id?: string
+          is_ticketed?: boolean
+          lat?: number | null
+          lng?: number | null
+          rsvp_deadline?: string | null
+          slug?: string
+          starts_at?: string | null
+          status?: Database["public"]["Enums"]["event_status"]
+          theme?: string
+          timezone?: string
+          title?: string
+          venue_name?: string | null
+          visibility?: Database["public"]["Enums"]["event_visibility"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "events_host_id_fkey"
+            columns: ["host_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          ntype: string
+          payload: Json
+          profile_id: string
+          read_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ntype: string
+          payload?: Json
+          profile_id: string
+          read_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ntype?: string
+          payload?: Json
+          profile_id?: string
+          read_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          amount_minor: number
+          buyer_name: string
+          buyer_phone: string | null
+          created_at: string
+          currency: string
+          event_id: string
+          id: string
+          kind: Database["public"]["Enums"]["order_kind"]
+          profile_id: string | null
+          provider: string
+          provider_flw_id: string | null
+          provider_tx_ref: string | null
+          referral_code: string | null
+          status: Database["public"]["Enums"]["order_status"]
+        }
+        Insert: {
+          amount_minor: number
+          buyer_name: string
+          buyer_phone?: string | null
+          created_at?: string
+          currency: string
+          event_id: string
+          id?: string
+          kind: Database["public"]["Enums"]["order_kind"]
+          profile_id?: string | null
+          provider?: string
+          provider_flw_id?: string | null
+          provider_tx_ref?: string | null
+          referral_code?: string | null
+          status?: Database["public"]["Enums"]["order_status"]
+        }
+        Update: {
+          amount_minor?: number
+          buyer_name?: string
+          buyer_phone?: string | null
+          created_at?: string
+          currency?: string
+          event_id?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["order_kind"]
+          profile_id?: string | null
+          provider?: string
+          provider_flw_id?: string | null
+          provider_tx_ref?: string | null
+          referral_code?: string | null
+          status?: Database["public"]["Enums"]["order_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payouts: {
+        Row: {
+          amount_minor: number
+          created_at: string
+          currency: string
+          destination: string
+          event_id: string
+          host_id: string
+          id: string
+          provider_ref: string | null
+          status: string
+        }
+        Insert: {
+          amount_minor: number
+          created_at?: string
+          currency: string
+          destination: string
+          event_id: string
+          host_id: string
+          id?: string
+          provider_ref?: string | null
+          status?: string
+        }
+        Update: {
+          amount_minor?: number
+          created_at?: string
+          currency?: string
+          destination?: string
+          event_id?: string
+          host_id?: string
+          id?: string
+          provider_ref?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payouts_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payouts_host_id_fkey"
+            columns: ["host_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      photos: {
+        Row: {
+          created_at: string
+          event_id: string
+          id: string
+          profile_id: string | null
+          rsvp_id: string | null
+          storage_path: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          id?: string
+          profile_id?: string | null
+          rsvp_id?: string | null
+          storage_path: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          id?: string
+          profile_id?: string | null
+          rsvp_id?: string | null
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "photos_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "photos_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "photos_rsvp_id_fkey"
+            columns: ["rsvp_id"]
+            isOneToOne: false
+            referencedRelation: "rsvps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      poll_options: {
+        Row: {
+          id: string
+          label: string
+          option_starts_at: string | null
+          poll_id: string
+        }
+        Insert: {
+          id?: string
+          label: string
+          option_starts_at?: string | null
+          poll_id: string
+        }
+        Update: {
+          id?: string
+          label?: string
+          option_starts_at?: string | null
+          poll_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "poll_options_poll_id_fkey"
+            columns: ["poll_id"]
+            isOneToOne: false
+            referencedRelation: "event_polls"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      poll_votes: {
+        Row: {
+          id: string
+          option_id: string
+          rsvp_id: string
+        }
+        Insert: {
+          id?: string
+          option_id: string
+          rsvp_id: string
+        }
+        Update: {
+          id?: string
+          option_id?: string
+          rsvp_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "poll_votes_option_id_fkey"
+            columns: ["option_id"]
+            isOneToOne: false
+            referencedRelation: "poll_options"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "poll_votes_rsvp_id_fkey"
+            columns: ["rsvp_id"]
+            isOneToOne: false
+            referencedRelation: "rsvps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          city: string | null
+          country_code: string | null
+          created_at: string
+          currency: string | null
+          display_name: string
+          id: string
+          phone: string | null
+          username: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          city?: string | null
+          country_code?: string | null
+          created_at?: string
+          currency?: string | null
+          display_name: string
+          id: string
+          phone?: string | null
+          username?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          city?: string | null
+          country_code?: string | null
+          created_at?: string
+          currency?: string | null
+          display_name?: string
+          id?: string
+          phone?: string | null
+          username?: string | null
+        }
+        Relationships: []
+      }
+      referral_earnings: {
+        Row: {
+          amount_minor: number
+          created_at: string
+          currency: string
+          id: string
+          order_id: string
+          referral_id: string
+          status: string
+        }
+        Insert: {
+          amount_minor: number
+          created_at?: string
+          currency: string
+          id?: string
+          order_id: string
+          referral_id: string
+          status?: string
+        }
+        Update: {
+          amount_minor?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          order_id?: string
+          referral_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_earnings_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referral_earnings_referral_id_fkey"
+            columns: ["referral_id"]
+            isOneToOne: false
+            referencedRelation: "referral_links"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      referral_links: {
+        Row: {
+          code: string
+          commission_bps: number
+          created_at: string
+          event_id: string
+          id: string
+          promoter_id: string
+        }
+        Insert: {
+          code: string
+          commission_bps?: number
+          created_at?: string
+          event_id: string
+          id?: string
+          promoter_id: string
+        }
+        Update: {
+          code?: string
+          commission_bps?: number
+          created_at?: string
+          event_id?: string
+          id?: string
+          promoter_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_links_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referral_links_promoter_id_fkey"
+            columns: ["promoter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reminders: {
+        Row: {
+          event_id: string
+          id: string
+          kind: string
+          send_at: string
+          sent_at: string | null
+        }
+        Insert: {
+          event_id: string
+          id?: string
+          kind: string
+          send_at: string
+          sent_at?: string | null
+        }
+        Update: {
+          event_id?: string
+          id?: string
+          kind?: string
+          send_at?: string
+          sent_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reminders_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rsvps: {
+        Row: {
+          created_at: string
+          edit_token: string
+          event_id: string
+          guest_name: string
+          guest_phone: string | null
+          id: string
+          plus_ones: number
+          profile_id: string | null
+          status: Database["public"]["Enums"]["rsvp_status"]
+          waitlisted: boolean
+        }
+        Insert: {
+          created_at?: string
+          edit_token?: string
+          event_id: string
+          guest_name: string
+          guest_phone?: string | null
+          id?: string
+          plus_ones?: number
+          profile_id?: string | null
+          status: Database["public"]["Enums"]["rsvp_status"]
+          waitlisted?: boolean
+        }
+        Update: {
+          created_at?: string
+          edit_token?: string
+          event_id?: string
+          guest_name?: string
+          guest_phone?: string | null
+          id?: string
+          plus_ones?: number
+          profile_id?: string | null
+          status?: Database["public"]["Enums"]["rsvp_status"]
+          waitlisted?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rsvps_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rsvps_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      table_bookings: {
+        Row: {
+          booker_name: string
+          booker_phone: string | null
+          created_at: string
+          event_id: string
+          id: string
+          order_id: string
+          table_id: string
+        }
+        Insert: {
+          booker_name: string
+          booker_phone?: string | null
+          created_at?: string
+          event_id: string
+          id?: string
+          order_id: string
+          table_id: string
+        }
+        Update: {
+          booker_name?: string
+          booker_phone?: string | null
+          created_at?: string
+          event_id?: string
+          id?: string
+          order_id?: string
+          table_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "table_bookings_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "table_bookings_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "table_bookings_table_id_fkey"
+            columns: ["table_id"]
+            isOneToOne: true
+            referencedRelation: "venue_tables"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ticket_tiers: {
+        Row: {
+          currency: string
+          description: string | null
+          event_id: string
+          id: string
+          name: string
+          per_order_limit: number
+          position: number
+          price_minor: number
+          quantity: number
+          sales_end: string | null
+          sales_start: string | null
+          sold: number
+        }
+        Insert: {
+          currency: string
+          description?: string | null
+          event_id: string
+          id?: string
+          name: string
+          per_order_limit?: number
+          position?: number
+          price_minor: number
+          quantity: number
+          sales_end?: string | null
+          sales_start?: string | null
+          sold?: number
+        }
+        Update: {
+          currency?: string
+          description?: string | null
+          event_id?: string
+          id?: string
+          name?: string
+          per_order_limit?: number
+          position?: number
+          price_minor?: number
+          quantity?: number
+          sales_end?: string | null
+          sales_start?: string | null
+          sold?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_tiers_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tickets: {
+        Row: {
+          attendee_name: string
+          checked_in_at: string | null
+          checked_in_by: string | null
+          event_id: string
+          id: string
+          order_id: string
+          qr_code: string
+          status: Database["public"]["Enums"]["ticket_status"]
+          tier_id: string
+        }
+        Insert: {
+          attendee_name: string
+          checked_in_at?: string | null
+          checked_in_by?: string | null
+          event_id: string
+          id?: string
+          order_id: string
+          qr_code?: string
+          status?: Database["public"]["Enums"]["ticket_status"]
+          tier_id: string
+        }
+        Update: {
+          attendee_name?: string
+          checked_in_at?: string | null
+          checked_in_by?: string | null
+          event_id?: string
+          id?: string
+          order_id?: string
+          qr_code?: string
+          status?: Database["public"]["Enums"]["ticket_status"]
+          tier_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tickets_checked_in_by_fkey"
+            columns: ["checked_in_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_tier_id_fkey"
+            columns: ["tier_id"]
+            isOneToOne: false
+            referencedRelation: "ticket_tiers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      venue_tables: {
+        Row: {
+          currency: string
+          event_id: string
+          id: string
+          name: string
+          price_minor: number
+          seats: number
+          status: string
+          venue_id: string | null
+        }
+        Insert: {
+          currency: string
+          event_id: string
+          id?: string
+          name: string
+          price_minor: number
+          seats: number
+          status?: string
+          venue_id?: string | null
+        }
+        Update: {
+          currency?: string
+          event_id?: string
+          id?: string
+          name?: string
+          price_minor?: number
+          seats?: number
+          status?: string
+          venue_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "venue_tables_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "venue_tables_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      venues: {
+        Row: {
+          address: string | null
+          city: string | null
+          country_code: string | null
+          created_at: string
+          id: string
+          lat: number | null
+          lng: number | null
+          name: string
+          owner_id: string | null
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          country_code?: string | null
+          created_at?: string
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          name: string
+          owner_id?: string | null
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          country_code?: string | null
+          created_at?: string
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          name?: string
+          owner_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "venues_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      is_event_manager: { Args: { e: string }; Returns: boolean }
+    }
+    Enums: {
+      event_status: "draft" | "published" | "cancelled"
+      event_visibility: "public" | "unlisted" | "private"
+      order_kind: "ticket" | "chip_in" | "table" | "merch"
+      order_status: "pending" | "paid" | "failed" | "refunded" | "cancelled"
+      question_type: "text" | "single_choice" | "multi_choice"
+      rsvp_status: "going" | "maybe" | "declined"
+      ticket_status: "valid" | "checked_in" | "void"
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
+}
+
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+
+export type Tables<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
+    }
+    ? R
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
+    : never
+
+export type TablesInsert<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
+    }
+    ? I
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
+    : never
+
+export type TablesUpdate<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
+    }
+    ? U
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
+    : never
+
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never = never,
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  public: {
+    Enums: {
+      event_status: ["draft", "published", "cancelled"],
+      event_visibility: ["public", "unlisted", "private"],
+      order_kind: ["ticket", "chip_in", "table", "merch"],
+      order_status: ["pending", "paid", "failed", "refunded", "cancelled"],
+      question_type: ["text", "single_choice", "multi_choice"],
+      rsvp_status: ["going", "maybe", "declined"],
+      ticket_status: ["valid", "checked_in", "void"],
+    },
+  },
+} as const
