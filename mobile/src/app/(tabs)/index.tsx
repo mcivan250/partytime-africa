@@ -1,12 +1,14 @@
 import { Image } from 'expo-image';
+import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { FlatList, RefreshControl, StyleSheet, View } from 'react-native';
+import { FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
 import type { Tables } from '@/types/database';
 
@@ -31,21 +33,26 @@ function formatStartsAt(event: EventRow) {
 
 function EventCard({ event }: { event: EventRow }) {
   return (
-    <ThemedView type="backgroundElement" style={styles.card}>
-      {event.cover_url ? (
-        <Image source={{ uri: event.cover_url }} style={styles.cover} contentFit="cover" />
-      ) : null}
-      <View style={styles.cardBody}>
-        <ThemedText type="subtitle">{event.title}</ThemedText>
-        <ThemedText type="small">{formatStartsAt(event)}</ThemedText>
-        {event.venue_name ? <ThemedText type="small">{event.venue_name}</ThemedText> : null}
-      </View>
-    </ThemedView>
+    <Pressable
+      onPress={() => router.push({ pathname: '/event/[slug]', params: { slug: event.slug } })}
+      style={({ pressed }) => pressed && styles.pressed}>
+      <ThemedView type="backgroundElement" style={styles.card}>
+        {event.cover_url ? (
+          <Image source={{ uri: event.cover_url }} style={styles.cover} contentFit="cover" />
+        ) : null}
+        <View style={styles.cardBody}>
+          <ThemedText type="subtitle">{event.title}</ThemedText>
+          <ThemedText type="small">{formatStartsAt(event)}</ThemedText>
+          {event.venue_name ? <ThemedText type="small">{event.venue_name}</ThemedText> : null}
+        </View>
+      </ThemedView>
+    </Pressable>
   );
 }
 
 export default function EventsScreen() {
   const theme = useTheme();
+  const { session } = useAuth();
   const [events, setEvents] = useState<EventRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -81,9 +88,18 @@ export default function EventsScreen() {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
-        <ThemedText type="title" style={styles.heading}>
-          Party Time
-        </ThemedText>
+        <View style={styles.headerRow}>
+          <ThemedText type="title" style={styles.heading}>
+            Party Time
+          </ThemedText>
+          {session ? (
+            <Pressable style={styles.hostButton} onPress={() => router.push('/create-event')}>
+              <ThemedText type="smallBold" style={styles.hostButtonLabel}>
+                + Host an event
+              </ThemedText>
+            </Pressable>
+          ) : null}
+        </View>
         <FlatList
           data={events}
           keyExtractor={(item) => item.id}
@@ -118,8 +134,25 @@ const styles = StyleSheet.create({
     maxWidth: MaxContentWidth,
     paddingHorizontal: Spacing.four,
   },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   heading: {
     paddingVertical: Spacing.three,
+  },
+  hostButton: {
+    backgroundColor: '#208AEF',
+    borderRadius: Spacing.two,
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.three,
+  },
+  hostButtonLabel: {
+    color: '#fff',
+  },
+  pressed: {
+    opacity: 0.7,
   },
   list: {
     gap: Spacing.three,
