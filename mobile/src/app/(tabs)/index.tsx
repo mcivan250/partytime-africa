@@ -34,7 +34,7 @@ function formatStartsAt(event: EventRow) {
 function EventCard({ event }: { event: EventRow }) {
   return (
     <Pressable
-      onPress={() => router.push({ pathname: '/event/[slug]', params: { slug: event.slug } })}
+      onPress={() => router.push({ pathname: '/e/[slug]', params: { slug: event.slug } })}
       style={({ pressed }) => pressed && styles.pressed}>
       <ThemedView type="backgroundElement" style={styles.card}>
         {event.cover_url ? (

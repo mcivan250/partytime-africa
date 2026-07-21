@@ -98,7 +98,7 @@ export default function CreateEventScreen() {
         setError(insertError.message);
         return;
       }
-      router.replace({ pathname: '/event/[slug]', params: { slug } });
+      router.replace({ pathname: '/e/[slug]', params: { slug } });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Something went wrong. Please try again.');
     } finally {
