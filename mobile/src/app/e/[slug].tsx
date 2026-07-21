@@ -14,6 +14,7 @@ import {
   View,
 } from 'react-native';
 
+import { Avatars } from '@/components/avatars';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import {
@@ -235,6 +236,10 @@ export default function EventScreen() {
   const [event, setEvent] = useState<Tables<'events'> | null>(null);
   const [hostName, setHostName] = useState<string | null>(null);
   const [goingCount, setGoingCount] = useState<number | null>(null);
+  const [goingNames, setGoingNames] = useState<string[]>([]);
+  const [guestList, setGuestList] = useState<
+    Pick<Tables<'rsvps'>, 'guest_name' | 'status' | 'plus_ones'>[]
+  >([]);
   const [myRsvp, setMyRsvp] = useState<Pick<Tables<'rsvps'>, 'id' | 'status'> | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -253,25 +258,44 @@ export default function EventScreen() {
     }
     setEvent(eventRow);
 
-    const [{ data: host }, { count }, myRsvpResult] = await Promise.all([
-      supabase.from('profiles').select('display_name').eq('id', eventRow.host_id).maybeSingle(),
-      supabase
-        .from('rsvps')
-        .select('id', { count: 'exact', head: true })
-        .eq('event_id', eventRow.id)
-        .eq('status', 'going'),
-      session
-        ? supabase
-            .from('rsvps')
-            .select('id, status')
-            .eq('event_id', eventRow.id)
-            .eq('profile_id', session.user.id)
-            .maybeSingle()
-        : Promise.resolve({ data: null }),
-    ]);
+    const isHost = session?.user.id === eventRow.host_id;
+    const [{ data: host }, { count }, { data: going }, myRsvpResult, guestListResult] =
+      await Promise.all([
+        supabase.from('profiles').select('display_name').eq('id', eventRow.host_id).maybeSingle(),
+        supabase
+          .from('rsvps')
+          .select('id', { count: 'exact', head: true })
+          .eq('event_id', eventRow.id)
+          .eq('status', 'going'),
+        // Names for the "who's there" stack (RLS returns rows when the guest
+        // list is visible or the viewer manages the event).
+        supabase
+          .from('rsvps')
+          .select('guest_name')
+          .eq('event_id', eventRow.id)
+          .eq('status', 'going')
+          .limit(30),
+        session
+          ? supabase
+              .from('rsvps')
+              .select('id, status')
+              .eq('event_id', eventRow.id)
+              .eq('profile_id', session.user.id)
+              .maybeSingle()
+          : Promise.resolve({ data: null }),
+        isHost
+          ? supabase
+              .from('rsvps')
+              .select('guest_name, status, plus_ones')
+              .eq('event_id', eventRow.id)
+              .order('created_at', { ascending: false })
+          : Promise.resolve({ data: [] }),
+      ]);
     setHostName(host?.display_name ?? null);
     setGoingCount(count ?? null);
+    setGoingNames((going ?? []).map((r) => r.guest_name));
     setMyRsvp(myRsvpResult.data ?? null);
+    setGuestList(guestListResult.data ?? []);
     setLoading(false);
   }, [slug, session]);
 
@@ -361,6 +385,12 @@ export default function EventScreen() {
         timeZone: event.timezone,
       })
     : 'Date TBA';
+  const isHost = session?.user.id === event.host_id;
+  const statusEmoji: Record<RsvpStatus, string> = {
+    going: '🔥',
+    maybe: '🤔',
+    declined: '😢',
+  };
 
   return (
     <ThemedView style={styles.container}>
@@ -446,6 +476,39 @@ export default function EventScreen() {
 
           {event.description ? (
             <ThemedText style={styles.description}>{event.description}</ThemedText>
+          ) : null}
+
+          {goingNames.length > 0 ? (
+            <ThemedView type="backgroundElement" style={styles.infoCard}>
+              <ThemedText type="smallBold" themeColor="textSecondary" style={styles.kicker}>
+                WHO&apos;S THERE
+              </ThemedText>
+              <Avatars names={goingNames} />
+            </ThemedView>
+          ) : null}
+
+          {isHost ? (
+            <ThemedView type="backgroundElement" style={styles.infoCard}>
+              <ThemedText type="subtitle">Guest list ({guestList.length})</ThemedText>
+              {guestList.length === 0 ? (
+                <ThemedText type="small" themeColor="textSecondary">
+                  No RSVPs yet. Share the link to get people on the list.
+                </ThemedText>
+              ) : (
+                guestList.map((g, i) => (
+                  <View key={`${g.guest_name}-${i}`} style={styles.guestRow}>
+                    <ThemedText type="small">{statusEmoji[g.status]}</ThemedText>
+                    <ThemedText type="smallBold" style={styles.guestName}>
+                      {g.guest_name}
+                      {g.plus_ones > 0 ? ` +${g.plus_ones}` : ''}
+                    </ThemedText>
+                    <ThemedText type="small" themeColor="textSecondary">
+                      {g.status}
+                    </ThemedText>
+                  </View>
+                ))
+              )}
+            </ThemedView>
           ) : null}
 
           <View style={styles.shareRow}>
@@ -583,6 +646,15 @@ const styles = StyleSheet.create({
   },
   shareWhatsApp: {
     backgroundColor: StateGo,
+  },
+  guestRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
+    paddingVertical: Spacing.one,
+  },
+  guestName: {
+    flex: 1,
   },
   chatHeader: {
     flexDirection: 'row',

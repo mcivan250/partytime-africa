@@ -1,10 +1,11 @@
+import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Brand, MaxContentWidth, Spacing, WebTabBarInset } from '@/constants/theme';
+import { Brand, MaxContentWidth, OnBrand, Spacing, WebTabBarInset } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
@@ -110,10 +111,13 @@ function ProfileCard() {
       <ThemedText type="subtitle">{profile?.display_name ?? 'Your profile'}</ThemedText>
       <ThemedText type="small">{session?.user.email}</ThemedText>
       {profile?.city && <ThemedText type="small">{profile.city}</ThemedText>}
-      <Pressable style={styles.button} onPress={() => supabase.auth.signOut()}>
+      <Pressable style={styles.button} onPress={() => router.push('/my-events')}>
         <ThemedText type="smallBold" style={styles.buttonLabel}>
-          Sign out
+          My events
         </ThemedText>
+      </Pressable>
+      <Pressable style={styles.buttonGhost} onPress={() => supabase.auth.signOut()}>
+        <ThemedText type="smallBold">Sign out</ThemedText>
       </Pressable>
     </ThemedView>
   );
@@ -162,12 +166,20 @@ const styles = StyleSheet.create({
     borderColor: '#8884',
   },
   buttonLabel: {
-    color: '#fff',
+    color: OnBrand,
   },
   button: {
     backgroundColor: Brand,
     borderRadius: 999,
     padding: Spacing.three,
     alignItems: 'center',
+  },
+  buttonGhost: {
+    backgroundColor: '#243527',
+    borderRadius: 999,
+    padding: Spacing.three,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
   },
 });

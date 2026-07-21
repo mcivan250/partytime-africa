@@ -66,6 +66,10 @@ export default function RootLayout() {
             name="create-event"
             options={{ headerShown: true, headerTitle: 'Host an event', presentation: 'modal' }}
           />
+          <Stack.Screen
+            name="my-events"
+            options={{ headerShown: true, headerTitle: 'My events' }}
+          />
         </Stack>
       </ThemeProvider>
     </AuthProvider>
