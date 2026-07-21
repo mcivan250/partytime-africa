@@ -38,7 +38,7 @@ export async function uploadImage(
   bucket: 'event-covers' | 'event-photos' | 'avatars',
   prefix: string,
   image: PickedImage,
-): Promise<string> {
+): Promise<{ path: string; url: string }> {
   const path = `${prefix}/${Date.now()}.${image.extension}`;
   const { error } = await supabase.storage
     .from(bucket)
@@ -46,5 +46,11 @@ export async function uploadImage(
   if (error) {
     throw error;
   }
+  const url = supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
+  return { path, url };
+}
+
+// Build a public URL for an already-stored object path.
+export function publicUrl(bucket: 'event-covers' | 'event-photos' | 'avatars', path: string) {
   return supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
 }

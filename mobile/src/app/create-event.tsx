@@ -79,7 +79,7 @@ export default function CreateEventScreen() {
     try {
       let coverUrl: string | null = null;
       if (coverImage) {
-        coverUrl = await uploadImage('event-covers', session.user.id, coverImage);
+        coverUrl = (await uploadImage('event-covers', session.user.id, coverImage)).url;
       }
       const slug = generateSlug(title);
       const { error: insertError } = await supabase.from('events').insert({

@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 
 import { Avatars } from '@/components/avatars';
+import { PhotoAlbum } from '@/components/photo-album';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import {
@@ -586,6 +587,8 @@ export default function EventScreen() {
               </ThemedText>
             </Pressable>
           </View>
+
+          {event.allow_guest_photos ? <PhotoAlbum eventId={event.id} /> : null}
 
           <PartyChat eventId={event.id} />
         </View>
