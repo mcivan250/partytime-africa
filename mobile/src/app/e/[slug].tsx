@@ -18,6 +18,7 @@ import { Avatars } from '@/components/avatars';
 import { PhotoAlbum } from '@/components/photo-album';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { TicketTiers } from '@/components/ticket-tiers';
 import {
   Brand,
   BrandGradient,
@@ -264,6 +265,7 @@ export default function EventScreen() {
   const [blastMessage, setBlastMessage] = useState('');
   const [blastBusy, setBlastBusy] = useState(false);
   const [blastResult, setBlastResult] = useState<string | null>(null);
+  const [buyNotice, setBuyNotice] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const { data: eventRow, error: eventError } = await supabase
@@ -516,6 +518,22 @@ export default function EventScreen() {
 
           {event.description ? (
             <ThemedText style={styles.description}>{event.description}</ThemedText>
+          ) : null}
+
+          <TicketTiers
+            eventId={event.id}
+            currency={event.currency}
+            isManager={isHost}
+            onBuy={() =>
+              setBuyNotice(
+                'Card & mobile money checkout (MTN MoMo, Airtel, Visa) is being set up — it will be live here shortly.',
+              )
+            }
+          />
+          {buyNotice ? (
+            <ThemedText type="small" themeColor="textSecondary" style={styles.center}>
+              {buyNotice}
+            </ThemedText>
           ) : null}
 
           {goingNames.length > 0 ? (
