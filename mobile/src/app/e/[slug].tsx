@@ -89,6 +89,7 @@ function RsvpButtons({
 function GuestRsvp({ slug, eventId }: { slug: string; eventId: string }) {
   const theme = useTheme();
   const [guestName, setGuestName] = useState('');
+  const [guestPhone, setGuestPhone] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState<RsvpStatus | null>(null);
@@ -101,7 +102,12 @@ function GuestRsvp({ slug, eventId }: { slug: string; eventId: string }) {
     }
     setBusy(true);
     const { data, error: fnError } = await supabase.functions.invoke('rsvp-guest', {
-      body: { slug, guest_name: guestName.trim(), status },
+      body: {
+        slug,
+        guest_name: guestName.trim(),
+        guest_phone: guestPhone.trim() || undefined,
+        status,
+      },
     });
     setBusy(false);
     if (fnError || data?.error) {
@@ -133,6 +139,15 @@ function GuestRsvp({ slug, eventId }: { slug: string; eventId: string }) {
         value={guestName}
         onChangeText={setGuestName}
         autoCapitalize="words"
+      />
+      <TextInput
+        style={[styles.guestInput, { color: theme.text, backgroundColor: theme.background }]}
+        placeholder="Phone (optional) — for event updates"
+        placeholderTextColor={theme.textSecondary}
+        value={guestPhone}
+        onChangeText={setGuestPhone}
+        keyboardType="phone-pad"
+        autoComplete="tel"
       />
       <RsvpButtons current={null} disabled={busy} onPick={submit} />
       {error ? <ThemedText type="small">{error}</ThemedText> : null}
@@ -233,6 +248,7 @@ function PartyChat({ eventId }: { eventId: string }) {
 export default function EventScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const { session } = useAuth();
+  const theme = useTheme();
   const [event, setEvent] = useState<Tables<'events'> | null>(null);
   const [hostName, setHostName] = useState<string | null>(null);
   const [goingCount, setGoingCount] = useState<number | null>(null);
@@ -244,6 +260,9 @@ export default function EventScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [blastMessage, setBlastMessage] = useState('');
+  const [blastBusy, setBlastBusy] = useState(false);
+  const [blastResult, setBlastResult] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const { data: eventRow, error: eventError } = await supabase
@@ -321,6 +340,26 @@ export default function EventScreen() {
     } else {
       shareInvite();
     }
+  };
+
+  const sendBlast = async () => {
+    if (!event || !blastMessage.trim()) return;
+    setBlastBusy(true);
+    setBlastResult(null);
+    const { data, error: fnError } = await supabase.functions.invoke('notify-guests', {
+      body: { event_id: event.id, message: blastMessage.trim(), audience: 'going' },
+    });
+    setBlastBusy(false);
+    if (fnError || data?.error) {
+      setBlastResult(data?.error || 'Could not send. SMS may not be set up yet.');
+      return;
+    }
+    setBlastMessage('');
+    setBlastResult(
+      data?.sent > 0
+        ? `Sent to ${data.sent} guest${data.sent === 1 ? '' : 's'}. 📣`
+        : (data?.note ?? 'No guests with phone numbers yet.'),
+    );
   };
 
   const rsvp = async (status: RsvpStatus) => {
@@ -508,6 +547,32 @@ export default function EventScreen() {
                   </View>
                 ))
               )}
+
+              <View style={styles.blastDivider} />
+              <ThemedText type="smallBold" themeColor="textSecondary" style={styles.kicker}>
+                📣 TEXT YOUR GUESTS
+              </ThemedText>
+              <TextInput
+                style={[styles.guestInput, { color: theme.text, backgroundColor: theme.background }]}
+                placeholder="e.g. Doors at 6 — don't be late!"
+                placeholderTextColor={theme.textSecondary}
+                value={blastMessage}
+                onChangeText={setBlastMessage}
+                multiline
+              />
+              <Pressable
+                style={[styles.blastButton, { opacity: blastBusy || !blastMessage.trim() ? 0.5 : 1 }]}
+                disabled={blastBusy || !blastMessage.trim()}
+                onPress={sendBlast}>
+                <ThemedText type="smallBold" style={styles.onState}>
+                  Send SMS to everyone going
+                </ThemedText>
+              </Pressable>
+              {blastResult ? (
+                <ThemedText type="small" themeColor="textSecondary">
+                  {blastResult}
+                </ThemedText>
+              ) : null}
             </ThemedView>
           ) : null}
 
@@ -655,6 +720,17 @@ const styles = StyleSheet.create({
   },
   guestName: {
     flex: 1,
+  },
+  blastDivider: {
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    marginTop: Spacing.two,
+  },
+  blastButton: {
+    backgroundColor: '#3DDC97',
+    borderRadius: 16,
+    paddingVertical: Spacing.three,
+    alignItems: 'center',
   },
   chatHeader: {
     flexDirection: 'row',
