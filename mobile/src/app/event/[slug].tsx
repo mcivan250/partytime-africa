@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -17,6 +17,11 @@ const RSVP_OPTIONS: { status: RsvpStatus; label: string }[] = [
   { status: 'maybe', label: 'Maybe' },
   { status: 'declined', label: "Can't go" },
 ];
+
+// Public invite link (the web invite page at this path is the next milestone).
+function inviteUrl(slug: string) {
+  return `https://partytime.africa/e/${slug}`;
+}
 
 export default function EventScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
@@ -68,6 +73,21 @@ export default function EventScreen() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const shareInvite = async () => {
+    if (!event) return;
+    const whenLine = event.starts_at
+      ? ` on ${new Date(event.starts_at).toLocaleDateString(undefined, {
+          weekday: 'long',
+          day: 'numeric',
+          month: 'long',
+          timeZone: event.timezone,
+        })}`
+      : '';
+    await Share.share({
+      message: `You're invited to ${event.title}${whenLine}! RSVP here: ${inviteUrl(event.slug)}`,
+    });
+  };
 
   const rsvp = async (status: RsvpStatus) => {
     if (!session || !event) return;
@@ -130,8 +150,17 @@ export default function EventScreen() {
         {event.cover_url ? (
           <Image source={{ uri: event.cover_url }} style={styles.cover} contentFit="cover" />
         ) : null}
-        <ThemedText type="title">{event.title}</ThemedText>
-        {hostName ? <ThemedText type="small">Hosted by {hostName}</ThemedText> : null}
+        <View style={styles.titleRow}>
+          <View style={styles.titleColumn}>
+            <ThemedText type="title">{event.title}</ThemedText>
+            {hostName ? <ThemedText type="small">Hosted by {hostName}</ThemedText> : null}
+          </View>
+          <Pressable style={styles.shareButton} onPress={shareInvite}>
+            <ThemedText type="smallBold" style={styles.rsvpLabelSelected}>
+              Share
+            </ThemedText>
+          </Pressable>
+        </View>
 
         <ThemedView type="backgroundElement" style={styles.infoCard}>
           <ThemedText type="smallBold">{startsAt}</ThemedText>
@@ -200,6 +229,22 @@ const styles = StyleSheet.create({
     width: '100%',
     aspectRatio: 16 / 9,
     borderRadius: Spacing.three,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: Spacing.three,
+  },
+  titleColumn: {
+    flex: 1,
+    gap: Spacing.one,
+  },
+  shareButton: {
+    backgroundColor: '#208AEF',
+    borderRadius: Spacing.two,
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.three,
   },
   infoCard: {
     borderRadius: Spacing.three,

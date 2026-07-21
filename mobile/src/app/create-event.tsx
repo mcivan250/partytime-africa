@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
@@ -8,6 +9,7 @@ import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth-context';
 import { generateSlug } from '@/lib/slug';
+import { pickImage, uploadImage } from '@/lib/storage';
 import { supabase } from '@/lib/supabase';
 import type { Tables } from '@/types/database';
 
@@ -36,6 +38,8 @@ export default function CreateEventScreen() {
   const [address, setAddress] = useState('');
   const [startsAtText, setStartsAtText] = useState('');
   const [visibility, setVisibility] = useState<Visibility>('public');
+  const [coverUri, setCoverUri] = useState<string | null>(null);
+  const [coverImage, setCoverImage] = useState<Awaited<ReturnType<typeof pickImage>>>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -46,6 +50,19 @@ export default function CreateEventScreen() {
       </ThemedView>
     );
   }
+
+  const chooseCover = async () => {
+    setError(null);
+    try {
+      const picked = await pickImage([16, 9]);
+      if (picked) {
+        setCoverImage(picked);
+        setCoverUri(`data:${picked.mimeType};base64,${picked.base64}`);
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not open the photo library.');
+    }
+  };
 
   const submit = async (status: 'draft' | 'published') => {
     setError(null);
@@ -59,24 +76,34 @@ export default function CreateEventScreen() {
       return;
     }
     setBusy(true);
-    const slug = generateSlug(title);
-    const { error: insertError } = await supabase.from('events').insert({
-      host_id: session.user.id,
-      title: title.trim(),
-      slug,
-      description: description.trim() || null,
-      venue_name: venueName.trim() || null,
-      address: address.trim() || null,
-      starts_at: startsAt,
-      visibility,
-      status,
-    });
-    setBusy(false);
-    if (insertError) {
-      setError(insertError.message);
-      return;
+    try {
+      let coverUrl: string | null = null;
+      if (coverImage) {
+        coverUrl = await uploadImage('event-covers', session.user.id, coverImage);
+      }
+      const slug = generateSlug(title);
+      const { error: insertError } = await supabase.from('events').insert({
+        host_id: session.user.id,
+        title: title.trim(),
+        slug,
+        description: description.trim() || null,
+        venue_name: venueName.trim() || null,
+        address: address.trim() || null,
+        starts_at: startsAt,
+        cover_url: coverUrl,
+        visibility,
+        status,
+      });
+      if (insertError) {
+        setError(insertError.message);
+        return;
+      }
+      router.replace({ pathname: '/event/[slug]', params: { slug } });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Something went wrong. Please try again.');
+    } finally {
+      setBusy(false);
     }
-    router.replace({ pathname: '/event/[slug]', params: { slug } });
   };
 
   const inputStyle = [
@@ -87,6 +114,15 @@ export default function CreateEventScreen() {
   return (
     <ThemedView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
+        <Pressable onPress={chooseCover} style={styles.coverPicker}>
+          {coverUri ? (
+            <Image source={{ uri: coverUri }} style={styles.coverPreview} contentFit="cover" />
+          ) : (
+            <ThemedView type="backgroundElement" style={styles.coverPlaceholder}>
+              <ThemedText type="small">+ Add a cover photo</ThemedText>
+            </ThemedView>
+          )}
+        </Pressable>
         <TextInput
           style={inputStyle}
           placeholder="Event title"
@@ -180,6 +216,25 @@ const styles = StyleSheet.create({
     maxWidth: MaxContentWidth,
     width: '100%',
     alignSelf: 'center',
+  },
+  coverPicker: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    borderRadius: Spacing.three,
+    overflow: 'hidden',
+  },
+  coverPreview: {
+    width: '100%',
+    height: '100%',
+  },
+  coverPlaceholder: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: '#8886',
+    borderRadius: Spacing.three,
   },
   input: {
     borderRadius: Spacing.two,

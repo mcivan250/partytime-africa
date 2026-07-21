@@ -32,6 +32,12 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Party Time uses your photos so you can set an event cover and share moments."
+        }
       ]
     ],
     "experiments": {
