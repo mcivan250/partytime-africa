@@ -63,3 +63,7 @@ export const Spacing = {
 
 export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
 export const MaxContentWidth = 800;
+
+// On web the tab bar floats absolutely at the top; screens inside the tab
+// group need this much top padding so their content clears it.
+export const WebTabBarInset = Platform.OS === 'web' ? 76 : 0;

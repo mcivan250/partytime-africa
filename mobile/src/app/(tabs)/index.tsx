@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { BottomTabInset, MaxContentWidth, Spacing, WebTabBarInset } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
@@ -109,13 +109,27 @@ export default function EventsScreen() {
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.text} />
           }
           ListEmptyComponent={
-            <ThemedText style={styles.empty}>
-              {loading
-                ? 'Loading events…'
-                : error
-                  ? `Could not load events: ${error}`
-                  : 'No published events yet. Be the first to host one!'}
-            </ThemedText>
+            loading ? (
+              <ThemedText style={styles.empty}>Loading events…</ThemedText>
+            ) : error ? (
+              <ThemedText style={styles.empty}>Could not load events: {error}</ThemedText>
+            ) : (
+              <ThemedView type="backgroundElement" style={styles.emptyCard}>
+                <ThemedText type="subtitle">No events yet</ThemedText>
+                <ThemedText type="small" style={styles.emptyText}>
+                  {session
+                    ? 'Be the first to throw something. Create an event, add a cover, and share the link with your people.'
+                    : 'Sign in to host your own events and RSVP to invites.'}
+                </ThemedText>
+                <Pressable
+                  style={styles.emptyButton}
+                  onPress={() => router.push(session ? '/create-event' : '/profile')}>
+                  <ThemedText type="smallBold" style={styles.hostButtonLabel}>
+                    {session ? '+ Host your first event' : 'Sign in'}
+                  </ThemedText>
+                </Pressable>
+              </ThemedView>
+            )
           }
         />
       </SafeAreaView>
@@ -131,8 +145,10 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
+    width: '100%',
     maxWidth: MaxContentWidth,
     paddingHorizontal: Spacing.four,
+    paddingTop: WebTabBarInset,
   },
   headerRow: {
     flexDirection: 'row',
@@ -173,5 +189,21 @@ const styles = StyleSheet.create({
   empty: {
     textAlign: 'center',
     paddingTop: Spacing.six,
+  },
+  emptyCard: {
+    marginTop: Spacing.five,
+    borderRadius: Spacing.three,
+    padding: Spacing.four,
+    gap: Spacing.three,
+    alignItems: 'flex-start',
+  },
+  emptyText: {
+    lineHeight: 20,
+  },
+  emptyButton: {
+    backgroundColor: '#208AEF',
+    borderRadius: Spacing.two,
+    paddingVertical: Spacing.three,
+    paddingHorizontal: Spacing.four,
   },
 });
