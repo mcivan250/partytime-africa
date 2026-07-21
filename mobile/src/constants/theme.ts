@@ -7,20 +7,22 @@ import '@/global.css';
 
 import { Platform } from 'react-native';
 
-// Party Time commits to one bold "night-out" look: a near-black canvas with a
-// vibrant accent, regardless of the device's light/dark setting. Both palette
-// slots point at the same dark values so every `Colors[scheme]` reader gets it.
+// Party Time's approved design system (DESIGN.md): a green "forest-black"
+// chrome, dark-first, applied regardless of the device light/dark setting.
+// Brand chrome is green; event posters bring their own colorful gradients.
+// Purple/violet is explicitly banned. Both palette slots point at the same
+// values so every `Colors[scheme]` reader gets this look.
 const nightPalette = {
-  text: '#FFFFFF',
-  textSecondary: '#9A9AA8',
-  background: '#0B0B10',
-  backgroundElement: '#17171F',
-  backgroundSelected: '#24242F',
-  surfaceElevated: '#202029',
-  border: 'rgba(255,255,255,0.08)',
-  accent: '#7B61FF',
-  accentSoft: 'rgba(123,97,255,0.16)',
-  onAccent: '#FFFFFF',
+  text: '#EFF6EE', // paper
+  textSecondary: '#94A697', // mute
+  background: '#111811', // ink
+  backgroundElement: '#19231B', // ink2 — cards, raised surfaces
+  backgroundSelected: '#243527', // ink3 — inputs, chips, pressed
+  surfaceElevated: '#243527',
+  border: 'rgba(255,255,255,0.08)', // line
+  accent: '#1DC96B', // brand gradient mid
+  accentSoft: 'rgba(29,201,107,0.16)',
+  onAccent: '#07130B', // onGrad — dark text ON gradient/accent, never white
 } as const;
 
 export const Colors = {
@@ -30,11 +32,23 @@ export const Colors = {
 
 export type ThemeColor = keyof typeof nightPalette;
 
-// Brand constants for use in static StyleSheet.create (which can't read the
-// runtime theme). Keep in sync with nightPalette.accent.
-export const Brand = '#7B61FF';
-export const BrandGradient = ['#7B61FF', '#FF5FA2'] as const;
-export const OnBrand = '#FFFFFF';
+// Brand constants for static StyleSheet.create (can't read the runtime theme).
+export const Brand = '#1DC96B';
+export const BrandGradient = ['#5BEA8E', '#1DC96B', '#0B8F52'] as const;
+export const BrandGradientLocations = [0, 0.45, 1] as const;
+export const OnBrand = '#07130B';
+
+// State + accent colors from the design system.
+export const StateGo = '#3DDC97';
+export const StateMaybe = '#FFB84D';
+export const Gold = '#E9C46A';
+
+// Font families loaded in the root layout (bundled by @expo-google-fonts).
+export const DisplayFont = 'Unbounded_900Black';
+export const DisplayFontBold = 'Unbounded_700Bold';
+export const BodyFont = 'SpaceGrotesk_400Regular';
+export const BodyFontMedium = 'SpaceGrotesk_500Medium';
+export const BodyFontBold = 'SpaceGrotesk_700Bold';
 
 export const Fonts = Platform.select({
   ios: {

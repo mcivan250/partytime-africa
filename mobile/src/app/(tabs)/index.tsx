@@ -11,6 +11,7 @@ import {
   BottomTabInset,
   Brand,
   BrandGradient,
+  BrandGradientLocations,
   MaxContentWidth,
   OnBrand,
   Spacing,
@@ -44,32 +45,35 @@ function EventCard({ event }: { event: EventRow }) {
   return (
     <Pressable
       onPress={() => router.push({ pathname: '/e/[slug]', params: { slug: event.slug } })}
-      style={({ pressed }) => [styles.card, pressed && styles.pressed]}>
-      {event.cover_url ? (
-        <Image source={{ uri: event.cover_url }} style={StyleSheet.absoluteFill} contentFit="cover" />
-      ) : (
-        <LinearGradient
-          colors={BrandGradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={StyleSheet.absoluteFill}
-        />
-      )}
-      <LinearGradient colors={['transparent', 'rgba(0,0,0,0.9)']} style={StyleSheet.absoluteFill} />
-      <View style={styles.cardContent}>
-        <View style={styles.datePill}>
-          <ThemedText type="smallBold" style={styles.onImage}>
-            {formatStartsAt(event)}
+      style={({ pressed }) => [styles.cardWrap, pressed && styles.pressed]}>
+      <View style={styles.card}>
+        {event.cover_url ? (
+          <Image source={{ uri: event.cover_url }} style={StyleSheet.absoluteFill} contentFit="cover" />
+        ) : (
+          <LinearGradient
+            colors={BrandGradient}
+            locations={BrandGradientLocations}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+        )}
+        <LinearGradient colors={['transparent', 'rgba(0,0,0,0.9)']} style={StyleSheet.absoluteFill} />
+        <View style={styles.cardContent}>
+          <View style={styles.datePill}>
+            <ThemedText type="smallBold" style={styles.onImage}>
+              {formatStartsAt(event)}
+            </ThemedText>
+          </View>
+          <ThemedText type="subtitle" style={styles.onImage}>
+            {event.title}
           </ThemedText>
+          {event.venue_name ? (
+            <ThemedText type="small" style={styles.onImageDim}>
+              {event.venue_name}
+            </ThemedText>
+          ) : null}
         </View>
-        <ThemedText type="subtitle" style={styles.onImage}>
-          {event.title}
-        </ThemedText>
-        {event.venue_name ? (
-          <ThemedText type="small" style={styles.onImageDim}>
-            {event.venue_name}
-          </ThemedText>
-        ) : null}
       </View>
     </Pressable>
   );
@@ -201,6 +205,15 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
     paddingBottom: BottomTabInset + Spacing.three,
     paddingTop: Spacing.one,
+  },
+  cardWrap: {
+    borderRadius: 22,
+    // Poster glow — light spilling from the club door (DESIGN.md signature).
+    shadowColor: Brand,
+    shadowOpacity: 0.35,
+    shadowRadius: 22,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 10,
   },
   card: {
     borderRadius: 22,

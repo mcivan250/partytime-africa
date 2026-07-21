@@ -1,9 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Linking,
   Pressable,
   ScrollView,
   Share,
@@ -14,7 +16,16 @@ import {
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Brand, MaxContentWidth, OnBrand, Spacing } from '@/constants/theme';
+import {
+  Brand,
+  BrandGradient,
+  BrandGradientLocations,
+  MaxContentWidth,
+  OnBrand,
+  Spacing,
+  StateGo,
+  StateMaybe,
+} from '@/constants/theme';
 import { useAuth } from '@/lib/auth-context';
 import { useTheme } from '@/hooks/use-theme';
 import { supabase } from '@/lib/supabase';
@@ -22,15 +33,54 @@ import type { Tables } from '@/types/database';
 
 type RsvpStatus = Tables<'rsvps'>['status'];
 
-const RSVP_OPTIONS: { status: RsvpStatus; label: string }[] = [
-  { status: 'going', label: 'Going' },
-  { status: 'maybe', label: 'Maybe' },
-  { status: 'declined', label: "Can't go" },
+const RSVP_OPTIONS: { status: RsvpStatus; label: string; emoji: string; color: string }[] = [
+  { status: 'going', label: 'Going', emoji: '🔥', color: StateGo },
+  { status: 'maybe', label: 'Maybe', emoji: '🤔', color: StateMaybe },
+  { status: 'declined', label: "Can't", emoji: '😢', color: '#33473A' },
 ];
 
-// Public invite link (the web invite page at this path is the next milestone).
+const RSVP_CONFIRM: Record<RsvpStatus, string> = {
+  going: "🔥 You're on the list — see you there!",
+  maybe: "We'll save you a maybe. Change anytime.",
+  declined: '😢 Next one, then.',
+};
+
 function inviteUrl(slug: string) {
   return `https://partytime.africa/e/${slug}`;
+}
+
+function RsvpButtons({
+  current,
+  disabled,
+  onPick,
+}: {
+  current: RsvpStatus | null;
+  disabled?: boolean;
+  onPick: (status: RsvpStatus) => void;
+}) {
+  return (
+    <View style={styles.rsvpRow}>
+      {RSVP_OPTIONS.map((opt) => {
+        const selected = current === opt.status;
+        const darkLabel = selected && opt.status !== 'declined';
+        return (
+          <Pressable
+            key={opt.status}
+            disabled={disabled}
+            onPress={() => onPick(opt.status)}
+            style={[
+              styles.rsvp,
+              selected && { backgroundColor: opt.color, borderColor: 'transparent' },
+            ]}>
+            <ThemedText style={styles.rsvpEmoji}>{opt.emoji}</ThemedText>
+            <ThemedText type="smallBold" style={darkLabel ? styles.onState : undefined}>
+              {opt.label}
+            </ThemedText>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
 }
 
 // Guest RSVP form for signed-out visitors (the web invite-link path). Inserts
@@ -57,7 +107,6 @@ function GuestRsvp({ slug, eventId }: { slug: string; eventId: string }) {
       setError(data?.error || 'Could not save your RSVP. Please try again.');
       return;
     }
-    // Keep the edit_token so this guest could amend their RSVP later.
     if (data?.edit_token) {
       await AsyncStorage.setItem(`guest_rsvp:${eventId}`, data.edit_token);
     }
@@ -66,10 +115,10 @@ function GuestRsvp({ slug, eventId }: { slug: string; eventId: string }) {
 
   if (confirmed) {
     return (
-      <ThemedText type="small">
+      <ThemedText type="smallBold" style={{ color: StateGo }}>
         {confirmed === 'declined'
-          ? "Thanks for letting the host know."
-          : `You're on the list, ${guestName.trim()}! See you there. 🎉`}
+          ? 'Thanks for letting the host know.'
+          : `You're on the list, ${guestName.trim()}! 🎉`}
       </ThemedText>
     );
   }
@@ -78,28 +127,105 @@ function GuestRsvp({ slug, eventId }: { slug: string; eventId: string }) {
     <View style={styles.guestForm}>
       <TextInput
         style={[styles.guestInput, { color: theme.text, backgroundColor: theme.background }]}
-        placeholder="Your name"
+        placeholder="Your name — no account needed"
         placeholderTextColor={theme.textSecondary}
         value={guestName}
         onChangeText={setGuestName}
         autoCapitalize="words"
       />
-      <View style={styles.rsvpRow}>
-        {RSVP_OPTIONS.map(({ status, label }) => (
-          <Pressable
-            key={status}
-            disabled={busy}
-            onPress={() => submit(status)}
-            style={styles.rsvpButton}>
-            <ThemedText type="smallBold">{label}</ThemedText>
-          </Pressable>
-        ))}
-      </View>
+      <RsvpButtons current={null} disabled={busy} onPick={submit} />
       {error ? <ThemedText type="small">{error}</ThemedText> : null}
       <Pressable onPress={() => router.push('/profile')}>
         <ThemedText type="link">Have an account? Sign in</ThemedText>
       </Pressable>
     </View>
+  );
+}
+
+type ChatRow = {
+  id: string;
+  body: string;
+  created_at: string;
+  profiles: { display_name: string } | null;
+};
+
+// Party Chat — event comments. Readable by anyone when the host allows
+// comments; only signed-in users can post (RLS enforced).
+function PartyChat({ eventId }: { eventId: string }) {
+  const theme = useTheme();
+  const { session } = useAuth();
+  const [messages, setMessages] = useState<ChatRow[]>([]);
+  const [text, setText] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    const { data } = await supabase
+      .from('comments')
+      .select('id, body, created_at, profiles(display_name)')
+      .eq('event_id', eventId)
+      .order('created_at', { ascending: true })
+      .limit(100);
+    if (data) setMessages(data as unknown as ChatRow[]);
+  }, [eventId]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const send = async () => {
+    if (!session || !text.trim()) return;
+    setBusy(true);
+    const { error } = await supabase
+      .from('comments')
+      .insert({ event_id: eventId, profile_id: session.user.id, body: text.trim() });
+    setBusy(false);
+    if (!error) {
+      setText('');
+      load();
+    }
+  };
+
+  return (
+    <ThemedView type="backgroundElement" style={styles.infoCard}>
+      <View style={styles.chatHeader}>
+        <ThemedText style={styles.infoIcon}>💬</ThemedText>
+        <ThemedText type="subtitle">Party chat</ThemedText>
+      </View>
+      {messages.length === 0 ? (
+        <ThemedText type="small" themeColor="textSecondary">
+          No messages yet. Say hi 👋
+        </ThemedText>
+      ) : (
+        messages.map((m) => (
+          <View key={m.id} style={styles.chatMsg}>
+            <ThemedText type="smallBold">{m.profiles?.display_name ?? 'Guest'}</ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              {m.body}
+            </ThemedText>
+          </View>
+        ))
+      )}
+      {session ? (
+        <View style={styles.chatComposer}>
+          <TextInput
+            style={[styles.guestInput, styles.chatInput, { color: theme.text, backgroundColor: theme.background }]}
+            placeholder="Message the party…"
+            placeholderTextColor={theme.textSecondary}
+            value={text}
+            onChangeText={setText}
+          />
+          <Pressable style={styles.sendButton} disabled={busy} onPress={send}>
+            <ThemedText type="smallBold" style={styles.onState}>
+              Send
+            </ThemedText>
+          </Pressable>
+        </View>
+      ) : (
+        <Pressable onPress={() => router.push('/profile')}>
+          <ThemedText type="link">Sign in to join the chat</ThemedText>
+        </Pressable>
+      )}
+    </ThemedView>
   );
 }
 
@@ -129,7 +255,6 @@ export default function EventScreen() {
 
     const [{ data: host }, { count }, myRsvpResult] = await Promise.all([
       supabase.from('profiles').select('display_name').eq('id', eventRow.host_id).maybeSingle(),
-      // Only readable when the host made the guest list visible; ignore failures.
       supabase
         .from('rsvps')
         .select('id', { count: 'exact', head: true })
@@ -154,19 +279,24 @@ export default function EventScreen() {
     load();
   }, [load]);
 
+  const inviteMessage = event
+    ? `You're invited to ${event.title}! RSVP here: ${inviteUrl(event.slug)}`
+    : '';
+
   const shareInvite = async () => {
     if (!event) return;
-    const whenLine = event.starts_at
-      ? ` on ${new Date(event.starts_at).toLocaleDateString(undefined, {
-          weekday: 'long',
-          day: 'numeric',
-          month: 'long',
-          timeZone: event.timezone,
-        })}`
-      : '';
-    await Share.share({
-      message: `You're invited to ${event.title}${whenLine}! RSVP here: ${inviteUrl(event.slug)}`,
-    });
+    await Share.share({ message: inviteMessage });
+  };
+
+  const shareWhatsApp = async () => {
+    if (!event) return;
+    const url = `https://wa.me/?text=${encodeURIComponent(inviteMessage)}`;
+    const ok = await Linking.canOpenURL(url);
+    if (ok) {
+      Linking.openURL(url);
+    } else {
+      shareInvite();
+    }
   };
 
   const rsvp = async (status: RsvpStatus) => {
@@ -200,7 +330,7 @@ export default function EventScreen() {
   if (loading) {
     return (
       <ThemedView style={[styles.container, styles.center]}>
-        <ActivityIndicator />
+        <ActivityIndicator color={Brand} />
       </ThemedView>
     );
   }
@@ -223,81 +353,114 @@ export default function EventScreen() {
         timeZone: event.timezone,
       })
     : 'Date to be announced';
+  const shortDate = event.starts_at
+    ? new Date(event.starts_at).toLocaleDateString(undefined, {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+        timeZone: event.timezone,
+      })
+    : 'Date TBA';
 
   return (
     <ThemedView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
-        {event.cover_url ? (
-          <Image source={{ uri: event.cover_url }} style={styles.cover} contentFit="cover" />
-        ) : null}
-        <View style={styles.titleRow}>
-          <View style={styles.titleColumn}>
-            <ThemedText type="title">{event.title}</ThemedText>
-            {hostName ? <ThemedText type="small">Hosted by {hostName}</ThemedText> : null}
-          </View>
-          <Pressable style={styles.shareButton} onPress={shareInvite}>
-            <ThemedText type="smallBold" style={styles.rsvpLabelSelected}>
-              Share
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        <View style={styles.hero}>
+          {event.cover_url ? (
+            <Image source={{ uri: event.cover_url }} style={StyleSheet.absoluteFill} contentFit="cover" />
+          ) : (
+            <LinearGradient
+              colors={BrandGradient}
+              locations={BrandGradientLocations}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
+          )}
+          <LinearGradient
+            colors={['rgba(17,24,17,0.1)', 'rgba(17,24,17,0.6)', '#111811']}
+            locations={[0, 0.55, 1]}
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={styles.heroContent}>
+            <ThemedText type="smallBold" style={styles.heroKicker}>
+              {shortDate.toUpperCase()}
             </ThemedText>
-          </Pressable>
+            <ThemedText type="title">{event.title}</ThemedText>
+            <View style={styles.heroChips}>
+              {hostName ? (
+                <View style={styles.chip}>
+                  <ThemedText type="small">Hosted by {hostName}</ThemedText>
+                </View>
+              ) : null}
+              {goingCount !== null && goingCount > 0 ? (
+                <View style={styles.chip}>
+                  <ThemedText type="small">{goingCount} going</ThemedText>
+                </View>
+              ) : null}
+            </View>
+          </View>
         </View>
 
-        <ThemedView type="backgroundElement" style={styles.infoCard}>
-          <View style={styles.infoRow}>
-            <ThemedText style={styles.infoIcon}>📅</ThemedText>
-            <ThemedText type="smallBold">{startsAt}</ThemedText>
-          </View>
-          {event.venue_name || event.address ? (
-            <View style={styles.infoRow}>
-              <ThemedText style={styles.infoIcon}>📍</ThemedText>
-              <View style={styles.infoTextColumn}>
-                {event.venue_name ? <ThemedText type="smallBold">{event.venue_name}</ThemedText> : null}
-                {event.address ? (
-                  <ThemedText type="small" themeColor="textSecondary">
-                    {event.address}
+        <View style={styles.body}>
+          <ThemedView type="backgroundElement" style={styles.infoCard}>
+            <ThemedText type="smallBold" themeColor="textSecondary" style={styles.kicker}>
+              ARE YOU PULLING UP?
+            </ThemedText>
+            {session ? (
+              <>
+                <RsvpButtons current={myRsvp?.status ?? null} disabled={saving} onPick={rsvp} />
+                {myRsvp ? (
+                  <ThemedText type="small" themeColor="textSecondary" style={styles.center}>
+                    {RSVP_CONFIRM[myRsvp.status]}
                   </ThemedText>
                 ) : null}
-              </View>
-            </View>
-          ) : null}
-          {goingCount !== null && goingCount > 0 ? (
+              </>
+            ) : (
+              <GuestRsvp slug={event.slug} eventId={event.id} />
+            )}
+            {error ? <ThemedText type="small">{error}</ThemedText> : null}
+          </ThemedView>
+
+          <ThemedView type="backgroundElement" style={styles.infoCard}>
             <View style={styles.infoRow}>
-              <ThemedText style={styles.infoIcon}>👥</ThemedText>
-              <ThemedText type="smallBold">
-                {goingCount} {goingCount === 1 ? 'person' : 'people'} going
-              </ThemedText>
+              <ThemedText style={styles.infoIcon}>📅</ThemedText>
+              <ThemedText type="smallBold">{startsAt}</ThemedText>
             </View>
-          ) : null}
-        </ThemedView>
-
-        {event.description ? <ThemedText>{event.description}</ThemedText> : null}
-
-        <ThemedView type="backgroundElement" style={styles.infoCard}>
-          <ThemedText type="subtitle">Are you coming?</ThemedText>
-          {session ? (
-            <View style={styles.rsvpRow}>
-              {RSVP_OPTIONS.map(({ status, label }) => {
-                const selected = myRsvp?.status === status;
-                return (
-                  <Pressable
-                    key={status}
-                    disabled={saving}
-                    onPress={() => rsvp(status)}
-                    style={[styles.rsvpButton, selected && styles.rsvpButtonSelected]}>
-                    <ThemedText
-                      type="smallBold"
-                      style={selected ? styles.rsvpLabelSelected : undefined}>
-                      {label}
+            {event.venue_name || event.address ? (
+              <View style={styles.infoRow}>
+                <ThemedText style={styles.infoIcon}>📍</ThemedText>
+                <View style={styles.infoTextColumn}>
+                  {event.venue_name ? (
+                    <ThemedText type="smallBold">{event.venue_name}</ThemedText>
+                  ) : null}
+                  {event.address ? (
+                    <ThemedText type="small" themeColor="textSecondary">
+                      {event.address}
                     </ThemedText>
-                  </Pressable>
-                );
-              })}
-            </View>
-          ) : (
-            <GuestRsvp slug={event.slug} eventId={event.id} />
-          )}
-          {error ? <ThemedText type="small">{error}</ThemedText> : null}
-        </ThemedView>
+                  ) : null}
+                </View>
+              </View>
+            ) : null}
+          </ThemedView>
+
+          {event.description ? (
+            <ThemedText style={styles.description}>{event.description}</ThemedText>
+          ) : null}
+
+          <View style={styles.shareRow}>
+            <Pressable style={[styles.shareButton, styles.shareGhost]} onPress={shareInvite}>
+              <ThemedText type="smallBold">Share</ThemedText>
+            </Pressable>
+            <Pressable style={[styles.shareButton, styles.shareWhatsApp]} onPress={shareWhatsApp}>
+              <ThemedText type="smallBold" style={styles.onState}>
+                Share on WhatsApp
+              </ThemedText>
+            </Pressable>
+          </View>
+
+          <PartyChat eventId={event.id} />
+        </View>
       </ScrollView>
     </ThemedView>
   );
@@ -306,41 +469,54 @@ export default function EventScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
   },
   center: {
     justifyContent: 'center',
+    alignItems: 'center',
+    textAlign: 'center',
   },
-  content: {
-    padding: Spacing.four,
-    gap: Spacing.three,
+  scroll: {
     maxWidth: MaxContentWidth,
     width: '100%',
     alignSelf: 'center',
+    paddingBottom: Spacing.six,
   },
-  cover: {
-    width: '100%',
-    aspectRatio: 16 / 9,
-    borderRadius: Spacing.four,
+  hero: {
+    height: 380,
+    justifyContent: 'flex-end',
   },
-  titleRow: {
+  heroContent: {
+    padding: Spacing.four,
+    gap: Spacing.two,
+  },
+  heroKicker: {
+    color: '#FFE3D2',
+    letterSpacing: 2,
+  },
+  heroChips: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
+    gap: Spacing.two,
+    marginTop: Spacing.one,
+    flexWrap: 'wrap',
+  },
+  chip: {
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    borderColor: 'rgba(255,255,255,0.2)',
+    borderWidth: 1,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+  },
+  body: {
+    padding: Spacing.four,
+    paddingTop: Spacing.three,
     gap: Spacing.three,
   },
-  titleColumn: {
-    flex: 1,
-    gap: Spacing.one,
-  },
-  shareButton: {
-    backgroundColor: Brand,
-    borderRadius: 999,
-    paddingVertical: Spacing.two,
-    paddingHorizontal: Spacing.four,
+  kicker: {
+    letterSpacing: 2,
   },
   infoCard: {
-    borderRadius: Spacing.four,
+    borderRadius: 22,
     padding: Spacing.four,
     gap: Spacing.three,
   },
@@ -358,31 +534,76 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: Spacing.half,
   },
+  description: {
+    lineHeight: 24,
+  },
   rsvpRow: {
     flexDirection: 'row',
     gap: Spacing.two,
   },
-  rsvpButton: {
+  rsvp: {
     flex: 1,
     alignItems: 'center',
-    padding: Spacing.three,
-    borderRadius: 999,
-    borderWidth: 1.5,
-    borderColor: Brand,
+    gap: Spacing.half,
+    paddingVertical: Spacing.three,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: '#243527',
   },
-  rsvpButtonSelected: {
-    backgroundColor: Brand,
+  rsvpEmoji: {
+    fontSize: 20,
   },
-  rsvpLabelSelected: {
+  onState: {
     color: OnBrand,
   },
   guestForm: {
     gap: Spacing.three,
   },
   guestInput: {
-    borderRadius: Spacing.three,
+    borderRadius: 16,
     padding: Spacing.three,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.12)',
+  },
+  shareRow: {
+    flexDirection: 'row',
+    gap: Spacing.two,
+  },
+  shareButton: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: Spacing.three,
+    borderRadius: 16,
+  },
+  shareGhost: {
+    backgroundColor: '#243527',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  shareWhatsApp: {
+    backgroundColor: StateGo,
+  },
+  chatHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  chatMsg: {
+    gap: Spacing.half,
+  },
+  chatComposer: {
+    flexDirection: 'row',
+    gap: Spacing.two,
+    alignItems: 'center',
+  },
+  chatInput: {
+    flex: 1,
+  },
+  sendButton: {
+    backgroundColor: Brand,
+    borderRadius: 16,
+    paddingVertical: Spacing.three,
+    paddingHorizontal: Spacing.four,
   },
 });

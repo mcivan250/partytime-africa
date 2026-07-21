@@ -1,6 +1,6 @@
-import { Platform, StyleSheet, Text, type TextProps } from 'react-native';
+import { StyleSheet, Text, type TextProps } from 'react-native';
 
-import { Fonts, ThemeColor } from '@/constants/theme';
+import { BodyFont, BodyFontBold, BodyFontMedium, DisplayFont, DisplayFontBold, ThemeColor } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 export type ThemedTextProps = TextProps & {
@@ -32,44 +32,44 @@ export function ThemedText({ style, type = 'default', themeColor, ...rest }: The
 
 const styles = StyleSheet.create({
   small: {
+    fontFamily: BodyFontMedium,
     fontSize: 14,
     lineHeight: 20,
-    fontWeight: 500,
   },
   smallBold: {
+    fontFamily: BodyFontBold,
     fontSize: 14,
     lineHeight: 20,
-    fontWeight: 700,
   },
   default: {
+    fontFamily: BodyFont,
     fontSize: 16,
     lineHeight: 24,
-    fontWeight: 500,
   },
   title: {
-    fontSize: 44,
-    fontWeight: 800,
-    lineHeight: 48,
-    letterSpacing: -1,
-  },
-  subtitle: {
-    fontSize: 24,
-    lineHeight: 30,
-    fontWeight: 700,
+    fontFamily: DisplayFont,
+    fontSize: 34,
+    lineHeight: 38,
     letterSpacing: -0.5,
   },
+  subtitle: {
+    fontFamily: DisplayFontBold,
+    fontSize: 20,
+    lineHeight: 26,
+  },
   link: {
+    fontFamily: BodyFontMedium,
     lineHeight: 30,
     fontSize: 14,
   },
   linkPrimary: {
+    fontFamily: BodyFontMedium,
     lineHeight: 30,
     fontSize: 14,
-    color: '#3c87f7',
+    color: '#3DDC97',
   },
   code: {
-    fontFamily: Fonts.mono,
-    fontWeight: Platform.select({ android: 700 }) ?? 500,
+    fontFamily: BodyFontMedium,
     fontSize: 12,
   },
 });
