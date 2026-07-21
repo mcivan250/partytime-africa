@@ -15,7 +15,7 @@ import {
   MaxContentWidth,
   OnBrand,
   Spacing,
-  WebTabBarInset,
+  WebBottomNavInset,
 } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth-context';
@@ -181,7 +181,6 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: MaxContentWidth,
     paddingHorizontal: Spacing.four,
-    paddingTop: WebTabBarInset,
   },
   headerRow: {
     flexDirection: 'row',
@@ -203,7 +202,7 @@ const styles = StyleSheet.create({
   },
   list: {
     gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
+    paddingBottom: BottomTabInset + WebBottomNavInset + Spacing.three,
     paddingTop: Spacing.one,
   },
   cardWrap: {

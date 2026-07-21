@@ -1,102 +1,139 @@
-import {
-  Tabs,
-  TabList,
-  TabTrigger,
-  TabSlot,
-  TabTriggerSlotProps,
-  TabListProps,
-} from 'expo-router/ui';
-import { Pressable, useColorScheme, View, StyleSheet } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { router } from 'expo-router';
+import { Tabs, TabList, TabTrigger, TabSlot, TabTriggerSlotProps, TabListProps } from 'expo-router/ui';
+import { Children } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from './themed-text';
-import { ThemedView } from './themed-view';
 
-import { Colors, MaxContentWidth, Spacing } from '@/constants/theme';
+import { BrandGradient, BrandGradientLocations, MaxContentWidth, OnBrand, Spacing } from '@/constants/theme';
 
 export default function AppTabs() {
   return (
     <Tabs>
-      <TabSlot style={{ height: '100%' }} />
+      <TabSlot style={styles.slot} />
       <TabList asChild>
-        <CustomTabList>
-          <TabTrigger name="home" href="/" asChild>
-            <TabButton>Home</TabButton>
+        <BottomBar>
+          <TabTrigger name="index" href="/" asChild>
+            <NavItem icon="✦" label="Discover" />
           </TabTrigger>
           <TabTrigger name="profile" href="/profile" asChild>
-            <TabButton>Profile</TabButton>
+            <NavItem icon="◐" label="Profile" />
           </TabTrigger>
-        </CustomTabList>
+        </BottomBar>
       </TabList>
     </Tabs>
   );
 }
 
-export function TabButton({ children, isFocused, ...props }: TabTriggerSlotProps) {
+function NavItem({
+  icon,
+  label,
+  isFocused,
+  ...props
+}: TabTriggerSlotProps & { icon: string; label: string }) {
   return (
-    <Pressable {...props} style={({ pressed }) => pressed && styles.pressed}>
-      <ThemedView
-        type={isFocused ? 'backgroundSelected' : 'backgroundElement'}
-        style={styles.tabButtonView}>
-        <ThemedText type="small" themeColor={isFocused ? 'text' : 'textSecondary'}>
-          {children}
-        </ThemedText>
-      </ThemedView>
+    <Pressable {...props} style={styles.item}>
+      <ThemedText style={[styles.icon, { opacity: isFocused ? 1 : 0.55 }]}>{icon}</ThemedText>
+      <ThemedText type="small" themeColor={isFocused ? 'text' : 'textSecondary'}>
+        {label}
+      </ThemedText>
     </Pressable>
   );
 }
 
-export function CustomTabList(props: TabListProps) {
-  const scheme = useColorScheme();
-  const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
-
+function StaticItem({ icon, label, onPress }: { icon: string; label: string; onPress: () => void }) {
   return (
-    <View {...props} style={styles.tabListContainer}>
-      <ThemedView type="backgroundElement" style={styles.innerContainer}>
-        <ThemedText type="smallBold" style={styles.brandText}>
-          Party Time
-        </ThemedText>
+    <Pressable style={styles.item} onPress={onPress}>
+      <ThemedText style={[styles.icon, { opacity: 0.55 }]}>{icon}</ThemedText>
+      <ThemedText type="small" themeColor="textSecondary">
+        {label}
+      </ThemedText>
+    </Pressable>
+  );
+}
 
-        {props.children}
-      </ThemedView>
+function Fab() {
+  return (
+    <Pressable onPress={() => router.push('/create-event')} style={styles.fabWrap}>
+      <LinearGradient
+        colors={BrandGradient}
+        locations={BrandGradientLocations}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.fab}>
+        <ThemedText style={styles.fabPlus}>+</ThemedText>
+      </LinearGradient>
+    </Pressable>
+  );
+}
+
+// The two TabTriggers arrive as children; we interleave My Events and the FAB
+// so the bar reads Discover · Events · [+] · Profile with the FAB centered.
+function BottomBar(props: TabListProps) {
+  const kids = Children.toArray(props.children);
+  return (
+    <View style={styles.barWrap} pointerEvents="box-none">
+      <View style={styles.bar}>
+        {kids[0]}
+        <StaticItem icon="☰" label="Events" onPress={() => router.push('/my-events')} />
+        <Fab />
+        {kids[1]}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  tabListContainer: {
+  slot: {
+    height: '100%',
+  },
+  barWrap: {
     position: 'absolute',
-    width: '100%',
-    padding: Spacing.three,
-    justifyContent: 'center',
+    bottom: 0,
+    left: 0,
+    right: 0,
     alignItems: 'center',
-    flexDirection: 'row',
-  },
-  innerContainer: {
-    paddingVertical: Spacing.two,
-    paddingHorizontal: Spacing.five,
-    borderRadius: Spacing.five,
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexGrow: 1,
-    gap: Spacing.two,
-    maxWidth: MaxContentWidth,
-  },
-  brandText: {
-    marginRight: 'auto',
-  },
-  pressed: {
-    opacity: 0.7,
-  },
-  tabButtonView: {
-    paddingVertical: Spacing.one,
+    paddingBottom: Spacing.three,
     paddingHorizontal: Spacing.three,
-    borderRadius: Spacing.three,
   },
-  externalPressable: {
+  bar: {
     flexDirection: 'row',
-    justifyContent: 'center',
     alignItems: 'center',
-    gap: Spacing.one,
-    marginLeft: Spacing.three,
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(23,23,31,0.96)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 26,
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.four,
+    width: '100%',
+    maxWidth: 460,
+    gap: Spacing.two,
+  },
+  item: {
+    alignItems: 'center',
+    gap: 2,
+    paddingVertical: 4,
+    minWidth: 60,
+  },
+  icon: {
+    fontSize: 20,
+  },
+  fabWrap: {
+    marginTop: -30,
+  },
+  fab: {
+    width: 54,
+    height: 54,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  fabPlus: {
+    color: OnBrand,
+    fontSize: 28,
+    lineHeight: 30,
+    fontWeight: '700',
   },
 });
