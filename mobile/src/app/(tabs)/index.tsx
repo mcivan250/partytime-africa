@@ -1,4 +1,5 @@
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
@@ -6,7 +7,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { BottomTabInset, MaxContentWidth, Spacing, WebTabBarInset } from '@/constants/theme';
+import {
+  BottomTabInset,
+  Brand,
+  BrandGradient,
+  MaxContentWidth,
+  OnBrand,
+  Spacing,
+  WebTabBarInset,
+} from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
@@ -19,7 +28,7 @@ type EventRow = Pick<
 
 function formatStartsAt(event: EventRow) {
   if (!event.starts_at) {
-    return 'Date to be announced';
+    return 'Date TBA';
   }
   return new Date(event.starts_at).toLocaleString(undefined, {
     weekday: 'short',
@@ -35,17 +44,33 @@ function EventCard({ event }: { event: EventRow }) {
   return (
     <Pressable
       onPress={() => router.push({ pathname: '/e/[slug]', params: { slug: event.slug } })}
-      style={({ pressed }) => pressed && styles.pressed}>
-      <ThemedView type="backgroundElement" style={styles.card}>
-        {event.cover_url ? (
-          <Image source={{ uri: event.cover_url }} style={styles.cover} contentFit="cover" />
-        ) : null}
-        <View style={styles.cardBody}>
-          <ThemedText type="subtitle">{event.title}</ThemedText>
-          <ThemedText type="small">{formatStartsAt(event)}</ThemedText>
-          {event.venue_name ? <ThemedText type="small">{event.venue_name}</ThemedText> : null}
+      style={({ pressed }) => [styles.card, pressed && styles.pressed]}>
+      {event.cover_url ? (
+        <Image source={{ uri: event.cover_url }} style={StyleSheet.absoluteFill} contentFit="cover" />
+      ) : (
+        <LinearGradient
+          colors={BrandGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+      )}
+      <LinearGradient colors={['transparent', 'rgba(0,0,0,0.9)']} style={StyleSheet.absoluteFill} />
+      <View style={styles.cardContent}>
+        <View style={styles.datePill}>
+          <ThemedText type="smallBold" style={styles.onImage}>
+            {formatStartsAt(event)}
+          </ThemedText>
         </View>
-      </ThemedView>
+        <ThemedText type="subtitle" style={styles.onImage}>
+          {event.title}
+        </ThemedText>
+        {event.venue_name ? (
+          <ThemedText type="small" style={styles.onImageDim}>
+            {event.venue_name}
+          </ThemedText>
+        ) : null}
+      </View>
     </Pressable>
   );
 }
@@ -89,13 +114,16 @@ export default function EventsScreen() {
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.headerRow}>
-          <ThemedText type="title" style={styles.heading}>
-            Party Time
-          </ThemedText>
+          <View>
+            <ThemedText type="small" themeColor="textSecondary">
+              What&apos;s on
+            </ThemedText>
+            <ThemedText type="title">Party Time</ThemedText>
+          </View>
           {session ? (
             <Pressable style={styles.hostButton} onPress={() => router.push('/create-event')}>
               <ThemedText type="smallBold" style={styles.hostButtonLabel}>
-                + Host an event
+                + Host
               </ThemedText>
             </Pressable>
           ) : null}
@@ -105,6 +133,7 @@ export default function EventsScreen() {
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => <EventCard event={item} />}
           contentContainerStyle={styles.list}
+          showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.text} />
           }
@@ -116,7 +145,7 @@ export default function EventsScreen() {
             ) : (
               <ThemedView type="backgroundElement" style={styles.emptyCard}>
                 <ThemedText type="subtitle">No events yet</ThemedText>
-                <ThemedText type="small" style={styles.emptyText}>
+                <ThemedText type="small" themeColor="textSecondary" style={styles.emptyText}>
                   {session
                     ? 'Be the first to throw something. Create an event, add a cover, and share the link with your people.'
                     : 'Sign in to host your own events and RSVP to invites.'}
@@ -154,37 +183,47 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-  },
-  heading: {
     paddingVertical: Spacing.three,
   },
   hostButton: {
-    backgroundColor: '#208AEF',
-    borderRadius: Spacing.two,
+    backgroundColor: Brand,
+    borderRadius: 999,
     paddingVertical: Spacing.two,
-    paddingHorizontal: Spacing.three,
+    paddingHorizontal: Spacing.four,
   },
   hostButtonLabel: {
-    color: '#fff',
+    color: OnBrand,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: 0.85,
   },
   list: {
     gap: Spacing.three,
     paddingBottom: BottomTabInset + Spacing.three,
+    paddingTop: Spacing.one,
   },
   card: {
-    borderRadius: Spacing.three,
+    borderRadius: 22,
     overflow: 'hidden',
+    minHeight: 210,
+    justifyContent: 'flex-end',
   },
-  cover: {
-    width: '100%',
-    aspectRatio: 16 / 9,
+  cardContent: {
+    padding: Spacing.four,
+    gap: Spacing.two,
   },
-  cardBody: {
-    padding: Spacing.three,
-    gap: Spacing.one,
+  datePill: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(11,11,16,0.55)',
+    paddingVertical: 4,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+  },
+  onImage: {
+    color: '#fff',
+  },
+  onImageDim: {
+    color: 'rgba(255,255,255,0.85)',
   },
   empty: {
     textAlign: 'center',
@@ -192,7 +231,7 @@ const styles = StyleSheet.create({
   },
   emptyCard: {
     marginTop: Spacing.five,
-    borderRadius: Spacing.three,
+    borderRadius: 20,
     padding: Spacing.four,
     gap: Spacing.three,
     alignItems: 'flex-start',
@@ -201,8 +240,8 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   emptyButton: {
-    backgroundColor: '#208AEF',
-    borderRadius: Spacing.two,
+    backgroundColor: Brand,
+    borderRadius: 999,
     paddingVertical: Spacing.three,
     paddingHorizontal: Spacing.four,
   },

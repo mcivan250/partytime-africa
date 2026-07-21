@@ -5,7 +5,7 @@ import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { MaxContentWidth, Spacing } from '@/constants/theme';
+import { Brand, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth-context';
 import { generateSlug } from '@/lib/slug';
@@ -254,19 +254,19 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     padding: Spacing.three,
-    borderRadius: Spacing.two,
-    borderWidth: 1,
-    borderColor: '#208AEF',
+    borderRadius: 999,
+    borderWidth: 1.5,
+    borderColor: Brand,
   },
   visibilitySelected: {
-    backgroundColor: '#208AEF',
+    backgroundColor: Brand,
   },
   selectedLabel: {
     color: '#fff',
   },
   primaryButton: {
-    backgroundColor: '#208AEF',
-    borderRadius: Spacing.two,
+    backgroundColor: Brand,
+    borderRadius: 999,
     padding: Spacing.three,
     alignItems: 'center',
   },

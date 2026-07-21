@@ -14,7 +14,7 @@ import {
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { MaxContentWidth, Spacing } from '@/constants/theme';
+import { Brand, MaxContentWidth, OnBrand, Spacing } from '@/constants/theme';
 import { useAuth } from '@/lib/auth-context';
 import { useTheme } from '@/hooks/use-theme';
 import { supabase } from '@/lib/supabase';
@@ -243,13 +243,30 @@ export default function EventScreen() {
         </View>
 
         <ThemedView type="backgroundElement" style={styles.infoCard}>
-          <ThemedText type="smallBold">{startsAt}</ThemedText>
-          {event.venue_name ? <ThemedText type="small">{event.venue_name}</ThemedText> : null}
-          {event.address ? <ThemedText type="small">{event.address}</ThemedText> : null}
+          <View style={styles.infoRow}>
+            <ThemedText style={styles.infoIcon}>📅</ThemedText>
+            <ThemedText type="smallBold">{startsAt}</ThemedText>
+          </View>
+          {event.venue_name || event.address ? (
+            <View style={styles.infoRow}>
+              <ThemedText style={styles.infoIcon}>📍</ThemedText>
+              <View style={styles.infoTextColumn}>
+                {event.venue_name ? <ThemedText type="smallBold">{event.venue_name}</ThemedText> : null}
+                {event.address ? (
+                  <ThemedText type="small" themeColor="textSecondary">
+                    {event.address}
+                  </ThemedText>
+                ) : null}
+              </View>
+            </View>
+          ) : null}
           {goingCount !== null && goingCount > 0 ? (
-            <ThemedText type="small">
-              {goingCount} {goingCount === 1 ? 'person is' : 'people are'} going
-            </ThemedText>
+            <View style={styles.infoRow}>
+              <ThemedText style={styles.infoIcon}>👥</ThemedText>
+              <ThemedText type="smallBold">
+                {goingCount} {goingCount === 1 ? 'person' : 'people'} going
+              </ThemedText>
+            </View>
           ) : null}
         </ThemedView>
 
@@ -304,7 +321,7 @@ const styles = StyleSheet.create({
   cover: {
     width: '100%',
     aspectRatio: 16 / 9,
-    borderRadius: Spacing.three,
+    borderRadius: Spacing.four,
   },
   titleRow: {
     flexDirection: 'row',
@@ -317,15 +334,29 @@ const styles = StyleSheet.create({
     gap: Spacing.one,
   },
   shareButton: {
-    backgroundColor: '#208AEF',
-    borderRadius: Spacing.two,
+    backgroundColor: Brand,
+    borderRadius: 999,
     paddingVertical: Spacing.two,
-    paddingHorizontal: Spacing.three,
+    paddingHorizontal: Spacing.four,
   },
   infoCard: {
-    borderRadius: Spacing.three,
+    borderRadius: Spacing.four,
     padding: Spacing.four,
-    gap: Spacing.two,
+    gap: Spacing.three,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
+  },
+  infoIcon: {
+    fontSize: 18,
+    width: 24,
+    textAlign: 'center',
+  },
+  infoTextColumn: {
+    flex: 1,
+    gap: Spacing.half,
   },
   rsvpRow: {
     flexDirection: 'row',
@@ -335,23 +366,23 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     padding: Spacing.three,
-    borderRadius: Spacing.two,
-    borderWidth: 1,
-    borderColor: '#208AEF',
+    borderRadius: 999,
+    borderWidth: 1.5,
+    borderColor: Brand,
   },
   rsvpButtonSelected: {
-    backgroundColor: '#208AEF',
+    backgroundColor: Brand,
   },
   rsvpLabelSelected: {
-    color: '#fff',
+    color: OnBrand,
   },
   guestForm: {
     gap: Spacing.three,
   },
   guestInput: {
-    borderRadius: Spacing.two,
+    borderRadius: Spacing.three,
     padding: Spacing.three,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#8884',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
   },
 });
