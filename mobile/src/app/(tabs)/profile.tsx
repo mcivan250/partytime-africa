@@ -116,6 +116,9 @@ function ProfileCard() {
           My events
         </ThemedText>
       </Pressable>
+      <Pressable style={styles.buttonGhost} onPress={() => router.push('/tickets')}>
+        <ThemedText type="smallBold">My tickets</ThemedText>
+      </Pressable>
       <Pressable style={styles.buttonGhost} onPress={() => supabase.auth.signOut()}>
         <ThemedText type="smallBold">Sign out</ThemedText>
       </Pressable>

@@ -38,6 +38,12 @@
         {
           "photosPermission": "Party Time uses your photos so you can set an event cover and share moments."
         }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Party Time uses the camera so hosts can scan guests' ticket QR codes at the door."
+        }
       ]
     ],
     "experiments": {

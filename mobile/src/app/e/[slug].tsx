@@ -530,6 +530,15 @@ export default function EventScreen() {
               )
             }
           />
+          {isHost && event.is_ticketed ? (
+            <Pressable
+              style={styles.checkInButton}
+              onPress={() => router.push({ pathname: '/check-in/[eventId]', params: { eventId: event.id } })}>
+              <ThemedText type="smallBold" style={styles.onState}>
+                🎫 Scan tickets at the door
+              </ThemedText>
+            </Pressable>
+          ) : null}
           {buyNotice ? (
             <ThemedText type="small" themeColor="textSecondary" style={styles.center}>
               {buyNotice}
@@ -752,6 +761,14 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingVertical: Spacing.three,
     alignItems: 'center',
+  },
+  checkInButton: {
+    backgroundColor: '#243527',
+    borderRadius: 16,
+    paddingVertical: Spacing.three,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
   },
   chatHeader: {
     flexDirection: 'row',

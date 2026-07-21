@@ -70,6 +70,14 @@ export default function RootLayout() {
             name="my-events"
             options={{ headerShown: true, headerTitle: 'My events' }}
           />
+          <Stack.Screen
+            name="tickets"
+            options={{ headerShown: true, headerTitle: 'My tickets' }}
+          />
+          <Stack.Screen
+            name="check-in/[eventId]"
+            options={{ headerShown: true, headerTitle: 'Check-in' }}
+          />
         </Stack>
       </ThemeProvider>
     </AuthProvider>

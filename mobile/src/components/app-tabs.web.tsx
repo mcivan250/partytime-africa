@@ -76,8 +76,9 @@ function BottomBar(props: TabListProps) {
     <View style={styles.barWrap} pointerEvents="box-none">
       <View style={styles.bar}>
         {kids[0]}
-        <StaticItem icon="☰" label="Events" onPress={() => router.push('/my-events')} />
+        <StaticItem icon="🎟" label="Tickets" onPress={() => router.push('/tickets')} />
         <Fab />
+        <StaticItem icon="☰" label="Events" onPress={() => router.push('/my-events')} />
         {kids[1]}
       </View>
     </View>
