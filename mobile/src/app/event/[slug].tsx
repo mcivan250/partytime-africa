@@ -1,12 +1,22 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  Share,
+  StyleSheet,
+  TextInput,
+  View,
+} from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useAuth } from '@/lib/auth-context';
+import { useTheme } from '@/hooks/use-theme';
 import { supabase } from '@/lib/supabase';
 import type { Tables } from '@/types/database';
 
@@ -21,6 +31,76 @@ const RSVP_OPTIONS: { status: RsvpStatus; label: string }[] = [
 // Public invite link (the web invite page at this path is the next milestone).
 function inviteUrl(slug: string) {
   return `https://partytime.africa/e/${slug}`;
+}
+
+// Guest RSVP form for signed-out visitors (the web invite-link path). Inserts
+// go through the rsvp-guest Edge Function since RLS blocks anonymous inserts.
+function GuestRsvp({ slug, eventId }: { slug: string; eventId: string }) {
+  const theme = useTheme();
+  const [guestName, setGuestName] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [confirmed, setConfirmed] = useState<RsvpStatus | null>(null);
+
+  const submit = async (status: RsvpStatus) => {
+    setError(null);
+    if (!guestName.trim()) {
+      setError('Please enter your name first.');
+      return;
+    }
+    setBusy(true);
+    const { data, error: fnError } = await supabase.functions.invoke('rsvp-guest', {
+      body: { slug, guest_name: guestName.trim(), status },
+    });
+    setBusy(false);
+    if (fnError || data?.error) {
+      setError(data?.error || 'Could not save your RSVP. Please try again.');
+      return;
+    }
+    // Keep the edit_token so this guest could amend their RSVP later.
+    if (data?.edit_token) {
+      await AsyncStorage.setItem(`guest_rsvp:${eventId}`, data.edit_token);
+    }
+    setConfirmed(status);
+  };
+
+  if (confirmed) {
+    return (
+      <ThemedText type="small">
+        {confirmed === 'declined'
+          ? "Thanks for letting the host know."
+          : `You're on the list, ${guestName.trim()}! See you there. 🎉`}
+      </ThemedText>
+    );
+  }
+
+  return (
+    <View style={styles.guestForm}>
+      <TextInput
+        style={[styles.guestInput, { color: theme.text, backgroundColor: theme.background }]}
+        placeholder="Your name"
+        placeholderTextColor={theme.textSecondary}
+        value={guestName}
+        onChangeText={setGuestName}
+        autoCapitalize="words"
+      />
+      <View style={styles.rsvpRow}>
+        {RSVP_OPTIONS.map(({ status, label }) => (
+          <Pressable
+            key={status}
+            disabled={busy}
+            onPress={() => submit(status)}
+            style={styles.rsvpButton}>
+            <ThemedText type="smallBold">{label}</ThemedText>
+          </Pressable>
+        ))}
+      </View>
+      {error ? <ThemedText type="small">{error}</ThemedText> : null}
+      <Pressable onPress={() => router.push('/profile')}>
+        <ThemedText type="link">Have an account? Sign in</ThemedText>
+      </Pressable>
+    </View>
+  );
 }
 
 export default function EventScreen() {
@@ -197,11 +277,7 @@ export default function EventScreen() {
               })}
             </View>
           ) : (
-            <Pressable style={styles.signInButton} onPress={() => router.push('/profile')}>
-              <ThemedText type="smallBold" style={styles.rsvpLabelSelected}>
-                Sign in to RSVP
-              </ThemedText>
-            </Pressable>
+            <GuestRsvp slug={event.slug} eventId={event.id} />
           )}
           {error ? <ThemedText type="small">{error}</ThemedText> : null}
         </ThemedView>
@@ -269,10 +345,13 @@ const styles = StyleSheet.create({
   rsvpLabelSelected: {
     color: '#fff',
   },
-  signInButton: {
-    backgroundColor: '#208AEF',
+  guestForm: {
+    gap: Spacing.three,
+  },
+  guestInput: {
     borderRadius: Spacing.two,
     padding: Spacing.three,
-    alignItems: 'center',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: '#8884',
   },
 });
