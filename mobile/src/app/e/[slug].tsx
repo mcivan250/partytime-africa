@@ -16,6 +16,7 @@ import {
 
 import { Avatars } from '@/components/avatars';
 import { PhotoAlbum } from '@/components/photo-album';
+import { Playlist } from '@/components/playlist';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { TicketTiers } from '@/components/ticket-tiers';
@@ -519,6 +520,8 @@ export default function EventScreen() {
           {event.description ? (
             <ThemedText style={styles.description}>{event.description}</ThemedText>
           ) : null}
+
+          {event.playlist_url ? <Playlist url={event.playlist_url} /> : null}
 
           <TicketTiers
             eventId={event.id}

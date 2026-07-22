@@ -37,6 +37,7 @@ export default function CreateEventScreen() {
   const [venueName, setVenueName] = useState('');
   const [address, setAddress] = useState('');
   const [startsAtText, setStartsAtText] = useState('');
+  const [playlistUrl, setPlaylistUrl] = useState('');
   const [visibility, setVisibility] = useState<Visibility>('public');
   const [coverUri, setCoverUri] = useState<string | null>(null);
   const [coverImage, setCoverImage] = useState<Awaited<ReturnType<typeof pickImage>>>(null);
@@ -91,6 +92,7 @@ export default function CreateEventScreen() {
         address: address.trim() || null,
         starts_at: startsAt,
         cover_url: coverUrl,
+        playlist_url: playlistUrl.trim() || null,
         visibility,
         status,
       });
@@ -152,6 +154,15 @@ export default function CreateEventScreen() {
           placeholderTextColor={theme.textSecondary}
           value={venueName}
           onChangeText={setVenueName}
+        />
+        <TextInput
+          style={inputStyle}
+          placeholder="🎧 Playlist link (Spotify or YouTube)"
+          placeholderTextColor={theme.textSecondary}
+          value={playlistUrl}
+          onChangeText={setPlaylistUrl}
+          autoCapitalize="none"
+          keyboardType="url"
         />
         <TextInput
           style={inputStyle}

@@ -255,6 +255,7 @@ export type Database = {
           is_ticketed: boolean
           lat: number | null
           lng: number | null
+          playlist_url: string | null
           rsvp_deadline: string | null
           slug: string
           starts_at: string | null
@@ -281,6 +282,7 @@ export type Database = {
           is_ticketed?: boolean
           lat?: number | null
           lng?: number | null
+          playlist_url?: string | null
           rsvp_deadline?: string | null
           slug: string
           starts_at?: string | null
@@ -307,6 +309,7 @@ export type Database = {
           is_ticketed?: boolean
           lat?: number | null
           lng?: number | null
+          playlist_url?: string | null
           rsvp_deadline?: string | null
           slug?: string
           starts_at?: string | null
