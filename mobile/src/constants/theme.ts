@@ -88,6 +88,6 @@ export const Spacing = {
 export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
 export const MaxContentWidth = 800;
 
-// On web the nav floats absolutely at the bottom; screens inside the tab group
-// need this much BOTTOM padding so their content clears it.
-export const WebBottomNavInset = Platform.OS === 'web' ? 104 : 0;
+// The nav floats absolutely at the bottom on every platform; screens inside
+// the tab group need this much BOTTOM padding so their content clears it.
+export const BottomNavInset = 108;

@@ -8,14 +8,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import {
-  BottomTabInset,
+  BottomNavInset,
   Brand,
   BrandGradient,
   BrandGradientLocations,
   MaxContentWidth,
   OnBrand,
   Spacing,
-  WebBottomNavInset,
 } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth-context';
@@ -253,7 +252,7 @@ const styles = StyleSheet.create({
   },
   list: {
     gap: Spacing.three,
-    paddingBottom: BottomTabInset + WebBottomNavInset + Spacing.three,
+    paddingBottom: BottomNavInset,
     paddingTop: Spacing.one,
   },
   cardWrap: {

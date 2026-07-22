@@ -3,12 +3,15 @@ import { router } from 'expo-router';
 import { Tabs, TabList, TabTrigger, TabSlot, TabTriggerSlotProps, TabListProps } from 'expo-router/ui';
 import { Children } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ThemedText } from './themed-text';
-
+import { ThemedText } from '@/components/themed-text';
 import { BrandGradient, BrandGradientLocations, MaxContentWidth, OnBrand, Spacing } from '@/constants/theme';
 
-export default function AppTabs() {
+// One bottom nav for web AND native: Discover · Tickets · [+] · Events ·
+// Profile, with the signature green gradient FAB. Discover/Profile are tabs;
+// the rest push their stack routes.
+export function AppTabs() {
   return (
     <Tabs>
       <TabSlot style={styles.slot} />
@@ -68,12 +71,13 @@ function Fab() {
   );
 }
 
-// The two TabTriggers arrive as children; we interleave My Events and the FAB
-// so the bar reads Discover · Events · [+] · Profile with the FAB centered.
 function BottomBar(props: TabListProps) {
+  const insets = useSafeAreaInsets();
   const kids = Children.toArray(props.children);
   return (
-    <View style={styles.barWrap} pointerEvents="box-none">
+    <View
+      style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, Spacing.two) }]}
+      pointerEvents="box-none">
       <View style={styles.bar}>
         {kids[0]}
         <StaticItem icon="🎟" label="Tickets" onPress={() => router.push('/tickets')} />
@@ -89,40 +93,40 @@ const styles = StyleSheet.create({
   slot: {
     height: '100%',
   },
-  barWrap: {
+  wrap: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
     alignItems: 'center',
-    paddingBottom: Spacing.three,
     paddingHorizontal: Spacing.three,
+    paddingTop: Spacing.two,
   },
   bar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: 'rgba(23,23,31,0.96)',
+    backgroundColor: 'rgba(23,23,31,0.98)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
     borderRadius: 26,
     paddingVertical: Spacing.two,
     paddingHorizontal: Spacing.four,
     width: '100%',
-    maxWidth: 460,
+    maxWidth: MaxContentWidth,
     gap: Spacing.two,
   },
   item: {
     alignItems: 'center',
     gap: 2,
     paddingVertical: 4,
-    minWidth: 60,
+    minWidth: 56,
   },
   icon: {
     fontSize: 20,
   },
   fabWrap: {
-    marginTop: -30,
+    marginTop: -28,
   },
   fab: {
     width: 54,

@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Brand, MaxContentWidth, OnBrand, Spacing, WebBottomNavInset } from '@/constants/theme';
+import { Brand, BottomNavInset, MaxContentWidth, OnBrand, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
     flex: 1,
     maxWidth: MaxContentWidth,
     paddingHorizontal: Spacing.four,
-    paddingBottom: WebBottomNavInset,
+    paddingBottom: BottomNavInset,
     alignSelf: 'stretch',
   },
   heading: {
