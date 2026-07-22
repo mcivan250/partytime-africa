@@ -22,12 +22,22 @@ import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
 import type { Tables } from '@/types/database';
 
-type EventRow = Pick<
-  Tables<'events'>,
-  'id' | 'slug' | 'title' | 'starts_at' | 'venue_name' | 'address' | 'cover_url' | 'timezone'
->;
+type FeedEvent = {
+  id: string;
+  slug: string;
+  title: string;
+  starts_at: string | null;
+  venue_name: string | null;
+  address: string | null;
+  cover_url: string | null;
+  timezone: string;
+  capacity: number | null;
+  is_ticketed: boolean;
+  going_count: number;
+  trending_score: number;
+};
 
-function formatStartsAt(event: EventRow) {
+function formatStartsAt(event: FeedEvent) {
   if (!event.starts_at) {
     return 'Date TBA';
   }
@@ -41,7 +51,41 @@ function formatStartsAt(event: EventRow) {
   });
 }
 
-function EventCard({ event }: { event: EventRow }) {
+function hoursUntil(startsAt: string | null): number | null {
+  if (!startsAt) return null;
+  return (new Date(startsAt).getTime() - Date.now()) / 3_600_000;
+}
+
+type Badge = { label: string; bg: string; fg: string };
+
+// FOMO signals, all from real data — social-proof badges appear as real RSVPs
+// arrive; time and ticket badges show immediately.
+function fomoBadges(event: FeedEvent): Badge[] {
+  const out: Badge[] = [];
+  const h = hoursUntil(event.starts_at);
+  if (event.trending_score >= 8) {
+    out.push({ label: '🔥 Trending', bg: '#F73558', fg: '#fff' });
+  }
+  if (event.capacity && event.going_count >= event.capacity * 0.85) {
+    out.push({ label: 'Almost full', bg: '#FFB84D', fg: '#07130B' });
+  } else if (event.going_count >= 20) {
+    out.push({ label: `${event.going_count} going`, bg: 'rgba(61,220,151,0.9)', fg: '#07130B' });
+  }
+  if (h !== null && h >= 0 && h <= 10) {
+    out.push({
+      label: h < 1 ? 'Starting soon' : `In ${Math.round(h)}h`,
+      bg: 'rgba(11,11,16,0.6)',
+      fg: '#fff',
+    });
+  }
+  if (event.is_ticketed) {
+    out.push({ label: '🎟 Tickets', bg: 'rgba(11,11,16,0.6)', fg: '#fff' });
+  }
+  return out.slice(0, 3);
+}
+
+function EventCard({ event }: { event: FeedEvent }) {
+  const badges = fomoBadges(event);
   return (
     <Pressable
       onPress={() => router.push({ pathname: '/e/[slug]', params: { slug: event.slug } })}
@@ -59,6 +103,17 @@ function EventCard({ event }: { event: EventRow }) {
           />
         )}
         <LinearGradient colors={['transparent', 'rgba(0,0,0,0.9)']} style={StyleSheet.absoluteFill} />
+        {badges.length > 0 ? (
+          <View style={styles.badgeRow}>
+            {badges.map((b) => (
+              <View key={b.label} style={[styles.badge, { backgroundColor: b.bg }]}>
+                <ThemedText type="smallBold" style={[styles.badgeText, { color: b.fg }]}>
+                  {b.label}
+                </ThemedText>
+              </View>
+            ))}
+          </View>
+        ) : null}
         <View style={styles.cardContent}>
           <View style={styles.datePill}>
             <ThemedText type="smallBold" style={styles.onImage}>
@@ -82,24 +137,20 @@ function EventCard({ event }: { event: EventRow }) {
 export default function EventsScreen() {
   const theme = useTheme();
   const { session } = useAuth();
-  const [events, setEvents] = useState<EventRow[]>([]);
+  const [events, setEvents] = useState<FeedEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const loadEvents = useCallback(async () => {
-    const { data, error: queryError } = await supabase
-      .from('events')
-      .select('id, slug, title, starts_at, venue_name, address, cover_url, timezone')
-      .eq('status', 'published')
-      .eq('visibility', 'public')
-      .order('starts_at', { ascending: true })
-      .limit(50);
+    // feed_events returns public published events with live going/trending
+    // aggregates, ordered by start time.
+    const { data, error: queryError } = await supabase.rpc('feed_events');
     if (queryError) {
       setError(queryError.message);
     } else {
       setError(null);
-      setEvents(data);
+      setEvents((data ?? []) as FeedEvent[]);
     }
     setLoading(false);
   }, []);
@@ -219,6 +270,23 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     minHeight: 210,
     justifyContent: 'flex-end',
+  },
+  badgeRow: {
+    position: 'absolute',
+    top: Spacing.three,
+    left: Spacing.three,
+    right: Spacing.three,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.two,
+  },
+  badge: {
+    borderRadius: 999,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+  },
+  badgeText: {
+    fontSize: 12,
   },
   cardContent: {
     padding: Spacing.four,

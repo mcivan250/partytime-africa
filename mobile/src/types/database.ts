@@ -1066,7 +1066,28 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      event_guest_list_public: { Args: { e: string }; Returns: boolean }
+      feed_events: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          address: string
+          capacity: number
+          cover_url: string
+          currency: string
+          ends_at: string
+          going_count: number
+          id: string
+          is_ticketed: boolean
+          slug: string
+          starts_at: string
+          timezone: string
+          title: string
+          trending_score: number
+          venue_name: string
+        }[]
+      }
       is_event_manager: { Args: { e: string }; Returns: boolean }
+      user_has_rsvp: { Args: { e: string }; Returns: boolean }
     }
     Enums: {
       event_status: "draft" | "published" | "cancelled"
