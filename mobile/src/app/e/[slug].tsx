@@ -366,6 +366,35 @@ export default function EventScreen() {
     );
   };
 
+  const buyTier = async (tier: { id: string }) => {
+    if (!session) {
+      setBuyNotice('Please sign in to buy a ticket.');
+      router.push('/profile');
+      return;
+    }
+    setBuyNotice('Starting secure checkout…');
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('display_name, phone')
+      .eq('id', session.user.id)
+      .maybeSingle();
+    const { data, error: fnError } = await supabase.functions.invoke('create-order', {
+      body: {
+        tier_id: tier.id,
+        quantity: 1,
+        buyer_name: profile?.display_name || session.user.email || 'Guest',
+        buyer_phone: profile?.phone || '',
+        email: session.user.email || '',
+      },
+    });
+    if (fnError || data?.error || !data?.redirect_url) {
+      setBuyNotice(data?.error || 'Could not start checkout. Payments may not be set up yet.');
+      return;
+    }
+    setBuyNotice('Opening secure checkout — after paying, your ticket appears in My Tickets. 🎟');
+    Linking.openURL(data.redirect_url);
+  };
+
   const rsvp = async (status: RsvpStatus) => {
     if (!session || !event) return;
     setSaving(true);
@@ -527,11 +556,7 @@ export default function EventScreen() {
             eventId={event.id}
             currency={event.currency}
             isManager={isHost}
-            onBuy={() =>
-              setBuyNotice(
-                'Card & mobile money checkout (MTN MoMo, Airtel, Visa) is being set up — it will be live here shortly.',
-              )
-            }
+            onBuy={buyTier}
           />
           {isHost && event.is_ticketed ? (
             <Pressable
