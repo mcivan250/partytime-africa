@@ -7,6 +7,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Brand, Gold, OnBrand, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { formatMoney, toMinor } from '@/lib/money';
+import { pickImage, uploadImage } from '@/lib/storage';
 import { supabase } from '@/lib/supabase';
 import type { Tables } from '@/types/database';
 
@@ -37,6 +38,8 @@ export function MerchShop({
   const [items, setItems] = useState<Item[]>([]);
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
+  const [photo, setPhoto] = useState<Awaited<ReturnType<typeof pickImage>>>(null);
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [picked, setPicked] = useState<Record<string, string>>({});
@@ -54,12 +57,35 @@ export function MerchShop({
     load();
   }, [load]);
 
+  const choosePhoto = async () => {
+    setError(null);
+    try {
+      const image = await pickImage([1, 1]);
+      if (image) {
+        setPhoto(image);
+        setPhotoUri(`data:${image.mimeType};base64,${image.base64}`);
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not open photos.');
+    }
+  };
+
   const addItem = async () => {
     setError(null);
     const priceNum = Number(price);
     if (!name.trim()) return setError('Name the item.');
     if (!Number.isFinite(priceNum) || priceNum < 0) return setError('Enter a valid price.');
     setBusy(true);
+    let imageUrl: string | null = null;
+    if (photo) {
+      try {
+        imageUrl = (await uploadImage('merch', eventId, photo)).url;
+      } catch {
+        setError('Could not upload the photo. Try again.');
+        setBusy(false);
+        return;
+      }
+    }
     // Create the item, then a default "One size" variant so it's instantly
     // buyable. Hosts can add real sizes (S/M/L) afterwards.
     const { data: item, error: itemError } = await supabase
@@ -69,6 +95,7 @@ export function MerchShop({
         name: name.trim(),
         price_minor: toMinor(priceNum, currency),
         currency,
+        image_url: imageUrl,
         position: items.length,
       })
       .select('id')
@@ -81,8 +108,23 @@ export function MerchShop({
     await supabase.from('merch_variants').insert({ item_id: item.id, label: 'One size' });
     setName('');
     setPrice('');
+    setPhoto(null);
+    setPhotoUri(null);
     await load();
     setBusy(false);
+  };
+
+  const setItemPhoto = async (item: Item) => {
+    setError(null);
+    try {
+      const image = await pickImage([1, 1]);
+      if (!image) return;
+      const url = (await uploadImage('merch', eventId, image)).url;
+      await supabase.from('merch_items').update({ image_url: url }).eq('id', item.id);
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not update the photo.');
+    }
   };
 
   const addSize = async (item: Item, label: string) => {
@@ -130,6 +172,7 @@ export function MerchShop({
             onPick={(vid) => setPicked((p) => ({ ...p, [item.id]: vid }))}
             onBuy={onBuy}
             onAddSize={(label) => addSize(item, label)}
+            onSetPhoto={() => setItemPhoto(item)}
             onRemove={() => removeItem(item.id)}
           />
         ))
@@ -137,6 +180,15 @@ export function MerchShop({
 
       {isManager ? (
         <View style={styles.form}>
+          <Pressable style={styles.photoPicker} onPress={choosePhoto}>
+            {photoUri ? (
+              <Image source={{ uri: photoUri }} style={styles.photoPreview} contentFit="cover" />
+            ) : (
+              <ThemedText type="small" themeColor="textSecondary">
+                📷 Add photo (optional)
+              </ThemedText>
+            )}
+          </Pressable>
           <TextInput
             style={input}
             placeholder="Item name — e.g. Event T-Shirt"
@@ -176,6 +228,7 @@ function MerchRow({
   onPick,
   onBuy,
   onAddSize,
+  onSetPhoto,
   onRemove,
 }: {
   item: Item;
@@ -184,6 +237,7 @@ function MerchRow({
   onPick: (variantId: string) => void;
   onBuy?: (variant: Variant) => void;
   onAddSize: (label: string) => void;
+  onSetPhoto: () => void;
   onRemove: () => void;
 }) {
   const theme = useTheme();
@@ -247,6 +301,11 @@ function MerchRow({
                 setSizeInput('');
               }}
             />
+            <Pressable onPress={onSetPhoto} style={styles.remove}>
+              <ThemedText type="smallBold" themeColor="textSecondary">
+                {item.image_url ? '📷 Change' : '📷 Photo'}
+              </ThemedText>
+            </Pressable>
             <Pressable onPress={onRemove} style={styles.remove}>
               <ThemedText type="smallBold" themeColor="textSecondary">
                 Remove
@@ -349,6 +408,20 @@ const styles = StyleSheet.create({
   },
   form: {
     gap: Spacing.two,
+  },
+  photoPicker: {
+    height: 96,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: 'rgba(255,255,255,0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  photoPreview: {
+    width: '100%',
+    height: '100%',
   },
   formRow: {
     flexDirection: 'row',
