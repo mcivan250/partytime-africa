@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Linking,
@@ -13,6 +13,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatars } from '@/components/avatars';
 import { PhotoAlbum } from '@/components/photo-album';
@@ -32,6 +33,7 @@ import {
 } from '@/constants/theme';
 import { useAuth } from '@/lib/auth-context';
 import { useTheme } from '@/hooks/use-theme';
+import { formatMoney } from '@/lib/money';
 import { supabase } from '@/lib/supabase';
 import type { Tables } from '@/types/database';
 
@@ -48,6 +50,8 @@ const RSVP_CONFIRM: Record<RsvpStatus, string> = {
   maybe: "We'll save you a maybe. Change anytime.",
   declined: '😢 Next one, then.',
 };
+
+const HERO_HEIGHT = 380;
 
 function inviteUrl(slug: string) {
   return `https://partytime.africa/e/${slug}`;
@@ -267,6 +271,15 @@ export default function EventScreen() {
   const [blastBusy, setBlastBusy] = useState(false);
   const [blastResult, setBlastResult] = useState<string | null>(null);
   const [buyNotice, setBuyNotice] = useState<string | null>(null);
+  const [minTier, setMinTier] = useState<{ price_minor: number; currency: string } | null>(null);
+  const insets = useSafeAreaInsets();
+  const scrollRef = useRef<ScrollView>(null);
+  const rsvpY = useRef(0);
+  const ticketsY = useRef(0);
+
+  const scrollToSection = (y: number) => {
+    scrollRef.current?.scrollTo({ y: HERO_HEIGHT + y - 12, animated: true });
+  };
 
   const load = useCallback(async () => {
     const { data: eventRow, error: eventError } = await supabase
@@ -282,7 +295,7 @@ export default function EventScreen() {
     setEvent(eventRow);
 
     const isHost = session?.user.id === eventRow.host_id;
-    const [{ data: host }, { count }, { data: going }, myRsvpResult, guestListResult] =
+    const [{ data: host }, { count }, { data: going }, myRsvpResult, guestListResult, minTierResult] =
       await Promise.all([
         supabase.from('profiles').select('display_name').eq('id', eventRow.host_id).maybeSingle(),
         supabase
@@ -313,12 +326,20 @@ export default function EventScreen() {
               .eq('event_id', eventRow.id)
               .order('created_at', { ascending: false })
           : Promise.resolve({ data: [] }),
+        supabase
+          .from('ticket_tiers')
+          .select('price_minor, currency')
+          .eq('event_id', eventRow.id)
+          .order('price_minor', { ascending: true })
+          .limit(1)
+          .maybeSingle(),
       ]);
     setHostName(host?.display_name ?? null);
     setGoingCount(count ?? null);
     setGoingNames((going ?? []).map((r) => r.guest_name));
     setMyRsvp(myRsvpResult.data ?? null);
     setGuestList(guestListResult.data ?? []);
+    setMinTier(minTierResult.data ?? null);
     setLoading(false);
   }, [slug, session]);
 
@@ -466,7 +487,10 @@ export default function EventScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        ref={scrollRef}
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}>
         <View style={styles.hero}>
           {event.cover_url ? (
             <Image source={{ uri: event.cover_url }} style={StyleSheet.absoluteFill} contentFit="cover" />
@@ -505,7 +529,12 @@ export default function EventScreen() {
         </View>
 
         <View style={styles.body}>
-          <ThemedView type="backgroundElement" style={styles.infoCard}>
+          <ThemedView
+            type="backgroundElement"
+            style={styles.infoCard}
+            onLayout={(e) => {
+              rsvpY.current = e.nativeEvent.layout.y;
+            }}>
             <ThemedText type="smallBold" themeColor="textSecondary" style={styles.kicker}>
               ARE YOU PULLING UP?
             </ThemedText>
@@ -552,12 +581,17 @@ export default function EventScreen() {
 
           {event.playlist_url ? <Playlist url={event.playlist_url} /> : null}
 
-          <TicketTiers
-            eventId={event.id}
-            currency={event.currency}
-            isManager={isHost}
-            onBuy={buyTier}
-          />
+          <View
+            onLayout={(e) => {
+              ticketsY.current = e.nativeEvent.layout.y;
+            }}>
+            <TicketTiers
+              eventId={event.id}
+              currency={event.currency}
+              isManager={isHost}
+              onBuy={buyTier}
+            />
+          </View>
           {isHost && event.is_ticketed ? (
             <Pressable
               style={styles.checkInButton}
@@ -648,6 +682,38 @@ export default function EventScreen() {
           <PartyChat eventId={event.id} />
         </View>
       </ScrollView>
+
+      {!isHost ? (
+        <View style={[styles.stickyBar, { paddingBottom: Math.max(insets.bottom, Spacing.three) }]}>
+          {event.is_ticketed ? (
+            <>
+              <View style={styles.stickyInfo}>
+                <ThemedText type="small" themeColor="textSecondary">
+                  {minTier ? 'From' : ' '}
+                </ThemedText>
+                <ThemedText type="subtitle" style={styles.stickyPrice}>
+                  {minTier ? formatMoney(minTier.price_minor, minTier.currency) : 'Tickets'}
+                </ThemedText>
+              </View>
+              <Pressable style={styles.stickyCta} onPress={() => scrollToSection(ticketsY.current)}>
+                <ThemedText type="smallBold" style={styles.onState}>
+                  Get tickets
+                </ThemedText>
+              </Pressable>
+            </>
+          ) : (
+            <Pressable
+              style={[styles.stickyCta, styles.stickyCtaWide]}
+              onPress={() => scrollToSection(rsvpY.current)}>
+              <ThemedText type="smallBold" style={styles.onState}>
+                {myRsvp
+                  ? `You're ${myRsvp.status === 'going' ? 'going 🔥' : myRsvp.status} · Change`
+                  : 'RSVP now'}
+              </ThemedText>
+            </Pressable>
+          )}
+        </View>
+      ) : null}
     </ThemedView>
   );
 }
@@ -665,10 +731,41 @@ const styles = StyleSheet.create({
     maxWidth: MaxContentWidth,
     width: '100%',
     alignSelf: 'center',
-    paddingBottom: Spacing.six,
+    paddingBottom: 120,
+  },
+  stickyBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
+    paddingHorizontal: Spacing.four,
+    paddingTop: Spacing.three,
+    backgroundColor: 'rgba(11,11,16,0.96)',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.08)',
+  },
+  stickyInfo: {
+    flex: 1,
+  },
+  stickyPrice: {
+    fontSize: 18,
+    lineHeight: 22,
+  },
+  stickyCta: {
+    backgroundColor: Brand,
+    borderRadius: 999,
+    paddingVertical: Spacing.three,
+    paddingHorizontal: Spacing.five,
+    alignItems: 'center',
+  },
+  stickyCtaWide: {
+    flex: 1,
   },
   hero: {
-    height: 380,
+    height: HERO_HEIGHT,
     justifyContent: 'flex-end',
   },
   heroContent: {
