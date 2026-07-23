@@ -37,9 +37,21 @@ const STATUS_LABEL: Record<WalletTicket['status'], string> = {
   void: '✕ Void',
 };
 
+type WalletMerch = {
+  id: string;
+  buyer_name: string;
+  qr_code: string;
+  quantity: number;
+  status: string;
+  merch_items: { name: string } | null;
+  merch_variants: { label: string } | null;
+  events: { title: string; venue_name: string | null } | null;
+};
+
 export default function TicketsScreen() {
   const { session } = useAuth();
   const [tickets, setTickets] = useState<WalletTicket[]>([]);
+  const [merch, setMerch] = useState<WalletMerch[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
@@ -47,13 +59,22 @@ export default function TicketsScreen() {
       setLoading(false);
       return;
     }
-    const { data } = await supabase
-      .from('tickets')
-      .select(
-        'id, attendee_name, qr_code, status, orders!inner(profile_id), events(title, starts_at, venue_name, timezone), ticket_tiers(name)',
-      )
-      .eq('orders.profile_id', session.user.id);
-    if (data) setTickets(data as unknown as WalletTicket[]);
+    const [ticketRes, merchRes] = await Promise.all([
+      supabase
+        .from('tickets')
+        .select(
+          'id, attendee_name, qr_code, status, orders!inner(profile_id), events(title, starts_at, venue_name, timezone), ticket_tiers(name)',
+        )
+        .eq('orders.profile_id', session.user.id),
+      supabase
+        .from('merch_purchases')
+        .select(
+          'id, buyer_name, qr_code, quantity, status, orders!inner(profile_id), merch_items(name), merch_variants(label), events(title, venue_name)',
+        )
+        .eq('orders.profile_id', session.user.id),
+    ]);
+    if (ticketRes.data) setTickets(ticketRes.data as unknown as WalletTicket[]);
+    if (merchRes.data) setMerch(merchRes.data as unknown as WalletMerch[]);
     setLoading(false);
   }, [session]);
 
@@ -75,10 +96,10 @@ export default function TicketsScreen() {
         <ThemedText type="title">My tickets</ThemedText>
         {loading ? (
           <ActivityIndicator color={Brand} style={styles.loader} />
-        ) : tickets.length === 0 ? (
+        ) : tickets.length === 0 && merch.length === 0 ? (
           <ThemedText type="small" themeColor="textSecondary" style={styles.empty}>
-            No tickets yet. When you buy a ticket it shows up here with a QR pass that scans at
-            the door — even offline.
+            No tickets yet. When you buy a ticket or merch it shows up here with a QR pass that
+            scans at the door — even offline.
           </ThemedText>
         ) : (
           tickets.map((t) => (
@@ -118,6 +139,51 @@ export default function TicketsScreen() {
             </ThemedView>
           ))
         )}
+
+        {merch.length > 0 ? (
+          <>
+            <ThemedText type="subtitle" style={styles.sectionHeading}>
+              🛍️ Merch pickups
+            </ThemedText>
+            {merch.map((m) => {
+              const collected = m.status === 'collected';
+              const size =
+                m.merch_variants?.label && m.merch_variants.label !== 'One size'
+                  ? ` · ${m.merch_variants.label}`
+                  : '';
+              return (
+                <ThemedView key={m.id} type="backgroundElement" style={styles.pass}>
+                  <View style={styles.merchTop}>
+                    <ThemedText type="smallBold" style={styles.merchKicker}>
+                      {(m.merch_items?.name ?? 'MERCH').toUpperCase()}
+                      {size.toUpperCase()}
+                    </ThemedText>
+                    <ThemedText type="subtitle">{m.events?.title ?? 'Event'}</ThemedText>
+                  </View>
+                  <View style={styles.passBody}>
+                    <View style={styles.qrBox}>
+                      <QRCode value={m.qr_code} size={104} backgroundColor="#FFFFFF" color="#0B120D" />
+                    </View>
+                    <View style={styles.passInfo}>
+                      <ThemedText type="smallBold">
+                        {m.buyer_name}
+                        {m.quantity > 1 ? ` ×${m.quantity}` : ''}
+                      </ThemedText>
+                      {m.events?.venue_name ? (
+                        <ThemedText type="small" themeColor="textSecondary">
+                          {m.events.venue_name}
+                        </ThemedText>
+                      ) : null}
+                      <ThemedText type="smallBold" style={styles.status}>
+                        {collected ? '✓ Collected' : '● Show at pickup'}
+                      </ThemedText>
+                    </View>
+                  </View>
+                </ThemedView>
+              );
+            })}
+          </>
+        ) : null}
       </ScrollView>
     </ThemedView>
   );
@@ -180,5 +246,17 @@ const styles = StyleSheet.create({
   status: {
     color: Brand,
     marginTop: Spacing.one,
+  },
+  sectionHeading: {
+    marginTop: Spacing.four,
+  },
+  merchTop: {
+    padding: Spacing.four,
+    paddingBottom: 0,
+    gap: Spacing.half,
+  },
+  merchKicker: {
+    color: Brand,
+    letterSpacing: 2,
   },
 });

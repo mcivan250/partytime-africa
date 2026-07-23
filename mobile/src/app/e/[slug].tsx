@@ -20,6 +20,7 @@ import { PhotoAlbum } from '@/components/photo-album';
 import { Playlist } from '@/components/playlist';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { MerchShop } from '@/components/merch-shop';
 import { TicketTiers } from '@/components/ticket-tiers';
 import { VenueTables } from '@/components/venue-tables';
 import {
@@ -411,6 +412,35 @@ export default function EventScreen() {
     Linking.openURL(data.redirect_url);
   };
 
+  const buyMerch = async (variant: { id: string }) => {
+    if (!session) {
+      setBuyNotice('Please sign in to buy merch.');
+      router.push('/profile');
+      return;
+    }
+    setBuyNotice('Starting secure checkout…');
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('display_name, phone')
+      .eq('id', session.user.id)
+      .maybeSingle();
+    const { data, error: fnError } = await supabase.functions.invoke('create-order', {
+      body: {
+        merch_variant_id: variant.id,
+        quantity: 1,
+        buyer_name: profile?.display_name || session.user.email || 'Guest',
+        buyer_phone: profile?.phone || '',
+        email: session.user.email || '',
+      },
+    });
+    if (fnError || data?.error || !data?.redirect_url) {
+      setBuyNotice(data?.error || 'Could not start checkout. Payments may not be set up yet.');
+      return;
+    }
+    setBuyNotice('Opening secure checkout — collect your merch at the event with the QR in My Tickets. 🛍️');
+    Linking.openURL(data.redirect_url);
+  };
+
   const rsvp = async (status: RsvpStatus) => {
     if (!session || !event) return;
     setSaving(true);
@@ -595,6 +625,13 @@ export default function EventScreen() {
             currency={event.currency}
             isManager={isHost}
             onBook={bookTable}
+          />
+
+          <MerchShop
+            eventId={event.id}
+            currency={event.currency}
+            isManager={isHost}
+            onBuy={buyMerch}
           />
           {isHost ? (
             <Pressable

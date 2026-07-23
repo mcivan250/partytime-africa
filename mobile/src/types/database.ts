@@ -375,6 +375,148 @@ export type Database = {
           },
         ]
       }
+      merch_items: {
+        Row: {
+          created_at: string
+          currency: string
+          description: string | null
+          event_id: string
+          id: string
+          image_url: string | null
+          name: string
+          position: number
+          price_minor: number
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          currency: string
+          description?: string | null
+          event_id: string
+          id?: string
+          image_url?: string | null
+          name: string
+          position?: number
+          price_minor: number
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          description?: string | null
+          event_id?: string
+          id?: string
+          image_url?: string | null
+          name?: string
+          position?: number
+          price_minor?: number
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "merch_items_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      merch_variants: {
+        Row: {
+          id: string
+          inventory: number | null
+          item_id: string
+          label: string
+          position: number
+          sold: number
+        }
+        Insert: {
+          id?: string
+          inventory?: number | null
+          item_id: string
+          label?: string
+          position?: number
+          sold?: number
+        }
+        Update: {
+          id?: string
+          inventory?: number | null
+          item_id?: string
+          label?: string
+          position?: number
+          sold?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "merch_variants_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "merch_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      merch_purchases: {
+        Row: {
+          buyer_name: string
+          collected_at: string | null
+          collected_by: string | null
+          created_at: string
+          event_id: string
+          id: string
+          item_id: string
+          order_id: string
+          qr_code: string
+          quantity: number
+          status: string
+          variant_id: string
+        }
+        Insert: {
+          buyer_name: string
+          collected_at?: string | null
+          collected_by?: string | null
+          created_at?: string
+          event_id: string
+          id?: string
+          item_id: string
+          order_id: string
+          qr_code?: string
+          quantity?: number
+          status?: string
+          variant_id: string
+        }
+        Update: {
+          buyer_name?: string
+          collected_at?: string | null
+          collected_by?: string | null
+          created_at?: string
+          event_id?: string
+          id?: string
+          item_id?: string
+          order_id?: string
+          qr_code?: string
+          quantity?: number
+          status?: string
+          variant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "merch_purchases_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "merch_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "merch_purchases_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "merch_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           created_at: string

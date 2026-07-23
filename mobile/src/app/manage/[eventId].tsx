@@ -18,6 +18,10 @@ type EventRow = Pick<
 type Tier = Pick<Tables<'ticket_tiers'>, 'name' | 'sold' | 'quantity' | 'price_minor' | 'currency'>;
 type TableRow = Pick<Tables<'venue_tables'>, 'price_minor' | 'status'>;
 type Rsvp = Pick<Tables<'rsvps'>, 'guest_name' | 'status' | 'plus_ones'>;
+type MerchPickup = Pick<Tables<'merch_purchases'>, 'id' | 'buyer_name' | 'quantity' | 'status'> & {
+  merch_items: { name: string; price_minor: number } | null;
+  merch_variants: { label: string } | null;
+};
 
 const STATUS_EMOJI: Record<Rsvp['status'], string> = { going: '🔥', maybe: '🤔', declined: '😢' };
 
@@ -45,6 +49,7 @@ export default function ManageEventScreen() {
   const [event, setEvent] = useState<EventRow | null>(null);
   const [tiers, setTiers] = useState<Tier[]>([]);
   const [tables, setTables] = useState<TableRow[]>([]);
+  const [merch, setMerch] = useState<MerchPickup[]>([]);
   const [rsvps, setRsvps] = useState<Rsvp[]>([]);
   const [ticketStatuses, setTicketStatuses] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,14 +65,20 @@ export default function ManageEventScreen() {
       .maybeSingle();
     setEvent(ev);
     if (ev) {
-      const [tiersRes, tablesRes, rsvpRes, ticketRes] = await Promise.all([
+      const [tiersRes, tablesRes, merchRes, rsvpRes, ticketRes] = await Promise.all([
         supabase.from('ticket_tiers').select('name, sold, quantity, price_minor, currency').eq('event_id', ev.id).order('position'),
         supabase.from('venue_tables').select('price_minor, status').eq('event_id', ev.id),
+        supabase
+          .from('merch_purchases')
+          .select('id, buyer_name, quantity, status, merch_items(name, price_minor), merch_variants(label)')
+          .eq('event_id', ev.id)
+          .order('created_at', { ascending: false }),
         supabase.from('rsvps').select('guest_name, status, plus_ones').eq('event_id', ev.id).order('created_at', { ascending: false }),
         supabase.from('tickets').select('status').eq('event_id', ev.id),
       ]);
       setTiers(tiersRes.data ?? []);
       setTables(tablesRes.data ?? []);
+      setMerch((merchRes.data ?? []) as unknown as MerchPickup[]);
       setRsvps(rsvpRes.data ?? []);
       setTicketStatuses((ticketRes.data ?? []).map((t) => t.status));
     }
@@ -94,6 +105,14 @@ export default function ManageEventScreen() {
     setBlastResult(data?.sent > 0 ? `Sent to ${data.sent} guest(s). 📣` : (data?.note ?? 'No guests with phone numbers yet.'));
   };
 
+  const markCollected = async (id: string) => {
+    setMerch((prev) => prev.map((m) => (m.id === id ? { ...m, status: 'collected' } : m)));
+    await supabase
+      .from('merch_purchases')
+      .update({ status: 'collected', collected_at: new Date().toISOString() })
+      .eq('id', id);
+  };
+
   if (loading) {
     return (
       <ThemedView style={[styles.container, styles.center]}>
@@ -115,9 +134,13 @@ export default function ManageEventScreen() {
   const sold = tiers.reduce((n, t) => n + t.sold, 0);
   const bookedTables = tables.filter((t) => t.status === 'booked');
   const tableRevenueMinor = bookedTables.reduce((n, t) => n + t.price_minor, 0);
-  const revenueMinor = tiers.reduce((n, t) => n + t.sold * t.price_minor, 0) + tableRevenueMinor;
+  const merchUnits = merch.reduce((n, m) => n + m.quantity, 0);
+  const merchRevenueMinor = merch.reduce((n, m) => n + m.quantity * (m.merch_items?.price_minor ?? 0), 0);
+  const merchCollected = merch.filter((m) => m.status === 'collected').length;
+  const revenueMinor =
+    tiers.reduce((n, t) => n + t.sold * t.price_minor, 0) + tableRevenueMinor + merchRevenueMinor;
   const checkedIn = ticketStatuses.filter((s) => s === 'checked_in').length;
-  const hasSales = event.is_ticketed || tables.length > 0;
+  const hasSales = event.is_ticketed || tables.length > 0 || merch.length > 0;
 
   return (
     <ThemedView style={styles.container}>
@@ -138,6 +161,9 @@ export default function ManageEventScreen() {
           ) : null}
           {tables.length > 0 ? (
             <StatTile value={`${bookedTables.length}/${tables.length}`} label="TABLES BOOKED" />
+          ) : null}
+          {merch.length > 0 ? (
+            <StatTile value={`${merchCollected}/${merchUnits}`} label="MERCH COLLECTED" />
           ) : null}
           {hasSales ? (
             <StatTile value={formatMoney(revenueMinor, event.currency)} label="REVENUE" color={Gold} />
@@ -167,6 +193,44 @@ export default function ManageEventScreen() {
                 </ThemedText>
               </View>
             ))}
+          </ThemedView>
+        ) : null}
+
+        {merch.length > 0 ? (
+          <ThemedView type="backgroundElement" style={styles.card}>
+            <ThemedText type="subtitle">Merch pickups ({merchCollected}/{merchUnits})</ThemedText>
+            {merch.map((m) => {
+              const collected = m.status === 'collected';
+              const size =
+                m.merch_variants?.label && m.merch_variants.label !== 'One size'
+                  ? ` · ${m.merch_variants.label}`
+                  : '';
+              return (
+                <View key={m.id} style={styles.tierRow}>
+                  <View style={styles.flex}>
+                    <ThemedText type="smallBold">
+                      {m.buyer_name}
+                      {m.quantity > 1 ? ` ×${m.quantity}` : ''}
+                    </ThemedText>
+                    <ThemedText type="small" themeColor="textSecondary">
+                      {m.merch_items?.name ?? 'Item'}
+                      {size}
+                    </ThemedText>
+                  </View>
+                  {collected ? (
+                    <ThemedText type="smallBold" style={{ color: StateGo }}>
+                      ✓ Collected
+                    </ThemedText>
+                  ) : (
+                    <Pressable style={styles.collectButton} onPress={() => markCollected(m.id)}>
+                      <ThemedText type="smallBold" style={styles.onBrand}>
+                        Mark collected
+                      </ThemedText>
+                    </Pressable>
+                  )}
+                </View>
+              );
+            })}
           </ThemedView>
         ) : null}
 
@@ -271,6 +335,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.two,
+  },
+  collectButton: {
+    backgroundColor: Brand,
+    borderRadius: 999,
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.three,
   },
   flex: { flex: 1 },
   input: {
