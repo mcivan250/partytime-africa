@@ -113,7 +113,7 @@ export default function ManageEventScreen() {
   const going = rsvps.filter((r) => r.status === 'going').length;
   const maybe = rsvps.filter((r) => r.status === 'maybe').length;
   const sold = tiers.reduce((n, t) => n + t.sold, 0);
-  const bookedTables = tables.filter((t) => t.status !== 'available');
+  const bookedTables = tables.filter((t) => t.status === 'booked');
   const tableRevenueMinor = bookedTables.reduce((n, t) => n + t.price_minor, 0);
   const revenueMinor = tiers.reduce((n, t) => n + t.sold * t.price_minor, 0) + tableRevenueMinor;
   const checkedIn = ticketStatuses.filter((s) => s === 'checked_in').length;

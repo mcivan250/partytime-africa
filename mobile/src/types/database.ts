@@ -992,6 +992,7 @@ export type Database = {
         Row: {
           currency: string
           event_id: string
+          held_for: string | null
           id: string
           name: string
           price_minor: number
@@ -1002,6 +1003,7 @@ export type Database = {
         Insert: {
           currency: string
           event_id: string
+          held_for?: string | null
           id?: string
           name: string
           price_minor: number
@@ -1012,6 +1014,7 @@ export type Database = {
         Update: {
           currency?: string
           event_id?: string
+          held_for?: string | null
           id?: string
           name?: string
           price_minor?: number
