@@ -1,9 +1,12 @@
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as SplashScreen from 'expo-splash-screen';
 import { useState } from 'react';
-import { Dimensions, StyleSheet, View } from 'react-native';
+import { Dimensions, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, Keyframe } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
+
+import { BrandGradient, BrandGradientLocations, DisplayFont, OnBrand } from '@/constants/theme';
 
 const INITIAL_SCALE_FACTOR = Dimensions.get('screen').height / 90;
 const DURATION = 600;
@@ -33,7 +36,21 @@ export function AnimatedSplashOverlay() {
     },
   });
 
-  const image = <Image style={styles.image} source={require('@/assets/images/expo-logo.png')} />;
+  // Party Time brand splash: the green gradient badge + sparkle from the
+  // Discover tab, on forest-black — replaces the default Expo logo.
+  const image = (
+    <View style={styles.brandMark}>
+      <LinearGradient
+        colors={BrandGradient}
+        locations={BrandGradientLocations}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.brandBadge}>
+        <Text style={styles.brandGlyph}>✦</Text>
+      </LinearGradient>
+      <Text style={styles.brandWordmark}>PARTY TIME</Text>
+    </View>
+  );
 
   return animate ? (
     <Animated.View
@@ -140,9 +157,35 @@ const styles = StyleSheet.create({
   },
   splashOverlay: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: '#208AEF',
+    backgroundColor: '#111811',
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1000,
+  },
+  brandMark: {
+    alignItems: 'center',
+    gap: 20,
+  },
+  brandBadge: {
+    width: 112,
+    height: 112,
+    borderRadius: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#1DC96B',
+    shadowOpacity: 0.5,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 12,
+  },
+  brandGlyph: {
+    fontSize: 54,
+    color: OnBrand,
+  },
+  brandWordmark: {
+    fontFamily: DisplayFont,
+    fontSize: 22,
+    letterSpacing: 3,
+    color: '#EFF6EE',
   },
 });
