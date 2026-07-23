@@ -238,6 +238,45 @@ export type Database = {
           },
         ]
       }
+      event_reactions: {
+        Row: {
+          created_at: string
+          emoji: string
+          event_id: string
+          id: string
+          profile_id: string
+        }
+        Insert: {
+          created_at?: string
+          emoji?: string
+          event_id: string
+          id?: string
+          profile_id: string
+        }
+        Update: {
+          created_at?: string
+          emoji?: string
+          event_id?: string
+          id?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_reactions_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_reactions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       events: {
         Row: {
           address: string | null
@@ -1088,6 +1127,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      activity_feed: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          kind: string
+          actor: string
+          event_id: string
+          event_slug: string
+          event_title: string
+          cover_url: string | null
+          at: string
+        }[]
+      }
       event_guest_list_public: { Args: { e: string }; Returns: boolean }
       feed_events: {
         Args: Record<PropertyKey, never>
@@ -1108,6 +1159,9 @@ export type Database = {
           title: string
           trending_score: number
           venue_name: string
+          reaction_count: number
+          comment_count: number
+          i_reacted: boolean
         }[]
       }
       is_event_manager: { Args: { e: string }; Returns: boolean }

@@ -25,6 +25,7 @@ import {
   MaxContentWidth,
   OnBrand,
   Spacing,
+  StateGo,
 } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth-context';
@@ -45,6 +46,19 @@ type FeedEvent = {
   trending_score: number;
   featured: boolean;
   sponsor_name: string | null;
+  reaction_count: number;
+  comment_count: number;
+  i_reacted: boolean;
+};
+
+type ActivityItem = {
+  kind: string;
+  actor: string;
+  event_id: string;
+  event_slug: string;
+  event_title: string;
+  cover_url: string | null;
+  at: string;
 };
 
 type FilterKey = 'all' | 'trending' | 'tonight' | 'weekend' | 'ticketed' | 'free';
@@ -120,11 +134,12 @@ function fomoBadges(event: FeedEvent): Badge[] {
   return out.slice(0, 3);
 }
 
-function EventCard({ event }: { event: FeedEvent }) {
+function EventCard({ event, onReact }: { event: FeedEvent; onReact: (event: FeedEvent) => void }) {
   const badges = fomoBadges(event);
+  const openEvent = () => router.push({ pathname: '/e/[slug]', params: { slug: event.slug } });
   return (
     <Pressable
-      onPress={() => router.push({ pathname: '/e/[slug]', params: { slug: event.slug } })}
+      onPress={openEvent}
       style={({ pressed }) => [
         styles.cardWrap,
         event.featured && styles.cardWrapFeatured,
@@ -175,9 +190,67 @@ function EventCard({ event }: { event: FeedEvent }) {
               {event.venue_name}
             </ThemedText>
           ) : null}
+          <View style={styles.cardActions}>
+            <Pressable
+              onPress={(e) => {
+                e.stopPropagation?.();
+                onReact(event);
+              }}
+              hitSlop={8}
+              style={[styles.actionPill, event.i_reacted && styles.actionPillOn]}>
+              <ThemedText type="smallBold" style={event.i_reacted ? styles.actionOnText : styles.onImage}>
+                🔥 {event.reaction_count > 0 ? event.reaction_count : 'Hype'}
+              </ThemedText>
+            </Pressable>
+            <Pressable
+              onPress={(e) => {
+                e.stopPropagation?.();
+                openEvent();
+              }}
+              hitSlop={8}
+              style={styles.actionPill}>
+              <ThemedText type="smallBold" style={styles.onImage}>
+                💬 {event.comment_count > 0 ? event.comment_count : 'Chat'}
+              </ThemedText>
+            </Pressable>
+          </View>
         </View>
       </View>
     </Pressable>
+  );
+}
+
+// Horizontal "right now" strip of real activity (going-RSVPs + new events).
+function ActivityStrip({ items }: { items: ActivityItem[] }) {
+  if (items.length === 0) return null;
+  return (
+    <View style={styles.activityWrap}>
+      <ThemedText type="smallBold" themeColor="textSecondary" style={styles.kicker}>
+        ⚡ RIGHT NOW
+      </ThemedText>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.activityRow}>
+        {items.map((item, i) => {
+          const verb = item.kind === 'rsvp' ? 'is going to' : 'is hosting';
+          const emoji = item.kind === 'rsvp' ? '🔥' : '✨';
+          return (
+            <Pressable
+              key={`${item.kind}-${item.event_id}-${i}`}
+              onPress={() => router.push({ pathname: '/e/[slug]', params: { slug: item.event_slug } })}
+              style={styles.activityCard}>
+              <ThemedText type="smallBold" numberOfLines={2} style={styles.activityText}>
+                {emoji} <ThemedText type="smallBold" style={styles.activityActor}>{item.actor}</ThemedText> {verb}
+              </ThemedText>
+              <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+                {item.event_title}
+              </ThemedText>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+    </View>
   );
 }
 
@@ -210,6 +283,7 @@ export default function EventsScreen() {
   const theme = useTheme();
   const { session } = useAuth();
   const [events, setEvents] = useState<FeedEvent[]>([]);
+  const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -217,14 +291,55 @@ export default function EventsScreen() {
   const [filter, setFilter] = useState<FilterKey>('all');
 
   const loadEvents = useCallback(async () => {
-    const { data, error: queryError } = await supabase.rpc('feed_events');
+    const [{ data, error: queryError }, { data: acts }] = await Promise.all([
+      supabase.rpc('feed_events'),
+      supabase.rpc('activity_feed'),
+    ]);
     if (queryError) setError(queryError.message);
     else {
       setError(null);
       setEvents((data ?? []) as FeedEvent[]);
     }
+    setActivity((acts ?? []) as ActivityItem[]);
     setLoading(false);
   }, []);
+
+  // Optimistic 🔥 toggle — write to event_reactions, roll back on error.
+  const toggleReaction = useCallback(
+    async (event: FeedEvent) => {
+      if (!session) {
+        router.push('/profile');
+        return;
+      }
+      const next = !event.i_reacted;
+      setEvents((prev) =>
+        prev.map((e) =>
+          e.id === event.id
+            ? { ...e, i_reacted: next, reaction_count: Math.max(0, e.reaction_count + (next ? 1 : -1)) }
+            : e,
+        ),
+      );
+      const { error: reactError } = next
+        ? await supabase
+            .from('event_reactions')
+            .insert({ event_id: event.id, profile_id: session.user.id })
+        : await supabase
+            .from('event_reactions')
+            .delete()
+            .eq('event_id', event.id)
+            .eq('profile_id', session.user.id);
+      if (reactError) {
+        setEvents((prev) =>
+          prev.map((e) =>
+            e.id === event.id
+              ? { ...e, i_reacted: event.i_reacted, reaction_count: event.reaction_count }
+              : e,
+          ),
+        );
+      }
+    },
+    [session],
+  );
 
   useEffect(() => {
     loadEvents();
@@ -289,9 +404,14 @@ export default function EventsScreen() {
         <FlatList
           data={loading ? [] : filtered}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => <EventCard event={item} />}
+          renderItem={({ item }) => <EventCard event={item} onReact={toggleReaction} />}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
+          ListHeaderComponent={
+            !loading && filter === 'all' && !query.trim() ? (
+              <ActivityStrip items={activity} />
+            ) : null
+          }
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.text} />
           }
@@ -478,6 +598,51 @@ const styles = StyleSheet.create({
   cardContent: {
     padding: Spacing.four,
     gap: Spacing.two,
+  },
+  cardActions: {
+    flexDirection: 'row',
+    gap: Spacing.two,
+    marginTop: Spacing.one,
+  },
+  actionPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(11,11,16,0.55)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+  },
+  actionPillOn: {
+    backgroundColor: Brand,
+    borderColor: 'transparent',
+  },
+  actionOnText: {
+    color: OnBrand,
+  },
+  activityWrap: {
+    gap: Spacing.two,
+    marginBottom: Spacing.three,
+  },
+  activityRow: {
+    gap: Spacing.two,
+    paddingRight: Spacing.four,
+  },
+  activityCard: {
+    width: 200,
+    backgroundColor: '#19231B',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 16,
+    padding: Spacing.three,
+    gap: Spacing.half,
+  },
+  activityText: {
+    lineHeight: 18,
+  },
+  activityActor: {
+    color: StateGo,
   },
   datePill: {
     alignSelf: 'flex-start',
