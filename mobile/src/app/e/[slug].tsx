@@ -25,6 +25,7 @@ import {
   Brand,
   BrandGradient,
   BrandGradientLocations,
+  Gold,
   MaxContentWidth,
   OnBrand,
   Spacing,
@@ -260,16 +261,10 @@ export default function EventScreen() {
   const [hostName, setHostName] = useState<string | null>(null);
   const [goingCount, setGoingCount] = useState<number | null>(null);
   const [goingNames, setGoingNames] = useState<string[]>([]);
-  const [guestList, setGuestList] = useState<
-    Pick<Tables<'rsvps'>, 'guest_name' | 'status' | 'plus_ones'>[]
-  >([]);
   const [myRsvp, setMyRsvp] = useState<Pick<Tables<'rsvps'>, 'id' | 'status'> | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [blastMessage, setBlastMessage] = useState('');
-  const [blastBusy, setBlastBusy] = useState(false);
-  const [blastResult, setBlastResult] = useState<string | null>(null);
   const [buyNotice, setBuyNotice] = useState<string | null>(null);
   const [minTier, setMinTier] = useState<{ price_minor: number; currency: string } | null>(null);
   const insets = useSafeAreaInsets();
@@ -294,8 +289,7 @@ export default function EventScreen() {
     }
     setEvent(eventRow);
 
-    const isHost = session?.user.id === eventRow.host_id;
-    const [{ data: host }, { count }, { data: going }, myRsvpResult, guestListResult, minTierResult] =
+    const [{ data: host }, { count }, { data: going }, myRsvpResult, minTierResult] =
       await Promise.all([
         supabase.from('profiles').select('display_name').eq('id', eventRow.host_id).maybeSingle(),
         supabase
@@ -319,13 +313,6 @@ export default function EventScreen() {
               .eq('profile_id', session.user.id)
               .maybeSingle()
           : Promise.resolve({ data: null }),
-        isHost
-          ? supabase
-              .from('rsvps')
-              .select('guest_name, status, plus_ones')
-              .eq('event_id', eventRow.id)
-              .order('created_at', { ascending: false })
-          : Promise.resolve({ data: [] }),
         supabase
           .from('ticket_tiers')
           .select('price_minor, currency')
@@ -338,7 +325,6 @@ export default function EventScreen() {
     setGoingCount(count ?? null);
     setGoingNames((going ?? []).map((r) => r.guest_name));
     setMyRsvp(myRsvpResult.data ?? null);
-    setGuestList(guestListResult.data ?? []);
     setMinTier(minTierResult.data ?? null);
     setLoading(false);
   }, [slug, session]);
@@ -365,26 +351,6 @@ export default function EventScreen() {
     } else {
       shareInvite();
     }
-  };
-
-  const sendBlast = async () => {
-    if (!event || !blastMessage.trim()) return;
-    setBlastBusy(true);
-    setBlastResult(null);
-    const { data, error: fnError } = await supabase.functions.invoke('notify-guests', {
-      body: { event_id: event.id, message: blastMessage.trim(), audience: 'going' },
-    });
-    setBlastBusy(false);
-    if (fnError || data?.error) {
-      setBlastResult(data?.error || 'Could not send. SMS may not be set up yet.');
-      return;
-    }
-    setBlastMessage('');
-    setBlastResult(
-      data?.sent > 0
-        ? `Sent to ${data.sent} guest${data.sent === 1 ? '' : 's'}. 📣`
-        : (data?.note ?? 'No guests with phone numbers yet.'),
-    );
   };
 
   const buyTier = async (tier: { id: string }) => {
@@ -479,11 +445,6 @@ export default function EventScreen() {
       })
     : 'Date TBA';
   const isHost = session?.user.id === event.host_id;
-  const statusEmoji: Record<RsvpStatus, string> = {
-    going: '🔥',
-    maybe: '🤔',
-    declined: '😢',
-  };
 
   return (
     <ThemedView style={styles.container}>
@@ -513,6 +474,13 @@ export default function EventScreen() {
               {shortDate.toUpperCase()}
             </ThemedText>
             <ThemedText type="title">{event.title}</ThemedText>
+            {event.featured && event.sponsor_name ? (
+              <View style={styles.sponsorChip}>
+                <ThemedText type="smallBold" style={styles.sponsorChipText}>
+                  ★ Sponsored by {event.sponsor_name}
+                </ThemedText>
+              </View>
+            ) : null}
             <View style={styles.heroChips}>
               {hostName ? (
                 <View style={styles.chip}>
@@ -730,6 +698,18 @@ const styles = StyleSheet.create({
     marginTop: Spacing.one,
     flexWrap: 'wrap',
   },
+  sponsorChip: {
+    alignSelf: 'flex-start',
+    backgroundColor: Gold,
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    marginTop: Spacing.one,
+  },
+  sponsorChipText: {
+    color: '#07130B',
+    letterSpacing: 0.3,
+  },
   chip: {
     backgroundColor: 'rgba(0,0,0,0.35)',
     borderColor: 'rgba(255,255,255,0.2)',
@@ -814,26 +794,6 @@ const styles = StyleSheet.create({
   },
   shareWhatsApp: {
     backgroundColor: StateGo,
-  },
-  guestRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingVertical: Spacing.one,
-  },
-  guestName: {
-    flex: 1,
-  },
-  blastDivider: {
-    height: 1,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    marginTop: Spacing.two,
-  },
-  blastButton: {
-    backgroundColor: '#3DDC97',
-    borderRadius: 16,
-    paddingVertical: Spacing.three,
-    alignItems: 'center',
   },
   checkInButton: {
     backgroundColor: '#243527',
