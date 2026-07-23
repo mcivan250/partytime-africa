@@ -1,8 +1,17 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
-import { FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Animated,
+  FlatList,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
@@ -19,7 +28,6 @@ import {
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
-import type { Tables } from '@/types/database';
 
 type FeedEvent = {
   id: string;
@@ -36,10 +44,18 @@ type FeedEvent = {
   trending_score: number;
 };
 
+type FilterKey = 'all' | 'trending' | 'tonight' | 'weekend' | 'ticketed' | 'free';
+const FILTERS: { key: FilterKey; label: string }[] = [
+  { key: 'all', label: 'All' },
+  { key: 'trending', label: '🔥 Trending' },
+  { key: 'tonight', label: 'Tonight' },
+  { key: 'weekend', label: 'This weekend' },
+  { key: 'ticketed', label: '🎟 Tickets' },
+  { key: 'free', label: 'Free' },
+];
+
 function formatStartsAt(event: FeedEvent) {
-  if (!event.starts_at) {
-    return 'Date TBA';
-  }
+  if (!event.starts_at) return 'Date TBA';
   return new Date(event.starts_at).toLocaleString(undefined, {
     weekday: 'short',
     day: 'numeric',
@@ -55,31 +71,49 @@ function hoursUntil(startsAt: string | null): number | null {
   return (new Date(startsAt).getTime() - Date.now()) / 3_600_000;
 }
 
+function isThisWeekend(startsAt: string | null, tz: string): boolean {
+  if (!startsAt) return false;
+  const d = new Date(startsAt);
+  const h = (d.getTime() - Date.now()) / 3_600_000;
+  if (h < -6 || h > 24 * 7) return false;
+  const wd = new Intl.DateTimeFormat('en-US', { weekday: 'short', timeZone: tz }).format(d);
+  return wd === 'Fri' || wd === 'Sat' || wd === 'Sun';
+}
+
+function matchesFilter(ev: FeedEvent, filter: FilterKey): boolean {
+  switch (filter) {
+    case 'all':
+      return true;
+    case 'trending':
+      return ev.trending_score > 0;
+    case 'tonight': {
+      const h = hoursUntil(ev.starts_at);
+      return h !== null && h >= -3 && h <= 14;
+    }
+    case 'weekend':
+      return isThisWeekend(ev.starts_at, ev.timezone);
+    case 'ticketed':
+      return ev.is_ticketed;
+    case 'free':
+      return !ev.is_ticketed;
+  }
+}
+
 type Badge = { label: string; bg: string; fg: string };
 
-// FOMO signals, all from real data — social-proof badges appear as real RSVPs
-// arrive; time and ticket badges show immediately.
 function fomoBadges(event: FeedEvent): Badge[] {
   const out: Badge[] = [];
   const h = hoursUntil(event.starts_at);
-  if (event.trending_score >= 8) {
-    out.push({ label: '🔥 Trending', bg: '#F73558', fg: '#fff' });
-  }
+  if (event.trending_score >= 8) out.push({ label: '🔥 Trending', bg: '#F73558', fg: '#fff' });
   if (event.capacity && event.going_count >= event.capacity * 0.85) {
     out.push({ label: 'Almost full', bg: '#FFB84D', fg: '#07130B' });
   } else if (event.going_count >= 20) {
     out.push({ label: `${event.going_count} going`, bg: 'rgba(61,220,151,0.9)', fg: '#07130B' });
   }
   if (h !== null && h >= 0 && h <= 10) {
-    out.push({
-      label: h < 1 ? 'Starting soon' : `In ${Math.round(h)}h`,
-      bg: 'rgba(11,11,16,0.6)',
-      fg: '#fff',
-    });
+    out.push({ label: h < 1 ? 'Starting soon' : `In ${Math.round(h)}h`, bg: 'rgba(11,11,16,0.6)', fg: '#fff' });
   }
-  if (event.is_ticketed) {
-    out.push({ label: '🎟 Tickets', bg: 'rgba(11,11,16,0.6)', fg: '#fff' });
-  }
+  if (event.is_ticketed) out.push({ label: '🎟 Tickets', bg: 'rgba(11,11,16,0.6)', fg: '#fff' });
   return out.slice(0, 3);
 }
 
@@ -133,6 +167,31 @@ function EventCard({ event }: { event: FeedEvent }) {
   );
 }
 
+function SkeletonCard() {
+  const opacity = useRef(new Animated.Value(0.35)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(opacity, { toValue: 0.7, duration: 750, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 0.35, duration: 750, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [opacity]);
+  return <Animated.View style={[styles.skeleton, { opacity }]} />;
+}
+
+function Chip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+  return (
+    <Pressable onPress={onPress} style={[styles.chip, active && styles.chipActive]}>
+      <ThemedText type="smallBold" style={active ? styles.chipActiveText : styles.chipText}>
+        {label}
+      </ThemedText>
+    </Pressable>
+  );
+}
+
 export default function EventsScreen() {
   const theme = useTheme();
   const { session } = useAuth();
@@ -140,14 +199,13 @@ export default function EventsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
+  const [filter, setFilter] = useState<FilterKey>('all');
 
   const loadEvents = useCallback(async () => {
-    // feed_events returns public published events with live going/trending
-    // aggregates, ordered by start time.
     const { data, error: queryError } = await supabase.rpc('feed_events');
-    if (queryError) {
-      setError(queryError.message);
-    } else {
+    if (queryError) setError(queryError.message);
+    else {
       setError(null);
       setEvents((data ?? []) as FeedEvent[]);
     }
@@ -164,15 +222,26 @@ export default function EventsScreen() {
     setRefreshing(false);
   }, [loadEvents]);
 
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return events.filter((e) => {
+      if (!matchesFilter(e, filter)) return false;
+      if (!q) return true;
+      return (
+        e.title.toLowerCase().includes(q) || (e.venue_name ?? '').toLowerCase().includes(q)
+      );
+    });
+  }, [events, filter, query]);
+
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.headerRow}>
           <View>
-            <ThemedText type="small" themeColor="textSecondary">
-              What&apos;s on
+            <ThemedText type="smallBold" themeColor="textSecondary" style={styles.kicker}>
+              KAMPALA 🌙
             </ThemedText>
-            <ThemedText type="title">Party Time</ThemedText>
+            <ThemedText type="title">What&apos;s on</ThemedText>
           </View>
           {session ? (
             <Pressable style={styles.hostButton} onPress={() => router.push('/create-event')}>
@@ -182,8 +251,29 @@ export default function EventsScreen() {
             </Pressable>
           ) : null}
         </View>
+
+        <TextInput
+          style={[styles.search, { color: theme.text, backgroundColor: theme.backgroundElement }]}
+          placeholder="🔍  Search events, venues…"
+          placeholderTextColor={theme.textSecondary}
+          value={query}
+          onChangeText={setQuery}
+          autoCapitalize="none"
+        />
+
+        <View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.chipRow}>
+            {FILTERS.map((f) => (
+              <Chip key={f.key} label={f.label} active={filter === f.key} onPress={() => setFilter(f.key)} />
+            ))}
+          </ScrollView>
+        </View>
+
         <FlatList
-          data={events}
+          data={loading ? [] : filtered}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => <EventCard event={item} />}
           contentContainerStyle={styles.list}
@@ -193,9 +283,30 @@ export default function EventsScreen() {
           }
           ListEmptyComponent={
             loading ? (
-              <ThemedText style={styles.empty}>Loading events…</ThemedText>
+              <View style={styles.list}>
+                <SkeletonCard />
+                <SkeletonCard />
+                <SkeletonCard />
+              </View>
             ) : error ? (
               <ThemedText style={styles.empty}>Could not load events: {error}</ThemedText>
+            ) : events.length > 0 ? (
+              <ThemedView type="backgroundElement" style={styles.emptyCard}>
+                <ThemedText type="subtitle">Nothing here</ThemedText>
+                <ThemedText type="small" themeColor="textSecondary" style={styles.emptyText}>
+                  No events match. Try another filter or clear your search.
+                </ThemedText>
+                <Pressable
+                  style={styles.emptyButton}
+                  onPress={() => {
+                    setFilter('all');
+                    setQuery('');
+                  }}>
+                  <ThemedText type="smallBold" style={styles.hostButtonLabel}>
+                    Reset
+                  </ThemedText>
+                </Pressable>
+              </ThemedView>
             ) : (
               <ThemedView type="backgroundElement" style={styles.emptyCard}>
                 <ThemedText type="subtitle">No events yet</ThemedText>
@@ -236,7 +347,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: Spacing.three,
+    paddingTop: Spacing.three,
+    paddingBottom: Spacing.two,
+  },
+  kicker: {
+    letterSpacing: 2,
   },
   hostButton: {
     backgroundColor: Brand,
@@ -245,6 +360,34 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.four,
   },
   hostButtonLabel: {
+    color: OnBrand,
+  },
+  search: {
+    borderRadius: 999,
+    paddingVertical: Spacing.three,
+    paddingHorizontal: Spacing.four,
+    marginBottom: Spacing.two,
+  },
+  chipRow: {
+    gap: Spacing.two,
+    paddingVertical: Spacing.two,
+    paddingRight: Spacing.four,
+  },
+  chip: {
+    borderRadius: 999,
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  chipActive: {
+    backgroundColor: Brand,
+    borderColor: 'transparent',
+  },
+  chipText: {
+    opacity: 0.8,
+  },
+  chipActiveText: {
     color: OnBrand,
   },
   pressed: {
@@ -257,7 +400,6 @@ const styles = StyleSheet.create({
   },
   cardWrap: {
     borderRadius: 22,
-    // Poster glow — light spilling from the club door (DESIGN.md signature).
     shadowColor: Brand,
     shadowOpacity: 0.35,
     shadowRadius: 22,
@@ -269,6 +411,11 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     minHeight: 210,
     justifyContent: 'flex-end',
+  },
+  skeleton: {
+    borderRadius: 22,
+    minHeight: 210,
+    backgroundColor: '#19231B',
   },
   badgeRow: {
     position: 'absolute',
