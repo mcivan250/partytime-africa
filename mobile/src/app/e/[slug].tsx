@@ -21,6 +21,7 @@ import { Playlist } from '@/components/playlist';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { TicketTiers } from '@/components/ticket-tiers';
+import { VenueTables } from '@/components/venue-tables';
 import {
   Brand,
   BrandGradient,
@@ -382,6 +383,34 @@ export default function EventScreen() {
     Linking.openURL(data.redirect_url);
   };
 
+  const bookTable = async (table: { id: string }) => {
+    if (!session) {
+      setBuyNotice('Please sign in to book a table.');
+      router.push('/profile');
+      return;
+    }
+    setBuyNotice('Starting secure checkout…');
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('display_name, phone')
+      .eq('id', session.user.id)
+      .maybeSingle();
+    const { data, error: fnError } = await supabase.functions.invoke('create-order', {
+      body: {
+        table_id: table.id,
+        buyer_name: profile?.display_name || session.user.email || 'Guest',
+        buyer_phone: profile?.phone || '',
+        email: session.user.email || '',
+      },
+    });
+    if (fnError || data?.error || !data?.redirect_url) {
+      setBuyNotice(data?.error || 'Could not start checkout. Payments may not be set up yet.');
+      return;
+    }
+    setBuyNotice('Opening secure checkout — your table is confirmed once payment clears. 🍾');
+    Linking.openURL(data.redirect_url);
+  };
+
   const rsvp = async (status: RsvpStatus) => {
     if (!session || !event) return;
     setSaving(true);
@@ -560,6 +589,13 @@ export default function EventScreen() {
               onBuy={buyTier}
             />
           </View>
+
+          <VenueTables
+            eventId={event.id}
+            currency={event.currency}
+            isManager={isHost}
+            onBook={bookTable}
+          />
           {isHost ? (
             <Pressable
               style={styles.checkInButton}

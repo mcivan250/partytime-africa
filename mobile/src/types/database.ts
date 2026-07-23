@@ -387,6 +387,7 @@ export type Database = {
           provider_tx_ref: string | null
           referral_code: string | null
           status: Database["public"]["Enums"]["order_status"]
+          table_id: string | null
         }
         Insert: {
           amount_minor: number
@@ -403,6 +404,7 @@ export type Database = {
           provider_tx_ref?: string | null
           referral_code?: string | null
           status?: Database["public"]["Enums"]["order_status"]
+          table_id?: string | null
         }
         Update: {
           amount_minor?: number
@@ -419,6 +421,7 @@ export type Database = {
           provider_tx_ref?: string | null
           referral_code?: string | null
           status?: Database["public"]["Enums"]["order_status"]
+          table_id?: string | null
         }
         Relationships: [
           {
@@ -433,6 +436,13 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_table_id_fkey"
+            columns: ["table_id"]
+            isOneToOne: false
+            referencedRelation: "venue_tables"
             referencedColumns: ["id"]
           },
         ]

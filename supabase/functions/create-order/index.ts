@@ -1,7 +1,8 @@
-// create-order: starts a Pesapal ticket payment. Signed-in buyer only (money
-// is server-side). Validates the tier and availability, creates a pending
-// order, and returns Pesapal's hosted-checkout redirect_url. Tickets are only
-// issued later by the pesapal-ipn webhook once payment completes.
+// create-order: starts a Pesapal payment for a ticket tier OR a VIP table.
+// Signed-in buyer only (money is server-side). Validates the tier/table and
+// its availability, creates a pending order, and returns Pesapal's hosted-
+// checkout redirect_url. Tickets/table bookings are only issued later by the
+// pesapal-ipn webhook (via fulfill_paid_order) once payment completes.
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
@@ -78,11 +79,12 @@ Deno.serve(async (req) => {
     return json({ error: 'Invalid request body.' }, 400);
   }
   const tierId = typeof body.tier_id === 'string' ? body.tier_id : '';
+  const tableId = typeof body.table_id === 'string' ? body.table_id : '';
   const quantity = Math.max(1, Math.min(20, Math.trunc(Number(body.quantity ?? 1)) || 1));
   const buyerName = typeof body.buyer_name === 'string' ? body.buyer_name.trim() : '';
   const buyerPhone = typeof body.buyer_phone === 'string' ? body.buyer_phone.trim() : '';
   const email = typeof body.email === 'string' ? body.email.trim() : '';
-  if (!tierId) return json({ error: 'Missing ticket tier.' }, 400);
+  if (!tierId && !tableId) return json({ error: 'Missing ticket tier or table.' }, 400);
   if (!buyerName) return json({ error: 'Enter the buyer name.' }, 400);
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -91,36 +93,71 @@ Deno.serve(async (req) => {
   });
   const { data: userData } = await userClient.auth.getUser();
   const user = userData.user;
-  if (!user) return json({ error: 'Please sign in to buy a ticket.' }, 401);
+  if (!user) return json({ error: 'Please sign in to buy.' }, 401);
 
   const admin = createClient(supabaseUrl, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
-  // Validate tier + availability, and load the event slug.
-  const { data: tier } = await admin
-    .from('ticket_tiers')
-    .select('id, event_id, price_minor, currency, quantity, sold, per_order_limit, name, events(slug, status, title)')
-    .eq('id', tierId)
-    .maybeSingle();
-  if (!tier) return json({ error: 'Ticket tier not found.' }, 404);
-  const event = tier.events as { slug: string; status: string; title: string } | null;
-  if (!event || event.status !== 'published') return json({ error: 'Tickets are not on sale.' }, 409);
-  if (quantity > tier.per_order_limit) {
-    return json({ error: `Max ${tier.per_order_limit} per order.` }, 409);
-  }
-  if (tier.quantity - tier.sold < quantity) return json({ error: 'Not enough tickets left.' }, 409);
+  // Resolve what's being bought into a common shape: amount, currency,
+  // description, and the order row to insert. Tables and ticket tiers share
+  // the same Pesapal checkout + IPN fulfilment path.
+  let amountMinor: number;
+  let currency: string;
+  let description: string;
+  let orderInsert: Record<string, unknown>;
 
-  const amountMinor = tier.price_minor * quantity;
+  if (tableId) {
+    const { data: table } = await admin
+      .from('venue_tables')
+      .select('id, event_id, price_minor, currency, name, status, seats, events(slug, status, title)')
+      .eq('id', tableId)
+      .maybeSingle();
+    if (!table) return json({ error: 'Table not found.' }, 404);
+    const event = table.events as { slug: string; status: string; title: string } | null;
+    if (!event || event.status !== 'published') return json({ error: 'This event is not on sale.' }, 409);
+    if (table.status !== 'available') return json({ error: 'Sorry, that table is already taken.' }, 409);
+
+    amountMinor = table.price_minor;
+    currency = table.currency;
+    description = `${table.name} (table for ${table.seats}) — ${event.title}`;
+    orderInsert = {
+      event_id: table.event_id,
+      table_id: table.id,
+      quantity: 1,
+      kind: 'table',
+    };
+  } else {
+    const { data: tier } = await admin
+      .from('ticket_tiers')
+      .select('id, event_id, price_minor, currency, quantity, sold, per_order_limit, name, events(slug, status, title)')
+      .eq('id', tierId)
+      .maybeSingle();
+    if (!tier) return json({ error: 'Ticket tier not found.' }, 404);
+    const event = tier.events as { slug: string; status: string; title: string } | null;
+    if (!event || event.status !== 'published') return json({ error: 'Tickets are not on sale.' }, 409);
+    if (quantity > tier.per_order_limit) {
+      return json({ error: `Max ${tier.per_order_limit} per order.` }, 409);
+    }
+    if (tier.quantity - tier.sold < quantity) return json({ error: 'Not enough tickets left.' }, 409);
+
+    amountMinor = tier.price_minor * quantity;
+    currency = tier.currency;
+    description = `${quantity} x ${tier.name} — ${event.title}`;
+    orderInsert = {
+      event_id: tier.event_id,
+      tier_id: tier.id,
+      quantity,
+      kind: 'ticket',
+    };
+  }
+
   const merchantRef = `PT-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
   const { data: order, error: orderError } = await admin
     .from('orders')
     .insert({
-      event_id: tier.event_id,
-      tier_id: tier.id,
-      quantity,
+      ...orderInsert,
       amount_minor: amountMinor,
-      currency: tier.currency,
-      kind: 'ticket',
+      currency,
       buyer_name: buyerName,
       buyer_phone: buyerPhone || null,
       profile_id: user.id,
@@ -146,9 +183,9 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         id: merchantRef,
-        currency: tier.currency,
-        amount: toMajor(amountMinor, tier.currency),
-        description: `${quantity} x ${tier.name} — ${event.title}`.slice(0, 100),
+        currency,
+        amount: toMajor(amountMinor, currency),
+        description: description.slice(0, 100),
         callback_url: 'https://partytime.africa/payment-complete',
         notification_id: ipnId,
         billing_address: {

@@ -16,6 +16,7 @@ type EventRow = Pick<
   'id' | 'slug' | 'title' | 'starts_at' | 'timezone' | 'currency' | 'host_id' | 'is_ticketed'
 >;
 type Tier = Pick<Tables<'ticket_tiers'>, 'name' | 'sold' | 'quantity' | 'price_minor' | 'currency'>;
+type TableRow = Pick<Tables<'venue_tables'>, 'price_minor' | 'status'>;
 type Rsvp = Pick<Tables<'rsvps'>, 'guest_name' | 'status' | 'plus_ones'>;
 
 const STATUS_EMOJI: Record<Rsvp['status'], string> = { going: '🔥', maybe: '🤔', declined: '😢' };
@@ -43,6 +44,7 @@ export default function ManageEventScreen() {
   const { session } = useAuth();
   const [event, setEvent] = useState<EventRow | null>(null);
   const [tiers, setTiers] = useState<Tier[]>([]);
+  const [tables, setTables] = useState<TableRow[]>([]);
   const [rsvps, setRsvps] = useState<Rsvp[]>([]);
   const [ticketStatuses, setTicketStatuses] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,12 +60,14 @@ export default function ManageEventScreen() {
       .maybeSingle();
     setEvent(ev);
     if (ev) {
-      const [tiersRes, rsvpRes, ticketRes] = await Promise.all([
+      const [tiersRes, tablesRes, rsvpRes, ticketRes] = await Promise.all([
         supabase.from('ticket_tiers').select('name, sold, quantity, price_minor, currency').eq('event_id', ev.id).order('position'),
+        supabase.from('venue_tables').select('price_minor, status').eq('event_id', ev.id),
         supabase.from('rsvps').select('guest_name, status, plus_ones').eq('event_id', ev.id).order('created_at', { ascending: false }),
         supabase.from('tickets').select('status').eq('event_id', ev.id),
       ]);
       setTiers(tiersRes.data ?? []);
+      setTables(tablesRes.data ?? []);
       setRsvps(rsvpRes.data ?? []);
       setTicketStatuses((ticketRes.data ?? []).map((t) => t.status));
     }
@@ -109,8 +113,11 @@ export default function ManageEventScreen() {
   const going = rsvps.filter((r) => r.status === 'going').length;
   const maybe = rsvps.filter((r) => r.status === 'maybe').length;
   const sold = tiers.reduce((n, t) => n + t.sold, 0);
-  const revenueMinor = tiers.reduce((n, t) => n + t.sold * t.price_minor, 0);
+  const bookedTables = tables.filter((t) => t.status !== 'available');
+  const tableRevenueMinor = bookedTables.reduce((n, t) => n + t.price_minor, 0);
+  const revenueMinor = tiers.reduce((n, t) => n + t.sold * t.price_minor, 0) + tableRevenueMinor;
   const checkedIn = ticketStatuses.filter((s) => s === 'checked_in').length;
+  const hasSales = event.is_ticketed || tables.length > 0;
 
   return (
     <ThemedView style={styles.container}>
@@ -126,9 +133,14 @@ export default function ManageEventScreen() {
           {event.is_ticketed ? (
             <>
               <StatTile value={String(sold)} label="TICKETS SOLD" />
-              <StatTile value={formatMoney(revenueMinor, event.currency)} label="REVENUE" color={Gold} />
               <StatTile value={`${checkedIn}/${ticketStatuses.length}`} label="CHECKED IN" />
             </>
+          ) : null}
+          {tables.length > 0 ? (
+            <StatTile value={`${bookedTables.length}/${tables.length}`} label="TABLES BOOKED" />
+          ) : null}
+          {hasSales ? (
+            <StatTile value={formatMoney(revenueMinor, event.currency)} label="REVENUE" color={Gold} />
           ) : null}
         </View>
 
