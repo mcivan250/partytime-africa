@@ -1078,9 +1078,11 @@ export type Database = {
           cover_url: string
           currency: string
           ends_at: string
+          featured: boolean
           going_count: number
           id: string
           is_ticketed: boolean
+          sponsor_name: string | null
           slug: string
           starts_at: string
           timezone: string

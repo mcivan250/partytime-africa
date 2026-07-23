@@ -21,6 +21,7 @@ import {
   Brand,
   BrandGradient,
   BrandGradientLocations,
+  Gold,
   MaxContentWidth,
   OnBrand,
   Spacing,
@@ -42,6 +43,8 @@ type FeedEvent = {
   is_ticketed: boolean;
   going_count: number;
   trending_score: number;
+  featured: boolean;
+  sponsor_name: string | null;
 };
 
 type FilterKey = 'all' | 'trending' | 'tonight' | 'weekend' | 'ticketed' | 'free';
@@ -122,8 +125,12 @@ function EventCard({ event }: { event: FeedEvent }) {
   return (
     <Pressable
       onPress={() => router.push({ pathname: '/e/[slug]', params: { slug: event.slug } })}
-      style={({ pressed }) => [styles.cardWrap, pressed && styles.pressed]}>
-      <View style={styles.card}>
+      style={({ pressed }) => [
+        styles.cardWrap,
+        event.featured && styles.cardWrapFeatured,
+        pressed && styles.pressed,
+      ]}>
+      <View style={[styles.card, event.featured && styles.cardFeatured]}>
         {event.cover_url ? (
           <Image source={{ uri: event.cover_url }} style={StyleSheet.absoluteFill} contentFit="cover" />
         ) : (
@@ -136,8 +143,15 @@ function EventCard({ event }: { event: FeedEvent }) {
           />
         )}
         <LinearGradient colors={['transparent', 'rgba(0,0,0,0.9)']} style={StyleSheet.absoluteFill} />
+        {event.featured ? (
+          <View style={styles.featuredRibbon}>
+            <ThemedText type="smallBold" style={styles.featuredRibbonText}>
+              {event.sponsor_name ? `★ Sponsored by ${event.sponsor_name}` : '★ Featured'}
+            </ThemedText>
+          </View>
+        ) : null}
         {badges.length > 0 ? (
-          <View style={styles.badgeRow}>
+          <View style={[styles.badgeRow, event.featured && styles.badgeRowFeatured]}>
             {badges.map((b) => (
               <View key={b.label} style={[styles.badge, { backgroundColor: b.bg }]}>
                 <ThemedText type="smallBold" style={[styles.badgeText, { color: b.fg }]}>
@@ -406,11 +420,38 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 10 },
     elevation: 10,
   },
+  cardWrapFeatured: {
+    shadowColor: Gold,
+    shadowOpacity: 0.5,
+    shadowRadius: 26,
+  },
   card: {
     borderRadius: 22,
     overflow: 'hidden',
     minHeight: 210,
     justifyContent: 'flex-end',
+  },
+  cardFeatured: {
+    minHeight: 250,
+    borderWidth: 1.5,
+    borderColor: Gold,
+  },
+  featuredRibbon: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: Gold,
+    paddingVertical: 5,
+    alignItems: 'center',
+  },
+  featuredRibbonText: {
+    color: '#07130B',
+    fontSize: 12,
+    letterSpacing: 0.5,
+  },
+  badgeRowFeatured: {
+    top: Spacing.three + 26,
   },
   skeleton: {
     borderRadius: 22,
