@@ -80,7 +80,7 @@ export default function MyEventsScreen() {
         }
         renderItem={({ item }) => (
           <Pressable
-            onPress={() => router.push({ pathname: '/e/[slug]', params: { slug: item.slug } })}
+            onPress={() => router.push({ pathname: '/manage/[eventId]', params: { eventId: item.id } })}
             style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
             <ThemedView type="backgroundElement" style={styles.rowInner}>
               <View style={styles.rowText}>

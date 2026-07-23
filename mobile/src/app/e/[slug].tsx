@@ -592,13 +592,11 @@ export default function EventScreen() {
               onBuy={buyTier}
             />
           </View>
-          {isHost && event.is_ticketed ? (
+          {isHost ? (
             <Pressable
               style={styles.checkInButton}
-              onPress={() => router.push({ pathname: '/check-in/[eventId]', params: { eventId: event.id } })}>
-              <ThemedText type="smallBold" style={styles.onState}>
-                🎫 Scan tickets at the door
-              </ThemedText>
+              onPress={() => router.push({ pathname: '/manage/[eventId]', params: { eventId: event.id } })}>
+              <ThemedText type="smallBold">⚙️  Manage this event</ThemedText>
             </Pressable>
           ) : null}
           {buyNotice ? (
@@ -613,56 +611,6 @@ export default function EventScreen() {
                 WHO&apos;S THERE
               </ThemedText>
               <Avatars names={goingNames} />
-            </ThemedView>
-          ) : null}
-
-          {isHost ? (
-            <ThemedView type="backgroundElement" style={styles.infoCard}>
-              <ThemedText type="subtitle">Guest list ({guestList.length})</ThemedText>
-              {guestList.length === 0 ? (
-                <ThemedText type="small" themeColor="textSecondary">
-                  No RSVPs yet. Share the link to get people on the list.
-                </ThemedText>
-              ) : (
-                guestList.map((g, i) => (
-                  <View key={`${g.guest_name}-${i}`} style={styles.guestRow}>
-                    <ThemedText type="small">{statusEmoji[g.status]}</ThemedText>
-                    <ThemedText type="smallBold" style={styles.guestName}>
-                      {g.guest_name}
-                      {g.plus_ones > 0 ? ` +${g.plus_ones}` : ''}
-                    </ThemedText>
-                    <ThemedText type="small" themeColor="textSecondary">
-                      {g.status}
-                    </ThemedText>
-                  </View>
-                ))
-              )}
-
-              <View style={styles.blastDivider} />
-              <ThemedText type="smallBold" themeColor="textSecondary" style={styles.kicker}>
-                📣 TEXT YOUR GUESTS
-              </ThemedText>
-              <TextInput
-                style={[styles.guestInput, { color: theme.text, backgroundColor: theme.background }]}
-                placeholder="e.g. Doors at 6 — don't be late!"
-                placeholderTextColor={theme.textSecondary}
-                value={blastMessage}
-                onChangeText={setBlastMessage}
-                multiline
-              />
-              <Pressable
-                style={[styles.blastButton, { opacity: blastBusy || !blastMessage.trim() ? 0.5 : 1 }]}
-                disabled={blastBusy || !blastMessage.trim()}
-                onPress={sendBlast}>
-                <ThemedText type="smallBold" style={styles.onState}>
-                  Send SMS to everyone going
-                </ThemedText>
-              </Pressable>
-              {blastResult ? (
-                <ThemedText type="small" themeColor="textSecondary">
-                  {blastResult}
-                </ThemedText>
-              ) : null}
             </ThemedView>
           ) : null}
 
