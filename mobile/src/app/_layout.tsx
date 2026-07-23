@@ -11,7 +11,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import { Colors } from '@/constants/theme';
+import { BodyFontBold, Colors } from '@/constants/theme';
 import { AuthProvider } from '@/lib/auth-context';
 
 SplashScreen.preventAutoHideAsync();
@@ -56,11 +56,20 @@ export default function RootLayout() {
           screenOptions={{
             headerShown: false,
             contentStyle: { backgroundColor: Colors.dark.background },
+            // Themed native headers: forest-black chrome, brand font, no
+            // hairline shadow, and a clean "Back" label everywhere (defaults
+            // otherwise leak the "(tabs)" route-group name).
+            headerStyle: { backgroundColor: Colors.dark.background },
+            headerShadowVisible: false,
+            headerTintColor: Colors.dark.accent,
+            headerTitleStyle: { fontFamily: BodyFontBold, color: Colors.dark.text },
+            headerBackTitle: 'Back',
+            headerBackTitleStyle: { fontFamily: BodyFontBold },
           }}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen
             name="e/[slug]"
-            options={{ headerShown: true, headerTitle: '', headerBackTitle: 'Back' }}
+            options={{ headerShown: true, headerTitle: '' }}
           />
           <Stack.Screen
             name="create-event"
