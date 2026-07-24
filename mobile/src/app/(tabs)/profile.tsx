@@ -1,13 +1,28 @@
+import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, TextInput } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Brand, BottomNavInset, MaxContentWidth, OnBrand, Spacing } from '@/constants/theme';
+import {
+  BodyFontBold,
+  BottomNavInset,
+  Brand,
+  BrandGradient,
+  BrandGradientLocations,
+  DisplayFont,
+  Gold,
+  MaxContentWidth,
+  OnBrand,
+  Spacing,
+  StateGo,
+} from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth-context';
+import { pickImage, uploadImage } from '@/lib/storage';
 import { supabase } from '@/lib/supabase';
 import type { Tables } from '@/types/database';
 
@@ -41,88 +56,337 @@ function AuthForm() {
 
   const inputStyle = [
     styles.input,
-    { color: theme.text, backgroundColor: theme.backgroundElement },
+    { color: theme.text, backgroundColor: theme.background },
   ];
 
   return (
-    <ThemedView type="backgroundElement" style={styles.formCard}>
-      <ThemedText type="subtitle">
-        {mode === 'sign-in' ? 'Sign in' : 'Create your account'}
-      </ThemedText>
-      {mode === 'sign-up' && (
+    <View style={styles.authWrap}>
+      <View style={styles.authHero}>
+        <LinearGradient
+          colors={BrandGradient}
+          locations={BrandGradientLocations}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.authBadge}>
+          <ThemedText style={styles.authBadgeGlyph}>✦</ThemedText>
+        </LinearGradient>
+        <ThemedText style={styles.authTitle}>
+          {mode === 'sign-in' ? 'Welcome back' : 'Join the party'}
+        </ThemedText>
+        <ThemedText type="small" themeColor="textSecondary" style={styles.authSub}>
+          {mode === 'sign-in'
+            ? 'Your tickets, your events, your people — all in one place.'
+            : 'Host nights out, sell tickets, and keep your crew close.'}
+        </ThemedText>
+      </View>
+
+      <ThemedView type="backgroundElement" style={styles.formCard}>
+        {mode === 'sign-up' && (
+          <TextInput
+            style={inputStyle}
+            placeholder="Display name"
+            placeholderTextColor={theme.textSecondary}
+            value={displayName}
+            onChangeText={setDisplayName}
+            autoCapitalize="words"
+          />
+        )}
         <TextInput
           style={inputStyle}
-          placeholder="Display name"
+          placeholder="Email"
           placeholderTextColor={theme.textSecondary}
-          value={displayName}
-          onChangeText={setDisplayName}
-          autoCapitalize="words"
+          value={email}
+          onChangeText={setEmail}
+          autoCapitalize="none"
+          keyboardType="email-address"
+          autoComplete="email"
         />
-      )}
-      <TextInput
-        style={inputStyle}
-        placeholder="Email"
-        placeholderTextColor={theme.textSecondary}
-        value={email}
-        onChangeText={setEmail}
-        autoCapitalize="none"
-        keyboardType="email-address"
-        autoComplete="email"
-      />
-      <TextInput
-        style={inputStyle}
-        placeholder="Password"
-        placeholderTextColor={theme.textSecondary}
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-      />
-      {message && <ThemedText type="small">{message}</ThemedText>}
-      <Pressable style={[styles.button, { opacity: busy ? 0.5 : 1 }]} onPress={submit} disabled={busy}>
-        <ThemedText type="smallBold" style={styles.buttonLabel}>
-          {mode === 'sign-in' ? 'Sign in' : 'Sign up'}
-        </ThemedText>
-      </Pressable>
-      <Pressable onPress={() => setMode(mode === 'sign-in' ? 'sign-up' : 'sign-in')}>
-        <ThemedText type="link">
-          {mode === 'sign-in' ? "New here? Create an account" : 'Already have an account? Sign in'}
-        </ThemedText>
-      </Pressable>
-    </ThemedView>
+        <TextInput
+          style={inputStyle}
+          placeholder="Password"
+          placeholderTextColor={theme.textSecondary}
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+        />
+        {message && <ThemedText type="small">{message}</ThemedText>}
+        <Pressable style={[styles.cta, { opacity: busy ? 0.5 : 1 }]} onPress={submit} disabled={busy}>
+          <ThemedText type="smallBold" style={styles.ctaLabel}>
+            {mode === 'sign-in' ? 'Sign in' : 'Create account'}
+          </ThemedText>
+        </Pressable>
+        <Pressable onPress={() => setMode(mode === 'sign-in' ? 'sign-up' : 'sign-in')}>
+          <ThemedText type="link" style={styles.authSwitch}>
+            {mode === 'sign-in' ? "New here? Create an account" : 'Already have an account? Sign in'}
+          </ThemedText>
+        </Pressable>
+      </ThemedView>
+    </View>
   );
 }
 
-function ProfileCard() {
+type Stats = { hosting: number; going: number; tickets: number };
+type NextEvent = {
+  slug: string;
+  title: string;
+  starts_at: string | null;
+  cover_url: string | null;
+  venue_name: string | null;
+  timezone: string;
+  role: 'hosting' | 'going';
+};
+
+function initialsOf(name: string) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? '')
+    .join('');
+}
+
+function StatTile({ value, label, color }: { value: number; label: string; color: string }) {
+  return (
+    <View style={styles.statTile}>
+      <ThemedText style={[styles.statNum, { color }]}>{value}</ThemedText>
+      <ThemedText style={styles.statLabel}>{label}</ThemedText>
+    </View>
+  );
+}
+
+function ActionRow({
+  glyph,
+  title,
+  subtitle,
+  onPress,
+  last,
+}: {
+  glyph: string;
+  title: string;
+  subtitle: string;
+  onPress: () => void;
+  last?: boolean;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [styles.row, !last && styles.rowDivider, pressed && styles.rowPressed]}>
+      <View style={styles.rowIcon}>
+        <ThemedText style={styles.rowGlyph}>{glyph}</ThemedText>
+      </View>
+      <View style={styles.flex}>
+        <ThemedText type="smallBold">{title}</ThemedText>
+        <ThemedText type="small" themeColor="textSecondary">
+          {subtitle}
+        </ThemedText>
+      </View>
+      <ThemedText style={styles.chevron}>›</ThemedText>
+    </Pressable>
+  );
+}
+
+function Dashboard() {
   const { session } = useAuth();
+  const uid = session!.user.id;
   const [profile, setProfile] = useState<Tables<'profiles'> | null>(null);
+  const [stats, setStats] = useState<Stats>({ hosting: 0, going: 0, tickets: 0 });
+  const [next, setNext] = useState<NextEvent | null>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const load = useCallback(async () => {
+    const now = new Date().toISOString();
+    const [profileRes, hostingRes, goingRes, ticketsRes, hostUpcoming, goingUpcoming] =
+      await Promise.all([
+        supabase.from('profiles').select('*').eq('id', uid).maybeSingle(),
+        supabase.from('events').select('id', { count: 'exact', head: true }).eq('host_id', uid),
+        supabase
+          .from('rsvps')
+          .select('id', { count: 'exact', head: true })
+          .eq('profile_id', uid)
+          .eq('status', 'going'),
+        supabase
+          .from('tickets')
+          .select('id, orders!inner(profile_id)', { count: 'exact', head: true })
+          .eq('orders.profile_id', uid),
+        supabase
+          .from('events')
+          .select('slug, title, starts_at, cover_url, venue_name, timezone')
+          .eq('host_id', uid)
+          .gte('starts_at', now)
+          .order('starts_at', { ascending: true })
+          .limit(1),
+        supabase
+          .from('rsvps')
+          .select('events!inner(slug, title, starts_at, cover_url, venue_name, timezone)')
+          .eq('profile_id', uid)
+          .eq('status', 'going')
+          .gte('events.starts_at', now)
+          .limit(5),
+      ]);
+
+    if (profileRes.data) setProfile(profileRes.data);
+    setStats({
+      hosting: hostingRes.count ?? 0,
+      going: goingRes.count ?? 0,
+      tickets: ticketsRes.count ?? 0,
+    });
+
+    // Pick the soonest of "hosting next" vs "going next".
+    const candidates: NextEvent[] = [];
+    const h = hostUpcoming.data?.[0];
+    if (h) candidates.push({ ...h, role: 'hosting' } as NextEvent);
+    for (const row of (goingUpcoming.data ?? []) as { events?: Omit<NextEvent, 'role'> }[]) {
+      if (row.events) candidates.push({ ...row.events, role: 'going' });
+    }
+    candidates.sort((a, b) => (a.starts_at ?? '').localeCompare(b.starts_at ?? ''));
+    setNext(candidates[0] ?? null);
+  }, [uid]);
 
   useEffect(() => {
-    if (!session) return;
-    supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', session.user.id)
-      .maybeSingle()
-      .then(({ data }) => setProfile(data));
-  }, [session]);
+    load();
+  }, [load]);
+
+  const changeAvatar = async () => {
+    try {
+      const image = await pickImage([1, 1]);
+      if (!image) return;
+      setUploading(true);
+      const { url } = await uploadImage('avatars', uid, image);
+      await supabase.from('profiles').update({ avatar_url: url }).eq('id', uid);
+      setProfile((p) => (p ? { ...p, avatar_url: url } : p));
+    } catch {
+      // ignore — keeps the existing photo
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const name = profile?.display_name || session!.user.email?.split('@')[0] || 'You';
+  const handle = profile?.username ? `@${profile.username}` : session!.user.email;
+  const since = profile?.created_at ? new Date(profile.created_at).getFullYear() : null;
+  const meta = [profile?.city, since ? `Since ${since}` : null].filter(Boolean).join('  ·  ');
 
   return (
-    <ThemedView type="backgroundElement" style={styles.formCard}>
-      <ThemedText type="subtitle">{profile?.display_name ?? 'Your profile'}</ThemedText>
-      <ThemedText type="small">{session?.user.email}</ThemedText>
-      {profile?.city && <ThemedText type="small">{profile.city}</ThemedText>}
-      <Pressable style={styles.button} onPress={() => router.push('/my-events')}>
-        <ThemedText type="smallBold" style={styles.buttonLabel}>
-          My events
+    <ScrollView contentContainerStyle={styles.dashboard} showsVerticalScrollIndicator={false}>
+      {/* Identity hero */}
+      <View style={styles.hero}>
+        <LinearGradient
+          colors={['rgba(29,201,107,0.20)', 'transparent']}
+          style={styles.heroGlow}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+        />
+        <Pressable onPress={changeAvatar} style={styles.avatarRing}>
+          <LinearGradient
+            colors={BrandGradient}
+            locations={BrandGradientLocations}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.avatarRingGradient}>
+            <View style={styles.avatarInner}>
+              {profile?.avatar_url ? (
+                <Image source={{ uri: profile.avatar_url }} style={styles.avatarImg} contentFit="cover" />
+              ) : (
+                <ThemedText style={styles.avatarInitials}>{initialsOf(name)}</ThemedText>
+              )}
+            </View>
+          </LinearGradient>
+          <View style={styles.avatarBadge}>
+            {uploading ? (
+              <ActivityIndicator size="small" color={OnBrand} />
+            ) : (
+              <ThemedText style={styles.avatarBadgeGlyph}>📷</ThemedText>
+            )}
+          </View>
+        </Pressable>
+        <ThemedText style={styles.name}>{name}</ThemedText>
+        <ThemedText type="small" themeColor="textSecondary">
+          {handle}
+        </ThemedText>
+        {meta ? (
+          <ThemedText type="small" themeColor="textSecondary" style={styles.meta}>
+            {meta}
+          </ThemedText>
+        ) : null}
+      </View>
+
+      {/* Stats */}
+      <View style={styles.statRow}>
+        <StatTile value={stats.hosting} label="HOSTING" color={Gold} />
+        <StatTile value={stats.going} label="GOING" color={StateGo} />
+        <StatTile value={stats.tickets} label="TICKETS" color={Brand} />
+      </View>
+
+      {/* Next night out */}
+      {next ? (
+        <Pressable
+          onPress={() => router.push({ pathname: '/e/[slug]', params: { slug: next.slug } })}
+          style={({ pressed }) => [styles.nextCard, pressed && styles.rowPressed]}>
+          {next.cover_url ? (
+            <Image source={{ uri: next.cover_url }} style={styles.nextThumb} contentFit="cover" />
+          ) : (
+            <LinearGradient
+              colors={BrandGradient}
+              locations={BrandGradientLocations}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.nextThumb}
+            />
+          )}
+          <View style={styles.flex}>
+            <ThemedText style={styles.nextKicker}>
+              {next.role === 'hosting' ? "YOU'RE HOSTING" : "YOU'RE GOING"}
+            </ThemedText>
+            <ThemedText type="smallBold" numberOfLines={1}>
+              {next.title}
+            </ThemedText>
+            <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+              {next.starts_at
+                ? new Date(next.starts_at).toLocaleString(undefined, {
+                    weekday: 'short',
+                    day: 'numeric',
+                    month: 'short',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    timeZone: next.timezone,
+                  })
+                : 'Date TBA'}
+              {next.venue_name ? `  ·  ${next.venue_name}` : ''}
+            </ThemedText>
+          </View>
+          <ThemedText style={styles.chevron}>›</ThemedText>
+        </Pressable>
+      ) : null}
+
+      {/* Actions */}
+      <ThemedView type="backgroundElement" style={styles.actionCard}>
+        <ActionRow
+          glyph="✦"
+          title="My events"
+          subtitle="Events you host & manage"
+          onPress={() => router.push('/my-events')}
+        />
+        <ActionRow
+          glyph="🎟"
+          title="My tickets"
+          subtitle="Passes & merch pickups"
+          onPress={() => router.push('/tickets')}
+        />
+        <ActionRow
+          glyph="+"
+          title="Host an event"
+          subtitle="Start selling in minutes"
+          onPress={() => router.push('/create-event')}
+          last
+        />
+      </ThemedView>
+
+      <Pressable style={styles.signOut} onPress={() => supabase.auth.signOut()}>
+        <ThemedText type="smallBold" themeColor="textSecondary">
+          Sign out
         </ThemedText>
       </Pressable>
-      <Pressable style={styles.buttonGhost} onPress={() => router.push('/tickets')}>
-        <ThemedText type="smallBold">My tickets</ThemedText>
-      </Pressable>
-      <Pressable style={styles.buttonGhost} onPress={() => supabase.auth.signOut()}>
-        <ThemedText type="smallBold">Sign out</ThemedText>
-      </Pressable>
-    </ThemedView>
+    </ScrollView>
   );
 }
 
@@ -132,10 +396,15 @@ export default function ProfileScreen() {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
-        <ThemedText type="title" style={styles.heading}>
-          Profile
-        </ThemedText>
-        {loading ? <ActivityIndicator /> : session ? <ProfileCard /> : <AuthForm />}
+        {loading ? (
+          <ActivityIndicator color={Brand} style={styles.loader} />
+        ) : session ? (
+          <Dashboard />
+        ) : (
+          <ScrollView contentContainerStyle={styles.authScroll} showsVerticalScrollIndicator={false}>
+            <AuthForm />
+          </ScrollView>
+        )}
       </SafeAreaView>
     </ThemedView>
   );
@@ -150,39 +419,251 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     maxWidth: MaxContentWidth,
+    width: '100%',
     paddingHorizontal: Spacing.four,
-    paddingBottom: BottomNavInset,
     alignSelf: 'stretch',
   },
-  heading: {
+  loader: {
+    marginTop: Spacing.six,
+  },
+  flex: {
+    flex: 1,
+  },
+
+  // Dashboard
+  dashboard: {
+    paddingBottom: BottomNavInset,
+    gap: Spacing.three,
+  },
+  hero: {
+    alignItems: 'center',
+    paddingTop: Spacing.five,
+    paddingBottom: Spacing.four,
+    gap: Spacing.one,
+  },
+  heroGlow: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 220,
+  },
+  avatarRing: {
+    marginBottom: Spacing.two,
+  },
+  avatarRingGradient: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: Brand,
+    shadowOpacity: 0.5,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 10,
+  },
+  avatarInner: {
+    width: 86,
+    height: 86,
+    borderRadius: 43,
+    backgroundColor: '#19231B',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  avatarImg: {
+    width: '100%',
+    height: '100%',
+  },
+  avatarInitials: {
+    fontFamily: DisplayFont,
+    fontSize: 30,
+    color: '#EFF6EE',
+  },
+  avatarBadge: {
+    position: 'absolute',
+    right: -2,
+    bottom: -2,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: Brand,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: '#111811',
+  },
+  avatarBadgeGlyph: {
+    fontSize: 13,
+    color: OnBrand,
+  },
+  name: {
+    fontFamily: DisplayFont,
+    fontSize: 28,
+    color: '#EFF6EE',
+    textAlign: 'center',
+  },
+  meta: {
+    marginTop: Spacing.half,
+  },
+
+  // Stats
+  statRow: {
+    flexDirection: 'row',
+    gap: Spacing.two,
+  },
+  statTile: {
+    flex: 1,
+    backgroundColor: '#19231B',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 18,
+    paddingVertical: Spacing.three,
+    alignItems: 'center',
+    gap: 2,
+  },
+  statNum: {
+    fontFamily: DisplayFont,
+    fontSize: 26,
+  },
+  statLabel: {
+    fontFamily: BodyFontBold,
+    fontSize: 10,
+    letterSpacing: 1.5,
+    color: '#94A697',
+  },
+
+  // Next event
+  nextCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
+    backgroundColor: '#19231B',
+    borderWidth: 1,
+    borderColor: 'rgba(233,196,106,0.25)',
+    borderRadius: 20,
+    padding: Spacing.three,
+  },
+  nextThumb: {
+    width: 56,
+    height: 56,
+    borderRadius: 14,
+  },
+  nextKicker: {
+    fontFamily: BodyFontBold,
+    fontSize: 10,
+    letterSpacing: 1.5,
+    color: Gold,
+    marginBottom: 2,
+  },
+
+  // Action list
+  actionCard: {
+    borderRadius: 20,
+    paddingHorizontal: Spacing.three,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
     paddingVertical: Spacing.three,
   },
+  rowDivider: {
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.06)',
+  },
+  rowPressed: {
+    opacity: 0.6,
+  },
+  rowIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: 'rgba(29,201,107,0.14)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rowGlyph: {
+    fontSize: 18,
+    color: StateGo,
+  },
+  chevron: {
+    fontSize: 26,
+    color: '#94A697',
+    marginLeft: Spacing.two,
+  },
+
+  signOut: {
+    alignSelf: 'center',
+    paddingVertical: Spacing.three,
+    marginTop: Spacing.two,
+  },
+
+  // Auth (signed-out)
+  authScroll: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingBottom: BottomNavInset,
+  },
+  authWrap: {
+    gap: Spacing.four,
+  },
+  authHero: {
+    alignItems: 'center',
+    gap: Spacing.two,
+    paddingTop: Spacing.five,
+  },
+  authBadge: {
+    width: 72,
+    height: 72,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.one,
+    shadowColor: Brand,
+    shadowOpacity: 0.5,
+    shadowRadius: 22,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 12,
+  },
+  authBadgeGlyph: {
+    fontSize: 34,
+    color: OnBrand,
+  },
+  authTitle: {
+    fontFamily: DisplayFont,
+    fontSize: 30,
+    color: '#EFF6EE',
+    textAlign: 'center',
+  },
+  authSub: {
+    textAlign: 'center',
+    lineHeight: 20,
+    paddingHorizontal: Spacing.four,
+  },
+  authSwitch: {
+    textAlign: 'center',
+    marginTop: Spacing.one,
+  },
   formCard: {
-    borderRadius: Spacing.three,
+    borderRadius: 22,
     padding: Spacing.four,
     gap: Spacing.three,
   },
   input: {
-    borderRadius: Spacing.two,
+    borderRadius: 14,
     padding: Spacing.three,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#8884',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
   },
-  buttonLabel: {
-    color: OnBrand,
-  },
-  button: {
+  cta: {
     backgroundColor: Brand,
     borderRadius: 999,
     padding: Spacing.three,
     alignItems: 'center',
   },
-  buttonGhost: {
-    backgroundColor: '#243527',
-    borderRadius: 999,
-    padding: Spacing.three,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+  ctaLabel: {
+    color: OnBrand,
   },
 });
