@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 
+import { Appear } from '@/components/appear';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BottomNavInset, Brand, OnBrand, Spacing, StateGo } from '@/constants/theme';
@@ -186,8 +187,10 @@ export function CityFeed() {
           </ThemedText>
         )
       }
-      renderItem={({ item }) => (
-        <PostCard post={item} onLike={() => toggleLike(item)} />
+      renderItem={({ item, index }) => (
+        <Appear index={index}>
+          <PostCard post={item} onLike={() => toggleLike(item)} />
+        </Appear>
       )}
     />
   );

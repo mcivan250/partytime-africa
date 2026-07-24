@@ -2,6 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
+import { SectionLabel } from '@/components/section-label';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Brand, Gold, MaxContentWidth, OnBrand, Spacing, StateGo, StateMaybe } from '@/constants/theme';
@@ -182,7 +183,10 @@ export default function ManageEventScreen() {
 
         {event.is_ticketed && tiers.length > 0 ? (
           <ThemedView type="backgroundElement" style={styles.card}>
-            <ThemedText type="subtitle">Ticket sales</ThemedText>
+            <View style={styles.headingRow}>
+              <View style={styles.headingBar} />
+              <ThemedText type="subtitle">Ticket sales</ThemedText>
+            </View>
             {tiers.map((t, i) => (
               <View key={`${t.name}-${i}`} style={styles.tierRow}>
                 <ThemedText type="smallBold" style={styles.flex}>
@@ -198,7 +202,10 @@ export default function ManageEventScreen() {
 
         {merch.length > 0 ? (
           <ThemedView type="backgroundElement" style={styles.card}>
-            <ThemedText type="subtitle">Merch pickups ({merchCollected}/{merchUnits})</ThemedText>
+            <View style={styles.headingRow}>
+              <View style={styles.headingBar} />
+              <ThemedText type="subtitle">Merch pickups ({merchCollected}/{merchUnits})</ThemedText>
+            </View>
             {merch.map((m) => {
               const collected = m.status === 'collected';
               const size =
@@ -235,9 +242,7 @@ export default function ManageEventScreen() {
         ) : null}
 
         <ThemedView type="backgroundElement" style={styles.card}>
-          <ThemedText type="smallBold" themeColor="textSecondary" style={styles.kicker}>
-            📣 TEXT YOUR GUESTS
-          </ThemedText>
+          <SectionLabel>TEXT YOUR GUESTS</SectionLabel>
           <TextInput
             style={[styles.input, { color: theme.text, backgroundColor: theme.background }]}
             placeholder="e.g. Doors at 6 — don't be late!"
@@ -330,7 +335,17 @@ const styles = StyleSheet.create({
     padding: Spacing.four,
     gap: Spacing.three,
   },
-  kicker: { letterSpacing: 2 },
+  headingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  headingBar: {
+    width: 3,
+    height: 18,
+    borderRadius: 2,
+    backgroundColor: Brand,
+  },
   tierRow: {
     flexDirection: 'row',
     alignItems: 'center',

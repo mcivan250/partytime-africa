@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Appear } from '@/components/appear';
 import { CityFeed } from '@/components/city-feed';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -446,7 +447,11 @@ export default function EventsScreen() {
         <FlatList
           data={loading ? [] : filtered}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => <EventCard event={item} onReact={toggleReaction} />}
+          renderItem={({ item, index }) => (
+            <Appear index={index}>
+              <EventCard event={item} onReact={toggleReaction} />
+            </Appear>
+          )}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
           ListHeaderComponent={

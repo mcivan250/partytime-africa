@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from 'react-native';
 
+import { Appear } from '@/components/appear';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Brand, MaxContentWidth, OnBrand, Spacing, StateGo } from '@/constants/theme';
@@ -78,25 +79,31 @@ export default function MyEventsScreen() {
             </Pressable>
           </View>
         }
-        renderItem={({ item }) => (
-          <Pressable
-            onPress={() => router.push({ pathname: '/manage/[eventId]', params: { eventId: item.id } })}
-            style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
-            <ThemedView type="backgroundElement" style={styles.rowInner}>
-              <View style={styles.rowText}>
-                <ThemedText type="subtitle">{item.title}</ThemedText>
-                <ThemedText type="small" themeColor="textSecondary">
-                  {formatDate(item)}
-                </ThemedText>
-              </View>
-              <View style={[styles.badge, { backgroundColor: STATUS_COLOR[item.status] ?? '#94A697' }]}>
-                <ThemedText type="smallBold" style={styles.badgeText}>
-                  {item.status}
-                </ThemedText>
-              </View>
-            </ThemedView>
-          </Pressable>
-        )}
+        renderItem={({ item, index }) => {
+          const color = STATUS_COLOR[item.status] ?? '#94A697';
+          return (
+            <Appear index={index}>
+              <Pressable
+                onPress={() => router.push({ pathname: '/manage/[eventId]', params: { eventId: item.id } })}
+                style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
+                <ThemedView type="backgroundElement" style={styles.rowInner}>
+                  <View style={styles.rowText}>
+                    <ThemedText type="subtitle">{item.title}</ThemedText>
+                    <ThemedText type="small" themeColor="textSecondary">
+                      {formatDate(item)}
+                    </ThemedText>
+                  </View>
+                  <View style={styles.badge}>
+                    <View style={[styles.badgeDot, { backgroundColor: color }]} />
+                    <ThemedText type="smallBold" style={[styles.badgeText, { color }]}>
+                      {item.status}
+                    </ThemedText>
+                  </View>
+                </ThemedView>
+              </Pressable>
+            </Appear>
+          );
+        }}
         ListEmptyComponent={
           loading ? (
             <ActivityIndicator color={Brand} style={styles.loader} />
@@ -146,7 +153,8 @@ const styles = StyleSheet.create({
     borderRadius: 18,
   },
   pressed: {
-    opacity: 0.85,
+    opacity: 0.96,
+    transform: [{ scale: 0.985 }],
   },
   rowInner: {
     flexDirection: 'row',
@@ -161,13 +169,22 @@ const styles = StyleSheet.create({
     gap: Spacing.half,
   },
   badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     borderRadius: 999,
-    paddingVertical: 4,
+    paddingVertical: 5,
     paddingHorizontal: 10,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  badgeDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
   },
   badgeText: {
-    color: OnBrand,
     fontSize: 11,
+    letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
   loader: {
