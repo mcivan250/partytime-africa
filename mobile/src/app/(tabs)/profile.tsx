@@ -125,6 +125,11 @@ function AuthForm() {
   );
 }
 
+// Visible build marker — bumped every ship. If you can read this at the
+// bottom of the Profile, you are on this build; if it's absent, the surface
+// is running an older cached bundle and needs a redeploy/reload.
+const BUILD_TAG = 'build 2026.07.24 · dashboard';
+
 type Stats = { hosting: number; going: number; tickets: number };
 type NextEvent = {
   slug: string;
@@ -386,6 +391,8 @@ function Dashboard() {
           Sign out
         </ThemedText>
       </Pressable>
+
+      <ThemedText style={styles.buildTag}>{BUILD_TAG}</ThemedText>
     </ScrollView>
   );
 }
@@ -598,6 +605,12 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     paddingVertical: Spacing.three,
     marginTop: Spacing.two,
+  },
+  buildTag: {
+    alignSelf: 'center',
+    fontSize: 11,
+    color: '#5A6B5E',
+    marginBottom: Spacing.two,
   },
 
   // Auth (signed-out)
