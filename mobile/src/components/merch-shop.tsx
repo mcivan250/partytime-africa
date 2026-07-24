@@ -154,7 +154,7 @@ export function MerchShop({
   return (
     <ThemedView type="backgroundElement" style={styles.card}>
       <View style={styles.header}>
-        <ThemedText style={styles.icon}>🛍️</ThemedText>
+        <View style={styles.headerBar} />
         <ThemedText type="subtitle">Merch</ThemedText>
       </View>
 
@@ -338,8 +338,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.two,
   },
-  icon: {
-    fontSize: 18,
+  headerBar: {
+    width: 3,
+    height: 18,
+    borderRadius: 2,
+    backgroundColor: Brand,
   },
   item: {
     flexDirection: 'row',

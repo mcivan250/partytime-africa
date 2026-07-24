@@ -1,11 +1,13 @@
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
+import { SectionLabel } from '@/components/section-label';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Brand, MaxContentWidth, Spacing } from '@/constants/theme';
+import { Brand, DisplayFont, MaxContentWidth, OnBrand, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth-context';
 import { generateSlug } from '@/lib/slug';
@@ -110,87 +112,121 @@ export default function CreateEventScreen() {
 
   const inputStyle = [
     styles.input,
-    { color: theme.text, backgroundColor: theme.backgroundElement },
+    { color: theme.text, backgroundColor: theme.background },
   ];
 
   return (
     <ThemedView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.intro}>
+          <ThemedText style={styles.introTitle}>Throw something{'\n'}worth showing up for.</ThemedText>
+        </View>
+
+        {/* Cover hero — the first thing people see, so we make it the star. */}
         <Pressable onPress={chooseCover} style={styles.coverPicker}>
           {coverUri ? (
-            <Image source={{ uri: coverUri }} style={styles.coverPreview} contentFit="cover" />
+            <>
+              <Image source={{ uri: coverUri }} style={styles.coverPreview} contentFit="cover" />
+              <View style={styles.coverChange}>
+                <ThemedText type="smallBold" style={styles.coverChangeText}>
+                  Tap to change
+                </ThemedText>
+              </View>
+            </>
           ) : (
-            <ThemedView type="backgroundElement" style={styles.coverPlaceholder}>
-              <ThemedText type="small">+ Add a cover photo</ThemedText>
-            </ThemedView>
+            <View style={styles.coverPlaceholder}>
+              <LinearGradient
+                colors={['rgba(29,201,107,0.16)', 'rgba(17,24,17,0.4)']}
+                style={StyleSheet.absoluteFill}
+              />
+              <ThemedText style={styles.coverGlyph}>📷</ThemedText>
+              <ThemedText type="smallBold">Add a bold cover photo</ThemedText>
+              <ThemedText type="small" themeColor="textSecondary" style={styles.coverHint}>
+                It&apos;s the first thing people see in the feed
+              </ThemedText>
+            </View>
           )}
         </Pressable>
-        <TextInput
-          style={inputStyle}
-          placeholder="Event title"
-          placeholderTextColor={theme.textSecondary}
-          value={title}
-          onChangeText={setTitle}
-        />
-        <TextInput
-          style={[...inputStyle, styles.multiline]}
-          placeholder="What's the vibe? (description)"
-          placeholderTextColor={theme.textSecondary}
-          value={description}
-          onChangeText={setDescription}
-          multiline
-        />
-        <TextInput
-          style={inputStyle}
-          placeholder="Date & time — e.g. 2026-08-01 20:00"
-          placeholderTextColor={theme.textSecondary}
-          value={startsAtText}
-          onChangeText={setStartsAtText}
-          autoCapitalize="none"
-        />
-        <TextInput
-          style={inputStyle}
-          placeholder="Venue name"
-          placeholderTextColor={theme.textSecondary}
-          value={venueName}
-          onChangeText={setVenueName}
-        />
-        <TextInput
-          style={inputStyle}
-          placeholder="🎧 Playlist link (Spotify or YouTube)"
-          placeholderTextColor={theme.textSecondary}
-          value={playlistUrl}
-          onChangeText={setPlaylistUrl}
-          autoCapitalize="none"
-          keyboardType="url"
-        />
-        <TextInput
-          style={inputStyle}
-          placeholder="Address"
-          placeholderTextColor={theme.textSecondary}
-          value={address}
-          onChangeText={setAddress}
-        />
 
-        <ThemedText type="smallBold">Who can see it?</ThemedText>
-        <View style={styles.visibilityRow}>
-          {VISIBILITY_OPTIONS.map((option) => {
-            const selected = visibility === option.value;
-            return (
-              <Pressable
-                key={option.value}
-                onPress={() => setVisibility(option.value)}
-                style={[styles.visibilityButton, selected && styles.visibilitySelected]}>
-                <ThemedText type="smallBold" style={selected ? styles.selectedLabel : undefined}>
-                  {option.label}
-                </ThemedText>
-              </Pressable>
-            );
-          })}
+        <View style={styles.section}>
+          <SectionLabel>THE BASICS</SectionLabel>
+          <TextInput
+            style={inputStyle}
+            placeholder="Event title"
+            placeholderTextColor={theme.textSecondary}
+            value={title}
+            onChangeText={setTitle}
+          />
+          <TextInput
+            style={[...inputStyle, styles.multiline]}
+            placeholder="What's the vibe? Tell people why they can't miss it."
+            placeholderTextColor={theme.textSecondary}
+            value={description}
+            onChangeText={setDescription}
+            multiline
+          />
         </View>
-        <ThemedText type="small">
-          {VISIBILITY_OPTIONS.find((o) => o.value === visibility)?.hint}
-        </ThemedText>
+
+        <View style={styles.section}>
+          <SectionLabel>WHERE &amp; WHEN</SectionLabel>
+          <TextInput
+            style={inputStyle}
+            placeholder="Date & time — e.g. 2026-08-01 20:00"
+            placeholderTextColor={theme.textSecondary}
+            value={startsAtText}
+            onChangeText={setStartsAtText}
+            autoCapitalize="none"
+          />
+          <TextInput
+            style={inputStyle}
+            placeholder="Venue name"
+            placeholderTextColor={theme.textSecondary}
+            value={venueName}
+            onChangeText={setVenueName}
+          />
+          <TextInput
+            style={inputStyle}
+            placeholder="Address"
+            placeholderTextColor={theme.textSecondary}
+            value={address}
+            onChangeText={setAddress}
+          />
+        </View>
+
+        <View style={styles.section}>
+          <SectionLabel>SET THE MOOD</SectionLabel>
+          <TextInput
+            style={inputStyle}
+            placeholder="Playlist link (Spotify or YouTube)"
+            placeholderTextColor={theme.textSecondary}
+            value={playlistUrl}
+            onChangeText={setPlaylistUrl}
+            autoCapitalize="none"
+            keyboardType="url"
+          />
+        </View>
+
+        <View style={styles.section}>
+          <SectionLabel>WHO CAN SEE IT</SectionLabel>
+          <View style={styles.visibilityRow}>
+            {VISIBILITY_OPTIONS.map((option) => {
+              const selected = visibility === option.value;
+              return (
+                <Pressable
+                  key={option.value}
+                  onPress={() => setVisibility(option.value)}
+                  style={[styles.visibilityButton, selected && styles.visibilitySelected]}>
+                  <ThemedText type="smallBold" style={selected ? styles.selectedLabel : undefined}>
+                    {option.label}
+                  </ThemedText>
+                </Pressable>
+              );
+            })}
+          </View>
+          <ThemedText type="small" themeColor="textSecondary">
+            {VISIBILITY_OPTIONS.find((o) => o.value === visibility)?.hint}
+          </ThemedText>
+        </View>
 
         {error ? <ThemedText type="small">{error}</ThemedText> : null}
 
@@ -198,7 +234,7 @@ export default function CreateEventScreen() {
           style={[styles.primaryButton, { opacity: busy ? 0.5 : 1 }]}
           disabled={busy}
           onPress={() => submit('published')}>
-          <ThemedText type="smallBold" style={styles.selectedLabel}>
+          <ThemedText type="smallBold" style={styles.publishLabel}>
             Publish event
           </ThemedText>
         </Pressable>
@@ -223,38 +259,72 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: Spacing.four,
-    gap: Spacing.three,
+    gap: Spacing.four,
     maxWidth: MaxContentWidth,
     width: '100%',
     alignSelf: 'center',
+    paddingBottom: Spacing.six,
+  },
+  intro: {
+    marginBottom: Spacing.one,
+  },
+  introTitle: {
+    fontFamily: DisplayFont,
+    fontSize: 26,
+    lineHeight: 30,
+    letterSpacing: -0.5,
+    color: '#EFF6EE',
   },
   coverPicker: {
     width: '100%',
     aspectRatio: 16 / 9,
-    borderRadius: Spacing.three,
+    borderRadius: 20,
     overflow: 'hidden',
   },
   coverPreview: {
     width: '100%',
     height: '100%',
   },
+  coverChange: {
+    position: 'absolute',
+    right: Spacing.three,
+    bottom: Spacing.three,
+    backgroundColor: 'rgba(7,15,10,0.7)',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+  },
+  coverChangeText: {
+    color: '#fff',
+  },
   coverPlaceholder: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: Spacing.one,
     borderWidth: 1,
     borderStyle: 'dashed',
-    borderColor: '#8886',
-    borderRadius: Spacing.three,
+    borderColor: 'rgba(255,255,255,0.22)',
+    borderRadius: 20,
+  },
+  coverGlyph: {
+    fontSize: 30,
+    marginBottom: Spacing.one,
+  },
+  coverHint: {
+    textAlign: 'center',
+  },
+  section: {
+    gap: Spacing.two,
   },
   input: {
-    borderRadius: Spacing.two,
+    borderRadius: 14,
     padding: Spacing.three,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#8884',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
   },
   multiline: {
-    minHeight: 80,
+    minHeight: 96,
     textAlignVertical: 'top',
   },
   visibilityRow: {
@@ -266,20 +336,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: Spacing.three,
     borderRadius: 999,
-    borderWidth: 1.5,
-    borderColor: Brand,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
   },
   visibilitySelected: {
     backgroundColor: Brand,
+    borderColor: 'transparent',
   },
   selectedLabel: {
-    color: '#fff',
+    color: OnBrand,
   },
   primaryButton: {
     backgroundColor: Brand,
     borderRadius: 999,
     padding: Spacing.three,
     alignItems: 'center',
+    marginTop: Spacing.two,
+  },
+  publishLabel: {
+    color: OnBrand,
   },
   draftLink: {
     textAlign: 'center',

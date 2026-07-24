@@ -142,9 +142,10 @@ export default function TicketsScreen() {
 
         {merch.length > 0 ? (
           <>
-            <ThemedText type="subtitle" style={styles.sectionHeading}>
-              🛍️ Merch pickups
-            </ThemedText>
+            <View style={styles.sectionHeadingRow}>
+              <View style={styles.sectionBar} />
+              <ThemedText type="subtitle">Merch pickups</ThemedText>
+            </View>
             {merch.map((m) => {
               const collected = m.status === 'collected';
               const size =
@@ -247,8 +248,17 @@ const styles = StyleSheet.create({
     color: Brand,
     marginTop: Spacing.one,
   },
-  sectionHeading: {
+  sectionHeadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
     marginTop: Spacing.four,
+  },
+  sectionBar: {
+    width: 3,
+    height: 18,
+    borderRadius: 2,
+    backgroundColor: Brand,
   },
   merchTop: {
     padding: Spacing.four,
