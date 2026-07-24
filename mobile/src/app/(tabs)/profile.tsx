@@ -128,7 +128,7 @@ function AuthForm() {
 // Visible build marker — bumped every ship. If you can read this at the
 // bottom of the Profile, you are on this build; if it's absent, the surface
 // is running an older cached bundle and needs a redeploy/reload.
-const BUILD_TAG = 'build 2026.07.24 · motion+host';
+const BUILD_TAG = 'build 2026.07.24 · hype-engine';
 
 type Stats = { hosting: number; going: number; tickets: number };
 type NextEvent = {

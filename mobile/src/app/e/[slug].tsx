@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Avatars } from '@/components/avatars';
 import { PhotoAlbum } from '@/components/photo-album';
 import { Playlist } from '@/components/playlist';
+import { PromoteCard } from '@/components/promote-card';
 import { SectionLabel } from '@/components/section-label';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -256,7 +257,8 @@ function PartyChat({ eventId }: { eventId: string }) {
 }
 
 export default function EventScreen() {
-  const { slug } = useLocalSearchParams<{ slug: string }>();
+  const { slug, ref } = useLocalSearchParams<{ slug: string; ref?: string }>();
+  const referralCode = typeof ref === 'string' ? ref : undefined;
   const { session } = useAuth();
   const theme = useTheme();
   const [event, setEvent] = useState<Tables<'events'> | null>(null);
@@ -374,6 +376,7 @@ export default function EventScreen() {
         buyer_name: profile?.display_name || session.user.email || 'Guest',
         buyer_phone: profile?.phone || '',
         email: session.user.email || '',
+        referral_code: referralCode,
       },
     });
     if (fnError || data?.error || !data?.redirect_url) {
@@ -402,6 +405,7 @@ export default function EventScreen() {
         buyer_name: profile?.display_name || session.user.email || 'Guest',
         buyer_phone: profile?.phone || '',
         email: session.user.email || '',
+        referral_code: referralCode,
       },
     });
     if (fnError || data?.error || !data?.redirect_url) {
@@ -431,6 +435,7 @@ export default function EventScreen() {
         buyer_name: profile?.display_name || session.user.email || 'Guest',
         buyer_phone: profile?.phone || '',
         email: session.user.email || '',
+        referral_code: referralCode,
       },
     });
     if (fnError || data?.error || !data?.redirect_url) {
@@ -668,6 +673,13 @@ export default function EventScreen() {
               </ThemedText>
             </Pressable>
           </View>
+
+          <PromoteCard
+            eventId={event.id}
+            slug={event.slug}
+            title={event.title}
+            currency={event.currency}
+          />
 
           {event.allow_guest_photos ? <PhotoAlbum eventId={event.id} /> : null}
 

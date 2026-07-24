@@ -1377,6 +1377,23 @@ export type Database = {
         }[]
       }
       event_guest_list_public: { Args: { e: string }; Returns: boolean }
+      get_or_create_referral: {
+        Args: { p_event_id: string }
+        Returns: { code: string; commission_bps: number }[]
+      }
+      my_promotions: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          event_id: string
+          event_slug: string
+          event_title: string
+          code: string
+          commission_bps: number
+          tickets_sold: number
+          earned_minor: number
+          currency: string
+        }[]
+      }
       feed_events: {
         Args: Record<PropertyKey, never>
         Returns: {
