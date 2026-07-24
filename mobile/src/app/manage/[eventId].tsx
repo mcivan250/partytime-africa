@@ -14,7 +14,15 @@ import type { Tables } from '@/types/database';
 
 type EventRow = Pick<
   Tables<'events'>,
-  'id' | 'slug' | 'title' | 'starts_at' | 'timezone' | 'currency' | 'host_id' | 'is_ticketed'
+  | 'id'
+  | 'slug'
+  | 'title'
+  | 'starts_at'
+  | 'timezone'
+  | 'currency'
+  | 'host_id'
+  | 'is_ticketed'
+  | 'promoter_bps'
 >;
 type Tier = Pick<Tables<'ticket_tiers'>, 'name' | 'sold' | 'quantity' | 'price_minor' | 'currency'>;
 type TableRow = Pick<Tables<'venue_tables'>, 'price_minor' | 'status'>;
@@ -61,7 +69,7 @@ export default function ManageEventScreen() {
   const load = useCallback(async () => {
     const { data: ev } = await supabase
       .from('events')
-      .select('id, slug, title, starts_at, timezone, currency, host_id, is_ticketed')
+      .select('id, slug, title, starts_at, timezone, currency, host_id, is_ticketed, promoter_bps')
       .eq('id', eventId)
       .maybeSingle();
     setEvent(ev);
@@ -104,6 +112,12 @@ export default function ManageEventScreen() {
     }
     setBlast('');
     setBlastResult(data?.sent > 0 ? `Sent to ${data.sent} guest(s). 📣` : (data?.note ?? 'No guests with phone numbers yet.'));
+  };
+
+  const setRate = async (bps: number) => {
+    if (!event) return;
+    setEvent({ ...event, promoter_bps: bps });
+    await supabase.rpc('set_promoter_rate', { p_event_id: event.id, p_bps: bps });
   };
 
   const markCollected = async (id: string) => {
@@ -242,6 +256,32 @@ export default function ManageEventScreen() {
         ) : null}
 
         <ThemedView type="backgroundElement" style={styles.card}>
+          <View style={styles.headingRow}>
+            <View style={styles.headingBar} />
+            <ThemedText type="subtitle">Promoter payouts</ThemedText>
+          </View>
+          <ThemedText type="small" themeColor="textSecondary">
+            Pay guests a cut to promote your event — they share their link, you sell out. Set the
+            commission per ticket sold.
+          </ThemedText>
+          <View style={styles.rateRow}>
+            {[0, 500, 1000, 1500, 2000].map((bps) => {
+              const on = event.promoter_bps === bps;
+              return (
+                <Pressable
+                  key={bps}
+                  onPress={() => setRate(bps)}
+                  style={[styles.rateChip, on && styles.rateChipOn]}>
+                  <ThemedText type="smallBold" style={on ? styles.onBrand : undefined}>
+                    {bps === 0 ? 'Off' : `${bps / 100}%`}
+                  </ThemedText>
+                </Pressable>
+              );
+            })}
+          </View>
+        </ThemedView>
+
+        <ThemedView type="backgroundElement" style={styles.card}>
           <SectionLabel>TEXT YOUR GUESTS</SectionLabel>
           <TextInput
             style={[styles.input, { color: theme.text, backgroundColor: theme.background }]}
@@ -329,6 +369,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   onBrand: { color: OnBrand },
+  rateRow: {
+    flexDirection: 'row',
+    gap: Spacing.two,
+    flexWrap: 'wrap',
+  },
+  rateChip: {
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.four,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+  },
+  rateChipOn: {
+    backgroundColor: Brand,
+    borderColor: 'transparent',
+  },
   onState: { color: OnBrand },
   card: {
     borderRadius: 22,

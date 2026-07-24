@@ -95,6 +95,10 @@ export default function RootLayout() {
             name="post/[id]"
             options={{ headerShown: true, headerTitle: 'The Feed' }}
           />
+          <Stack.Screen
+            name="promotions"
+            options={{ headerShown: true, headerTitle: 'Promoter earnings' }}
+          />
         </Stack>
       </ThemeProvider>
     </AuthProvider>

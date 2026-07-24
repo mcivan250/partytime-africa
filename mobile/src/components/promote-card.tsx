@@ -21,11 +21,13 @@ export function PromoteCard({
   slug,
   title,
   currency,
+  promoterBps,
 }: {
   eventId: string;
   slug: string;
   title: string;
   currency: string;
+  promoterBps: number;
 }) {
   const { session } = useAuth();
   const [promo, setPromo] = useState<Promo | null>(null);
@@ -33,7 +35,7 @@ export function PromoteCard({
   const [busy, setBusy] = useState(false);
 
   const link = promo ? `https://partytime.africa/e/${slug}?ref=${promo.code}` : '';
-  const pct = promo ? Math.round(promo.commission_bps / 100) : 10;
+  const pct = promo ? Math.round(promo.commission_bps / 100) : Math.round(promoterBps / 100);
 
   const loadStats = useCallback(async () => {
     const { data } = await supabase.rpc('my_promotions');
@@ -65,6 +67,9 @@ export function PromoteCard({
     }
     setBusy(false);
   };
+
+  // Host has promotion switched off (and the viewer isn't already a promoter).
+  if (promoterBps <= 0 && !promo) return null;
 
   const shareMessage = `Pull up to ${title} 🎉 Get your tickets here:\n${link}`;
   const share = () => Share.share({ message: shareMessage });

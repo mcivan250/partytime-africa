@@ -296,6 +296,7 @@ export type Database = {
           lat: number | null
           lng: number | null
           playlist_url: string | null
+          promoter_bps: number
           rsvp_deadline: string | null
           slug: string
           sponsor_name: string | null
@@ -1393,6 +1394,10 @@ export type Database = {
           earned_minor: number
           currency: string
         }[]
+      }
+      set_promoter_rate: {
+        Args: { p_event_id: string; p_bps: number }
+        Returns: undefined
       }
       feed_events: {
         Args: Record<PropertyKey, never>

@@ -679,6 +679,7 @@ export default function EventScreen() {
             slug={event.slug}
             title={event.title}
             currency={event.currency}
+            promoterBps={event.promoter_bps}
           />
 
           {event.allow_guest_photos ? <PhotoAlbum eventId={event.id} /> : null}
