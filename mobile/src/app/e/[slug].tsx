@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Avatars } from '@/components/avatars';
 import { PhotoAlbum } from '@/components/photo-album';
 import { Playlist } from '@/components/playlist';
+import { SectionLabel } from '@/components/section-label';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { MerchShop } from '@/components/merch-shop';
@@ -214,7 +215,6 @@ function PartyChat({ eventId }: { eventId: string }) {
   return (
     <ThemedView type="backgroundElement" style={styles.infoCard}>
       <View style={styles.chatHeader}>
-        <ThemedText style={styles.infoIcon}>💬</ThemedText>
         <ThemedText type="subtitle">Party chat</ThemedText>
       </View>
       {messages.length === 0 ? (
@@ -529,10 +529,15 @@ export default function EventScreen() {
             style={StyleSheet.absoluteFill}
           />
           <View style={styles.heroContent}>
-            <ThemedText type="smallBold" style={styles.heroKicker}>
-              {shortDate.toUpperCase()}
+            <View style={styles.heroDate}>
+              <View style={styles.heroDateBar} />
+              <ThemedText type="smallBold" style={styles.heroKicker}>
+                {shortDate.toUpperCase()}
+              </ThemedText>
+            </View>
+            <ThemedText type="title" style={styles.heroTitle}>
+              {event.title}
             </ThemedText>
-            <ThemedText type="title">{event.title}</ThemedText>
             {event.featured && event.sponsor_name ? (
               <View style={styles.sponsorChip}>
                 <ThemedText type="smallBold" style={styles.sponsorChipText}>
@@ -562,9 +567,7 @@ export default function EventScreen() {
             onLayout={(e) => {
               rsvpY.current = e.nativeEvent.layout.y;
             }}>
-            <ThemedText type="smallBold" themeColor="textSecondary" style={styles.kicker}>
-              ARE YOU PULLING UP?
-            </ThemedText>
+            <SectionLabel>ARE YOU PULLING UP?</SectionLabel>
             {session ? (
               <>
                 <RsvpButtons current={myRsvp?.status ?? null} disabled={saving} onPick={rsvp} />
@@ -581,23 +584,25 @@ export default function EventScreen() {
           </ThemedView>
 
           <ThemedView type="backgroundElement" style={styles.infoCard}>
-            <View style={styles.infoRow}>
-              <ThemedText style={styles.infoIcon}>📅</ThemedText>
-              <ThemedText type="smallBold">{startsAt}</ThemedText>
+            <View style={styles.infoBlock}>
+              <SectionLabel>WHEN</SectionLabel>
+              <ThemedText type="smallBold" style={styles.infoValue}>
+                {startsAt}
+              </ThemedText>
             </View>
             {event.venue_name || event.address ? (
-              <View style={styles.infoRow}>
-                <ThemedText style={styles.infoIcon}>📍</ThemedText>
-                <View style={styles.infoTextColumn}>
-                  {event.venue_name ? (
-                    <ThemedText type="smallBold">{event.venue_name}</ThemedText>
-                  ) : null}
-                  {event.address ? (
-                    <ThemedText type="small" themeColor="textSecondary">
-                      {event.address}
-                    </ThemedText>
-                  ) : null}
-                </View>
+              <View style={styles.infoBlock}>
+                <SectionLabel>WHERE</SectionLabel>
+                {event.venue_name ? (
+                  <ThemedText type="smallBold" style={styles.infoValue}>
+                    {event.venue_name}
+                  </ThemedText>
+                ) : null}
+                {event.address ? (
+                  <ThemedText type="small" themeColor="textSecondary">
+                    {event.address}
+                  </ThemedText>
+                ) : null}
               </View>
             ) : null}
           </ThemedView>
@@ -637,7 +642,7 @@ export default function EventScreen() {
             <Pressable
               style={styles.checkInButton}
               onPress={() => router.push({ pathname: '/manage/[eventId]', params: { eventId: event.id } })}>
-              <ThemedText type="smallBold">⚙️  Manage this event</ThemedText>
+              <ThemedText type="smallBold">Manage this event  ›</ThemedText>
             </Pressable>
           ) : null}
           {buyNotice ? (
@@ -648,9 +653,7 @@ export default function EventScreen() {
 
           {goingNames.length > 0 ? (
             <ThemedView type="backgroundElement" style={styles.infoCard}>
-              <ThemedText type="smallBold" themeColor="textSecondary" style={styles.kicker}>
-                WHO&apos;S THERE
-              </ThemedText>
+              <SectionLabel>WHO&apos;S THERE</SectionLabel>
               <Avatars names={goingNames} />
             </ThemedView>
           ) : null}
@@ -761,9 +764,25 @@ const styles = StyleSheet.create({
     padding: Spacing.four,
     gap: Spacing.two,
   },
+  heroDate: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  heroDateBar: {
+    width: 3,
+    height: 14,
+    borderRadius: 2,
+    backgroundColor: StateGo,
+  },
   heroKicker: {
-    color: '#FFE3D2',
+    color: '#EFF6EE',
     letterSpacing: 2,
+  },
+  heroTitle: {
+    fontSize: 40,
+    lineHeight: 42,
+    letterSpacing: -0.5,
   },
   heroChips: {
     flexDirection: 'row',
@@ -796,27 +815,17 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.three,
     gap: Spacing.three,
   },
-  kicker: {
-    letterSpacing: 2,
-  },
   infoCard: {
     borderRadius: 22,
     padding: Spacing.four,
     gap: Spacing.three,
   },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.three,
+  infoBlock: {
+    gap: Spacing.two,
   },
-  infoIcon: {
-    fontSize: 18,
-    width: 24,
-    textAlign: 'center',
-  },
-  infoTextColumn: {
-    flex: 1,
-    gap: Spacing.half,
+  infoValue: {
+    fontSize: 16,
+    lineHeight: 22,
   },
   description: {
     lineHeight: 24,
