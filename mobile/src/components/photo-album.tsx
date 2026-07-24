@@ -39,13 +39,17 @@ export function PhotoAlbum({ eventId }: { eventId: string }) {
       if (!picked) return;
       setBusy(true);
       const { path } = await uploadImage('event-photos', `${eventId}/${session.user.id}`, picked);
-      const { error: insertError } = await supabase
+      const { data, error: insertError } = await supabase
         .from('photos')
-        .insert({ event_id: eventId, profile_id: session.user.id, storage_path: path });
-      if (insertError) {
-        setError('Could not add your photo. The host may have photos turned off.');
+        .insert({ event_id: eventId, profile_id: session.user.id, storage_path: path })
+        .select('id, storage_path')
+        .single();
+      if (insertError || !data) {
+        setError(insertError?.message ?? 'Could not add your photo. Photos may be turned off.');
       } else {
-        await load();
+        // Show it instantly — don't wait on a refetch to prove it landed.
+        setPhotos((prev) => [data, ...prev.filter((p) => p.id !== data.id)]);
+        load();
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not add your photo.');
