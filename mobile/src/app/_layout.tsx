@@ -91,6 +91,10 @@ export default function RootLayout() {
             name="manage/[eventId]"
             options={{ headerShown: true, headerTitle: 'Manage event' }}
           />
+          <Stack.Screen
+            name="post/[id]"
+            options={{ headerShown: true, headerTitle: 'The Feed' }}
+          />
         </Stack>
       </ThemeProvider>
     </AuthProvider>

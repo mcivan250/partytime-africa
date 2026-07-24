@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { CityFeed } from '@/components/city-feed';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import {
@@ -289,6 +290,7 @@ export default function EventsScreen() {
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<FilterKey>('all');
+  const [mode, setMode] = useState<'events' | 'feed'>('events');
 
   const loadEvents = useCallback(async () => {
     const [{ data, error: queryError }, { data: acts }] = await Promise.all([
@@ -381,6 +383,27 @@ export default function EventsScreen() {
           ) : null}
         </View>
 
+        <View style={styles.segment}>
+          <Pressable
+            style={[styles.segmentItem, mode === 'events' && styles.segmentItemOn]}
+            onPress={() => setMode('events')}>
+            <ThemedText type="smallBold" style={mode === 'events' ? styles.segmentOnText : styles.segmentText}>
+              What&apos;s on
+            </ThemedText>
+          </Pressable>
+          <Pressable
+            style={[styles.segmentItem, mode === 'feed' && styles.segmentItemOn]}
+            onPress={() => setMode('feed')}>
+            <ThemedText type="smallBold" style={mode === 'feed' ? styles.segmentOnText : styles.segmentText}>
+              The Feed
+            </ThemedText>
+          </Pressable>
+        </View>
+
+        {mode === 'feed' ? (
+          <CityFeed />
+        ) : (
+          <>
         <TextInput
           style={[styles.search, { color: theme.text, backgroundColor: theme.backgroundElement }]}
           placeholder="🔍  Search events, venues…"
@@ -460,6 +483,8 @@ export default function EventsScreen() {
             )
           }
         />
+          </>
+        )}
       </SafeAreaView>
     </ThemedView>
   );
@@ -494,6 +519,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.four,
   },
   hostButtonLabel: {
+    color: OnBrand,
+  },
+  segment: {
+    flexDirection: 'row',
+    backgroundColor: '#19231B',
+    borderRadius: 999,
+    padding: 4,
+    marginBottom: Spacing.two,
+    gap: 4,
+  },
+  segmentItem: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: Spacing.two,
+    borderRadius: 999,
+  },
+  segmentItemOn: {
+    backgroundColor: Brand,
+  },
+  segmentText: {
+    color: '#94A697',
+  },
+  segmentOnText: {
     color: OnBrand,
   },
   search: {

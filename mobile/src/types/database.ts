@@ -375,6 +375,84 @@ export type Database = {
           },
         ]
       }
+      feed_posts: {
+        Row: {
+          id: string
+          author_id: string
+          city: string
+          body: string
+          tag: string | null
+          event_id: string | null
+          like_count: number
+          reply_count: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          author_id: string
+          city?: string
+          body: string
+          tag?: string | null
+          event_id?: string | null
+          like_count?: number
+          reply_count?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          author_id?: string
+          city?: string
+          body?: string
+          tag?: string | null
+          event_id?: string | null
+          like_count?: number
+          reply_count?: number
+          created_at?: string
+        }
+        Relationships: []
+      }
+      feed_reactions: {
+        Row: {
+          post_id: string
+          profile_id: string
+          created_at: string
+        }
+        Insert: {
+          post_id: string
+          profile_id: string
+          created_at?: string
+        }
+        Update: {
+          post_id?: string
+          profile_id?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      feed_replies: {
+        Row: {
+          id: string
+          post_id: string
+          author_id: string
+          body: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          post_id: string
+          author_id: string
+          body: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          post_id?: string
+          author_id?: string
+          body?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
       merch_items: {
         Row: {
           created_at: string
@@ -1279,6 +1357,23 @@ export type Database = {
           event_title: string
           cover_url: string | null
           at: string
+        }[]
+      }
+      city_feed: {
+        Args: { p_city?: string }
+        Returns: {
+          id: string
+          author_name: string
+          author_avatar: string | null
+          body: string
+          tag: string | null
+          event_id: string | null
+          event_slug: string | null
+          event_title: string | null
+          like_count: number
+          reply_count: number
+          i_reacted: boolean
+          created_at: string
         }[]
       }
       event_guest_list_public: { Args: { e: string }; Returns: boolean }
