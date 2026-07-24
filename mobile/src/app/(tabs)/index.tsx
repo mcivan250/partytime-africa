@@ -18,10 +18,12 @@ import { CityFeed } from '@/components/city-feed';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import {
+  BodyFontBold,
   BottomNavInset,
   Brand,
   BrandGradient,
   BrandGradientLocations,
+  DisplayFont,
   Gold,
   MaxContentWidth,
   OnBrand,
@@ -158,7 +160,11 @@ function EventCard({ event, onReact }: { event: FeedEvent; onReact: (event: Feed
             style={StyleSheet.absoluteFill}
           />
         )}
-        <LinearGradient colors={['transparent', 'rgba(0,0,0,0.9)']} style={StyleSheet.absoluteFill} />
+        <LinearGradient
+          colors={['transparent', 'rgba(7,15,10,0.35)', 'rgba(7,15,10,0.97)']}
+          locations={[0, 0.5, 1]}
+          style={StyleSheet.absoluteFill}
+        />
         {event.featured ? (
           <View style={styles.featuredRibbon}>
             <ThemedText type="smallBold" style={styles.featuredRibbonText}>
@@ -178,19 +184,32 @@ function EventCard({ event, onReact }: { event: FeedEvent; onReact: (event: Feed
           </View>
         ) : null}
         <View style={styles.cardContent}>
-          <View style={styles.datePill}>
-            <ThemedText type="smallBold" style={styles.onImage}>
-              {formatStartsAt(event)}
+          <View style={styles.dateRow}>
+            <View style={styles.dateBar} />
+            <ThemedText type="smallBold" style={styles.dateText}>
+              {formatStartsAt(event).toUpperCase()}
             </ThemedText>
           </View>
-          <ThemedText type="subtitle" style={styles.onImage}>
+          <ThemedText style={styles.cardTitle} numberOfLines={2}>
             {event.title}
           </ThemedText>
-          {event.venue_name ? (
-            <ThemedText type="small" style={styles.onImageDim}>
-              {event.venue_name}
-            </ThemedText>
-          ) : null}
+          <View style={styles.metaRow}>
+            {event.venue_name ? (
+              <ThemedText type="small" style={styles.onImageDim} numberOfLines={1}>
+                {event.venue_name}
+              </ThemedText>
+            ) : null}
+            {event.venue_name && event.going_count > 0 ? (
+              <ThemedText type="small" style={styles.metaDot}>
+                ·
+              </ThemedText>
+            ) : null}
+            {event.going_count > 0 ? (
+              <ThemedText type="small" style={styles.goingText}>
+                {event.going_count} going
+              </ThemedText>
+            ) : null}
+          </View>
           <View style={styles.cardActions}>
             <Pressable
               onPress={(e) => {
@@ -573,7 +592,8 @@ const styles = StyleSheet.create({
     color: OnBrand,
   },
   pressed: {
-    opacity: 0.85,
+    opacity: 0.96,
+    transform: [{ scale: 0.985 }],
   },
   list: {
     gap: Spacing.three,
@@ -594,13 +614,13 @@ const styles = StyleSheet.create({
     shadowRadius: 26,
   },
   card: {
-    borderRadius: 22,
+    borderRadius: 24,
     overflow: 'hidden',
-    minHeight: 210,
+    minHeight: 340,
     justifyContent: 'flex-end',
   },
   cardFeatured: {
-    minHeight: 250,
+    minHeight: 420,
     borderWidth: 1.5,
     borderColor: Gold,
   },
@@ -692,12 +712,42 @@ const styles = StyleSheet.create({
   activityActor: {
     color: StateGo,
   },
-  datePill: {
-    alignSelf: 'flex-start',
-    backgroundColor: 'rgba(11,11,16,0.55)',
-    paddingVertical: 4,
-    paddingHorizontal: 12,
-    borderRadius: 999,
+  dateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    marginBottom: Spacing.one,
+  },
+  dateBar: {
+    width: 3,
+    height: 14,
+    borderRadius: 2,
+    backgroundColor: StateGo,
+  },
+  dateText: {
+    color: '#EFF6EE',
+    letterSpacing: 1.5,
+    fontSize: 12,
+  },
+  cardTitle: {
+    fontFamily: DisplayFont,
+    fontSize: 30,
+    lineHeight: 32,
+    letterSpacing: -0.5,
+    color: '#fff',
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    marginTop: Spacing.one,
+  },
+  metaDot: {
+    color: 'rgba(255,255,255,0.5)',
+  },
+  goingText: {
+    fontFamily: BodyFontBold,
+    color: StateGo,
   },
   onImage: {
     color: '#fff',
