@@ -1399,6 +1399,29 @@ export type Database = {
         Args: { p_event_id: string; p_bps: number }
         Returns: undefined
       }
+      promoter_balance: {
+        Args: Record<PropertyKey, never>
+        Returns: { available_minor: number; currency: string }[]
+      }
+      request_promoter_payout: {
+        Args: { p_destination: string }
+        Returns: { id: string; amount_minor: number; currency: string; status: string }[]
+      }
+      my_promoter_payouts: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          amount_minor: number
+          currency: string
+          destination: string
+          status: string
+          created_at: string
+        }[]
+      }
+      event_promoter_leaderboard: {
+        Args: { p_event_id: string }
+        Returns: { promoter_name: string; tickets_sold: number; earned_minor: number }[]
+      }
       feed_events: {
         Args: Record<PropertyKey, never>
         Returns: {

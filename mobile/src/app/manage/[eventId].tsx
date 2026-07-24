@@ -31,6 +31,7 @@ type MerchPickup = Pick<Tables<'merch_purchases'>, 'id' | 'buyer_name' | 'quanti
   merch_items: { name: string; price_minor: number } | null;
   merch_variants: { label: string } | null;
 };
+type Leader = { promoter_name: string; tickets_sold: number; earned_minor: number };
 
 const STATUS_EMOJI: Record<Rsvp['status'], string> = { going: '🔥', maybe: '🤔', declined: '😢' };
 
@@ -59,6 +60,7 @@ export default function ManageEventScreen() {
   const [tiers, setTiers] = useState<Tier[]>([]);
   const [tables, setTables] = useState<TableRow[]>([]);
   const [merch, setMerch] = useState<MerchPickup[]>([]);
+  const [leaders, setLeaders] = useState<Leader[]>([]);
   const [rsvps, setRsvps] = useState<Rsvp[]>([]);
   const [ticketStatuses, setTicketStatuses] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -90,6 +92,17 @@ export default function ManageEventScreen() {
       setMerch((merchRes.data ?? []) as unknown as MerchPickup[]);
       setRsvps(rsvpRes.data ?? []);
       setTicketStatuses((ticketRes.data ?? []).map((t) => t.status));
+
+      const { data: board } = await supabase.rpc('event_promoter_leaderboard', { p_event_id: ev.id });
+      setLeaders(
+        (board ?? [])
+          .map((b) => ({
+            promoter_name: b.promoter_name,
+            tickets_sold: Number(b.tickets_sold),
+            earned_minor: Number(b.earned_minor),
+          }))
+          .filter((b) => b.tickets_sold > 0),
+      );
     }
     setLoading(false);
   }, [eventId]);
@@ -281,6 +294,31 @@ export default function ManageEventScreen() {
           </View>
         </ThemedView>
 
+        {leaders.length > 0 ? (
+          <ThemedView type="backgroundElement" style={styles.card}>
+            <View style={styles.headingRow}>
+              <View style={styles.headingBar} />
+              <ThemedText type="subtitle">Top promoters</ThemedText>
+            </View>
+            {leaders.map((l, i) => (
+              <View key={`${l.promoter_name}-${i}`} style={styles.tierRow}>
+                <ThemedText type="smallBold" style={styles.rank}>
+                  {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`}
+                </ThemedText>
+                <View style={styles.flex}>
+                  <ThemedText type="smallBold">{l.promoter_name}</ThemedText>
+                  <ThemedText type="small" themeColor="textSecondary">
+                    {l.tickets_sold} sold
+                  </ThemedText>
+                </View>
+                <ThemedText type="smallBold" style={styles.leaderEarned}>
+                  {formatMoney(l.earned_minor, event.currency)}
+                </ThemedText>
+              </View>
+            ))}
+          </ThemedView>
+        ) : null}
+
         <ThemedView type="backgroundElement" style={styles.card}>
           <SectionLabel>TEXT YOUR GUESTS</SectionLabel>
           <TextInput
@@ -384,6 +422,12 @@ const styles = StyleSheet.create({
   rateChipOn: {
     backgroundColor: Brand,
     borderColor: 'transparent',
+  },
+  rank: {
+    width: 28,
+  },
+  leaderEarned: {
+    color: Gold,
   },
   onState: { color: OnBrand },
   card: {
