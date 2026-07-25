@@ -39,6 +39,9 @@ type Venue = {
   description: string | null;
   cover_url: string | null;
   phone: string | null;
+  price_range: string | null;
+  cuisines: string[];
+  hours: string | null;
 };
 
 type EventLite = {
@@ -101,7 +104,7 @@ export default function VenueScreen() {
     const [vRes, eRes] = await Promise.all([
       supabase
         .from('venues')
-        .select('id, name, kind, city, address, description, cover_url, phone')
+        .select('id, name, kind, city, address, description, cover_url, phone, price_range, cuisines, hours')
         .eq('id', id)
         .maybeSingle(),
       supabase
@@ -187,29 +190,62 @@ export default function VenueScreen() {
 
         <ThemedText type="small" style={{ color: vibe.accent }}>
           {KIND_LABEL[venue.kind] ?? 'Venue'}
+          {venue.price_range ? `  ·  ${venue.price_range}` : ''}
         </ThemedText>
         <ThemedText style={styles.title}>{venue.name}</ThemedText>
         <ThemedText type="small" themeColor="textSecondary">
           {[venue.address, venue.city ?? 'Kampala'].filter(Boolean).join(' · ')}
         </ThemedText>
+
+        {venue.cuisines.length > 0 ? (
+          <View style={styles.tagRow}>
+            {venue.cuisines.map((c) => (
+              <View key={c} style={styles.tag}>
+                <ThemedText type="small" themeColor="textSecondary">
+                  {c}
+                </ThemedText>
+              </View>
+            ))}
+          </View>
+        ) : null}
+
         {venue.description ? (
           <ThemedText type="default" themeColor="textSecondary" style={styles.desc}>
             {venue.description}
           </ThemedText>
         ) : null}
 
-        {venue.phone ? (
+        {/* Quick facts + actions */}
+        {venue.hours ? (
+          <ThemedText type="small" themeColor="textSecondary" style={styles.hours}>
+            🕒 {venue.hours}
+          </ThemedText>
+        ) : null}
+        <View style={styles.actionRow}>
           <Pressable
-            style={styles.callBtn}
+            style={styles.ghostAction}
             onPress={() => {
               tapLight();
-              Linking.openURL(`tel:${venue.phone}`);
+              const q = encodeURIComponent(`${venue.name}, ${venue.city ?? 'Kampala'}, Uganda`);
+              Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${q}`);
             }}>
             <ThemedText type="smallBold" style={styles.callText}>
-              📞 Call {venue.phone}
+              📍 Directions
             </ThemedText>
           </Pressable>
-        ) : null}
+          {venue.phone ? (
+            <Pressable
+              style={styles.ghostAction}
+              onPress={() => {
+                tapLight();
+                Linking.openURL(`tel:${venue.phone}`);
+              }}>
+              <ThemedText type="smallBold" style={styles.callText}>
+                📞 Call
+              </ThemedText>
+            </Pressable>
+          ) : null}
+        </View>
 
         {/* Reserve a table */}
         <ThemedView type="backgroundElement" style={styles.reserveCard}>
@@ -392,9 +428,17 @@ const styles = StyleSheet.create({
   heroImg: { width: '100%', height: 200, borderRadius: 22 },
   title: { fontFamily: DisplayFont, fontSize: 30, color: '#EFF6EE', lineHeight: 34 },
   desc: { marginTop: Spacing.two, lineHeight: 22 },
-  callBtn: {
-    alignSelf: 'flex-start',
-    marginTop: Spacing.two,
+  tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two, marginTop: Spacing.two },
+  tag: {
+    borderRadius: 999,
+    paddingVertical: 4,
+    paddingHorizontal: Spacing.two,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+  },
+  hours: { marginTop: Spacing.two },
+  actionRow: { flexDirection: 'row', gap: Spacing.two, marginTop: Spacing.two },
+  ghostAction: {
     borderRadius: 999,
     paddingVertical: Spacing.two,
     paddingHorizontal: Spacing.three,

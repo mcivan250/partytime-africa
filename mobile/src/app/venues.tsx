@@ -12,7 +12,16 @@ import { BrandGradientLocations, Brand, DisplayFont, MaxContentWidth, OnBrand, S
 import { tapLight } from '@/lib/haptics';
 import { supabase } from '@/lib/supabase';
 
-type Venue = { id: string; name: string; kind: string; city: string | null; description: string | null; cover_url: string | null };
+type Venue = {
+  id: string;
+  name: string;
+  kind: string;
+  city: string | null;
+  description: string | null;
+  cover_url: string | null;
+  price_range: string | null;
+  cuisines: string[];
+};
 
 const KINDS: { key: string; label: string }[] = [
   { key: 'all', label: 'All' },
@@ -44,7 +53,7 @@ export default function VenuesScreen() {
   const load = useCallback(async () => {
     const { data } = await supabase
       .from('venues')
-      .select('id, name, kind, city, description, cover_url')
+      .select('id, name, kind, city, description, cover_url, price_range, cuisines')
       .order('name');
     setVenues((data ?? []) as Venue[]);
     setLoading(false);
@@ -125,8 +134,13 @@ export default function VenuesScreen() {
                       {v.name}
                     </ThemedText>
                     <ThemedText type="small" style={styles.meta} numberOfLines={1}>
-                      📍 {v.city ?? 'Kampala'}
-                      {v.description ? `  ·  ${v.description}` : ''}
+                      {[
+                        v.price_range,
+                        v.cuisines.length > 0 ? v.cuisines.slice(0, 2).join(' · ') : null,
+                        `📍 ${v.city ?? 'Kampala'}`,
+                      ]
+                        .filter(Boolean)
+                        .join('  ·  ')}
                     </ThemedText>
                     <View style={styles.reservePill}>
                       <ThemedText type="small" style={styles.reserveText}>

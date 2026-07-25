@@ -1377,7 +1377,9 @@ export type Database = {
           country_code: string | null
           cover_url: string | null
           created_at: string
+          cuisines: string[]
           description: string | null
+          hours: string | null
           id: string
           kind: string
           lat: number | null
@@ -1385,6 +1387,7 @@ export type Database = {
           name: string
           owner_id: string | null
           phone: string | null
+          price_range: string | null
         }
         Insert: {
           address?: string | null
