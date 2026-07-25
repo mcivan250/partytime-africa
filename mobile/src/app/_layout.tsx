@@ -99,6 +99,10 @@ export default function RootLayout() {
             name="promotions"
             options={{ headerShown: true, headerTitle: 'Promoter earnings' }}
           />
+          <Stack.Screen
+            name="notifications"
+            options={{ headerShown: true, headerTitle: 'Notifications' }}
+          />
         </Stack>
       </ThemeProvider>
     </AuthProvider>

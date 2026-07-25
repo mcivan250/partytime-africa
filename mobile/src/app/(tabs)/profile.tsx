@@ -128,7 +128,7 @@ function AuthForm() {
 // Visible build marker — bumped every ship. If you can read this at the
 // bottom of the Profile, you are on this build; if it's absent, the surface
 // is running an older cached bundle and needs a redeploy/reload.
-const BUILD_TAG = 'build 2026.07.24 · payouts+leaderboard';
+const BUILD_TAG = 'build 2026.07.24 · notifications+og';
 
 type Stats = { hosting: number; going: number; tickets: number };
 type NextEvent = {
@@ -196,11 +196,12 @@ function Dashboard() {
   const [profile, setProfile] = useState<Tables<'profiles'> | null>(null);
   const [stats, setStats] = useState<Stats>({ hosting: 0, going: 0, tickets: 0 });
   const [next, setNext] = useState<NextEvent | null>(null);
+  const [unread, setUnread] = useState(0);
   const [uploading, setUploading] = useState(false);
 
   const load = useCallback(async () => {
     const now = new Date().toISOString();
-    const [profileRes, hostingRes, goingRes, ticketsRes, hostUpcoming, goingUpcoming] =
+    const [profileRes, hostingRes, goingRes, ticketsRes, hostUpcoming, goingUpcoming, unreadRes] =
       await Promise.all([
         supabase.from('profiles').select('*').eq('id', uid).maybeSingle(),
         supabase.from('events').select('id', { count: 'exact', head: true }).eq('host_id', uid),
@@ -227,9 +228,14 @@ function Dashboard() {
           .eq('status', 'going')
           .gte('events.starts_at', now)
           .limit(5),
+        supabase
+          .from('notifications')
+          .select('id', { count: 'exact', head: true })
+          .is('read_at', null),
       ]);
 
     if (profileRes.data) setProfile(profileRes.data);
+    setUnread(unreadRes.count ?? 0);
     setStats({
       hosting: hostingRes.count ?? 0,
       going: goingRes.count ?? 0,
@@ -365,6 +371,12 @@ function Dashboard() {
 
       {/* Actions */}
       <ThemedView type="backgroundElement" style={styles.actionCard}>
+        <ActionRow
+          glyph="🔔"
+          title="Notifications"
+          subtitle={unread > 0 ? `${unread} new` : 'Replies & earnings'}
+          onPress={() => router.push('/notifications')}
+        />
         <ActionRow
           glyph="✦"
           title="My events"
