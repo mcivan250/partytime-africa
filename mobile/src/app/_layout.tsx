@@ -111,6 +111,14 @@ export default function RootLayout() {
             name="ops"
             options={{ headerShown: true, headerTitle: 'Ops Copilot' }}
           />
+          <Stack.Screen
+            name="messages"
+            options={{ headerShown: true, headerTitle: 'Messages' }}
+          />
+          <Stack.Screen
+            name="dm/[id]"
+            options={{ headerShown: true, headerTitle: 'Chat' }}
+          />
         </Stack>
       </ThemeProvider>
     </AuthProvider>

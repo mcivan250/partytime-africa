@@ -704,6 +704,15 @@ export default function EventScreen() {
               </Pressable>
             )
           ) : null}
+          {session && !isHost ? (
+            <Pressable
+              style={styles.checkInButton}
+              onPress={() =>
+                router.push({ pathname: '/dm/[id]', params: { id: event.host_id, name: hostName ?? 'Host' } })
+              }>
+              <ThemedText type="smallBold">💬 Message the host</ThemedText>
+            </Pressable>
+          ) : null}
           {buyNotice ? (
             <ThemedText type="small" themeColor="textSecondary" style={styles.center}>
               {buyNotice}

@@ -46,6 +46,14 @@ function render(n: Note): { icon: string; title: string; body: string; onPress: 
       onPress: () => router.push({ pathname: '/post/[id]', params: { id: String(p.post_id) } }),
     };
   }
+  if (n.ntype === 'dm') {
+    return {
+      icon: '✉️',
+      title: `${p.actor ?? 'Someone'} messaged you`,
+      body: String(p.preview ?? ''),
+      onPress: () => router.push({ pathname: '/dm/[id]', params: { id: String(p.from_id), name: String(p.actor ?? '') } }),
+    };
+  }
   return { icon: '🔔', title: 'Notification', body: '', onPress: () => {} };
 }
 

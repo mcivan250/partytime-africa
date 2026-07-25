@@ -382,6 +382,33 @@ export type Database = {
           },
         ]
       }
+      dm_messages: {
+        Row: {
+          id: string
+          sender_id: string
+          recipient_id: string
+          body: string
+          read_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          sender_id: string
+          recipient_id: string
+          body: string
+          read_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          sender_id?: string
+          recipient_id?: string
+          body?: string
+          read_at?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
       feed_posts: {
         Row: {
           id: string
@@ -1397,6 +1424,17 @@ export type Database = {
       }
       event_guest_list_public: { Args: { e: string }; Returns: boolean }
       is_admin: { Args: Record<PropertyKey, never>; Returns: boolean }
+      my_conversations: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          other_id: string
+          name: string
+          avatar_url: string | null
+          last_body: string
+          last_at: string
+          unread: number
+        }[]
+      }
       get_or_create_referral: {
         Args: { p_event_id: string }
         Returns: { code: string; commission_bps: number }[]

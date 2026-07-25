@@ -312,6 +312,8 @@ export default function EventsScreen() {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<FilterKey>('all');
   const [mode, setMode] = useState<'events' | 'feed'>('events');
+  const [dmUnread, setDmUnread] = useState(0);
+  const [notifUnread, setNotifUnread] = useState(0);
 
   const loadEvents = useCallback(async () => {
     const [{ data, error: queryError }, { data: acts }] = await Promise.all([
@@ -369,6 +371,26 @@ export default function EventsScreen() {
     loadEvents();
   }, [loadEvents]);
 
+  useEffect(() => {
+    if (!session) {
+      setDmUnread(0);
+      setNotifUnread(0);
+      return;
+    }
+    (async () => {
+      const [{ count: n }, { count: d }] = await Promise.all([
+        supabase.from('notifications').select('id', { count: 'exact', head: true }).is('read_at', null),
+        supabase
+          .from('dm_messages')
+          .select('id', { count: 'exact', head: true })
+          .eq('recipient_id', session.user.id)
+          .is('read_at', null),
+      ]);
+      setNotifUnread(n ?? 0);
+      setDmUnread(d ?? 0);
+    })();
+  }, [session]);
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await loadEvents();
@@ -397,11 +419,24 @@ export default function EventsScreen() {
             <ThemedText type="title">What&apos;s on</ThemedText>
           </View>
           {session ? (
-            <Pressable style={styles.hostButton} onPress={() => router.push('/create-event')}>
-              <ThemedText type="smallBold" style={styles.hostButtonLabel}>
-                + Host
-              </ThemedText>
-            </Pressable>
+            <View style={styles.iconCluster}>
+              <Pressable style={styles.iconBtn} onPress={() => router.push('/messages')}>
+                <ThemedText style={styles.iconGlyph}>💬</ThemedText>
+                {dmUnread > 0 ? (
+                  <View style={styles.iconBadge}>
+                    <ThemedText style={styles.iconBadgeText}>{dmUnread > 9 ? '9+' : dmUnread}</ThemedText>
+                  </View>
+                ) : null}
+              </Pressable>
+              <Pressable style={styles.iconBtn} onPress={() => router.push('/notifications')}>
+                <ThemedText style={styles.iconGlyph}>🔔</ThemedText>
+                {notifUnread > 0 ? (
+                  <View style={styles.iconBadge}>
+                    <ThemedText style={styles.iconBadgeText}>{notifUnread > 9 ? '9+' : notifUnread}</ThemedText>
+                  </View>
+                ) : null}
+              </Pressable>
+            </View>
           ) : null}
         </View>
 
@@ -565,6 +600,41 @@ const styles = StyleSheet.create({
   },
   hostButtonLabel: {
     color: OnBrand,
+  },
+  iconCluster: {
+    flexDirection: 'row',
+    gap: Spacing.two,
+  },
+  iconBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconGlyph: {
+    fontSize: 18,
+  },
+  iconBadge: {
+    position: 'absolute',
+    top: -3,
+    right: -3,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#F73558',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 2,
+    borderColor: '#111811',
+  },
+  iconBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '700',
   },
   segment: {
     flexDirection: 'row',
