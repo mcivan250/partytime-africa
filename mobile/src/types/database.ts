@@ -1399,6 +1399,7 @@ export type Database = {
         Args: { p_city?: string }
         Returns: {
           id: string
+          author_id: string
           author_name: string
           author_avatar: string | null
           body: string
@@ -1434,6 +1435,18 @@ export type Database = {
       }
       admin_set_suspended: { Args: { p_id: string; p_suspended: boolean }; Returns: undefined }
       admin_delete_post: { Args: { p_id: string }; Returns: undefined }
+      request_friend: { Args: { p_other: string }; Returns: string }
+      respond_friend: { Args: { p_other: string; p_accept: boolean }; Returns: undefined }
+      remove_friend: { Args: { p_other: string }; Returns: undefined }
+      friend_status: { Args: { p_other: string }; Returns: string }
+      my_friends: {
+        Args: Record<PropertyKey, never>
+        Returns: { id: string; name: string; avatar_url: string | null }[]
+      }
+      friend_requests: {
+        Args: Record<PropertyKey, never>
+        Returns: { id: string; name: string; avatar_url: string | null; created_at: string }[]
+      }
       my_conversations: {
         Args: Record<PropertyKey, never>
         Returns: {

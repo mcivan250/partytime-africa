@@ -1,4 +1,4 @@
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -94,11 +94,11 @@ export default function DmThreadScreen() {
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={90}>
-        {name ? (
+        <Pressable onPress={() => router.push({ pathname: '/u/[id]', params: { id: other } })}>
           <ThemedText type="smallBold" style={styles.header}>
-            {name}
+            {name ?? 'View profile'} ›
           </ThemedText>
-        ) : null}
+        </Pressable>
         <ScrollView
           ref={scrollRef}
           contentContainerStyle={styles.content}

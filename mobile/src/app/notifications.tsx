@@ -54,6 +54,22 @@ function render(n: Note): { icon: string; title: string; body: string; onPress: 
       onPress: () => router.push({ pathname: '/dm/[id]', params: { id: String(p.from_id), name: String(p.actor ?? '') } }),
     };
   }
+  if (n.ntype === 'friend_request') {
+    return {
+      icon: '👋',
+      title: `${p.actor ?? 'Someone'} sent you a friend request`,
+      body: 'Tap to accept or decline',
+      onPress: () => router.push('/friends'),
+    };
+  }
+  if (n.ntype === 'friend_accepted') {
+    return {
+      icon: '🤝',
+      title: `${p.actor ?? 'Someone'} accepted your friend request`,
+      body: "You're now friends",
+      onPress: () => router.push({ pathname: '/u/[id]', params: { id: String(p.from_id) } }),
+    };
+  }
   return { icon: '🔔', title: 'Notification', body: '', onPress: () => {} };
 }
 

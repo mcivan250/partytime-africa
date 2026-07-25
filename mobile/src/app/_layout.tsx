@@ -123,6 +123,14 @@ export default function RootLayout() {
             name="admin"
             options={{ headerShown: true, headerTitle: 'Moderation' }}
           />
+          <Stack.Screen
+            name="friends"
+            options={{ headerShown: true, headerTitle: 'Friends' }}
+          />
+          <Stack.Screen
+            name="u/[id]"
+            options={{ headerShown: true, headerTitle: 'Profile' }}
+          />
         </Stack>
       </ThemeProvider>
     </AuthProvider>

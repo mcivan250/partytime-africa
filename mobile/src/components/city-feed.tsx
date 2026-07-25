@@ -26,6 +26,7 @@ const CITY = 'Kampala';
 
 type Post = {
   id: string;
+  author_id: string;
   author_name: string;
   author_avatar: string | null;
   body: string;
@@ -249,7 +250,9 @@ function PostCard({ post, onLike }: { post: Post; onLike: () => void }) {
   const label = tagLabel(post.tag);
   return (
     <ThemedView type="backgroundElement" style={styles.card}>
-      <View style={styles.cardHead}>
+      <Pressable
+        style={styles.cardHead}
+        onPress={() => router.push({ pathname: '/u/[id]', params: { id: post.author_id } })}>
         <View style={styles.avatar}>
           <ThemedText style={styles.avatarText}>{initials(post.author_name)}</ThemedText>
         </View>
@@ -266,7 +269,7 @@ function PostCard({ post, onLike }: { post: Post; onLike: () => void }) {
             </ThemedText>
           </View>
         ) : null}
-      </View>
+      </Pressable>
 
       <ThemedText style={styles.body}>{post.body}</ThemedText>
 
