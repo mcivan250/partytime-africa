@@ -66,6 +66,15 @@ type ActivityItem = {
   at: string;
 };
 
+type VenueLite = { id: string; name: string; kind: string; city: string | null; cover_url: string | null };
+
+const VENUE_KIND_LABEL: Record<string, string> = {
+  bar: 'Bar',
+  restaurant: 'Restaurant',
+  club: 'Nightclub',
+  lounge: 'Lounge',
+};
+
 type FilterKey = 'all' | 'trending' | 'tonight' | 'weekend' | 'ticketed' | 'free';
 const FILTERS: { key: FilterKey; label: string }[] = [
   { key: 'all', label: 'All' },
@@ -276,6 +285,62 @@ function ActivityStrip({ items }: { items: ActivityItem[] }) {
   );
 }
 
+// Horizontal "where to eat & drink" rail — the curated Kampala guide surfaced
+// right on Discover so visitors see recommendations immediately.
+function VenueRail({ venues }: { venues: VenueLite[] }) {
+  if (venues.length === 0) return null;
+  return (
+    <View style={styles.railWrap}>
+      <View style={styles.railHead}>
+        <ThemedText type="smallBold" themeColor="textSecondary" style={styles.kicker}>
+          🍸 WHERE TO EAT & DRINK
+        </ThemedText>
+        <Pressable onPress={() => router.push('/venues')} hitSlop={8}>
+          <ThemedText type="smallBold" style={styles.railSeeAll}>
+            See all ›
+          </ThemedText>
+        </Pressable>
+      </View>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.railRow}>
+        {venues.map((v) => (
+          <Pressable
+            key={v.id}
+            onPress={() => router.push({ pathname: '/v/[id]', params: { id: v.id } })}
+            style={({ pressed }) => [styles.railCard, pressed && styles.pressed]}>
+            {v.cover_url ? (
+              <Image source={{ uri: v.cover_url }} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} />
+            ) : (
+              <LinearGradient
+                colors={BrandGradient}
+                locations={BrandGradientLocations}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={StyleSheet.absoluteFill}
+              />
+            )}
+            <LinearGradient
+              colors={['transparent', 'rgba(7,15,10,0.35)', 'rgba(7,15,10,0.95)']}
+              locations={[0, 0.5, 1]}
+              style={StyleSheet.absoluteFill}
+            />
+            <View style={styles.railInfo}>
+              <ThemedText type="smallBold" style={styles.railName} numberOfLines={1}>
+                {v.name}
+              </ThemedText>
+              <ThemedText type="small" style={styles.railMeta} numberOfLines={1}>
+                {VENUE_KIND_LABEL[v.kind] ?? 'Venue'} · {v.city ?? 'Kampala'}
+              </ThemedText>
+            </View>
+          </Pressable>
+        ))}
+      </ScrollView>
+    </View>
+  );
+}
+
 function SkeletonCard() {
   const opacity = useRef(new Animated.Value(0.35)).current;
   useEffect(() => {
@@ -306,6 +371,7 @@ export default function EventsScreen() {
   const { session } = useAuth();
   const [events, setEvents] = useState<FeedEvent[]>([]);
   const [activity, setActivity] = useState<ActivityItem[]>([]);
+  const [venues, setVenues] = useState<VenueLite[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -316,9 +382,15 @@ export default function EventsScreen() {
   const [notifUnread, setNotifUnread] = useState(0);
 
   const loadEvents = useCallback(async () => {
-    const [{ data, error: queryError }, { data: acts }] = await Promise.all([
+    const [{ data, error: queryError }, { data: acts }, { data: vens }] = await Promise.all([
       supabase.rpc('feed_events'),
       supabase.rpc('activity_feed'),
+      supabase
+        .from('venues')
+        .select('id, name, kind, city, cover_url')
+        .not('cover_url', 'is', null)
+        .order('name')
+        .limit(12),
     ]);
     if (queryError) setError(queryError.message);
     else {
@@ -326,6 +398,7 @@ export default function EventsScreen() {
       setEvents((data ?? []) as FeedEvent[]);
     }
     setActivity((acts ?? []) as ActivityItem[]);
+    setVenues((vens ?? []) as VenueLite[]);
     setLoading(false);
   }, []);
 
@@ -511,7 +584,10 @@ export default function EventsScreen() {
                 <ThemedText style={styles.planChevron}>›</ThemedText>
               </Pressable>
               {!loading && filter === 'all' && !query.trim() ? (
-                <ActivityStrip items={activity} />
+                <>
+                  <ActivityStrip items={activity} />
+                  <VenueRail venues={venues} />
+                </>
               ) : null}
             </>
           }
@@ -828,6 +904,43 @@ const styles = StyleSheet.create({
   },
   activityActor: {
     color: StateGo,
+  },
+  railWrap: {
+    gap: Spacing.two,
+    marginBottom: Spacing.three,
+  },
+  railHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  railSeeAll: {
+    color: StateGo,
+  },
+  railRow: {
+    gap: Spacing.two,
+    paddingRight: Spacing.four,
+  },
+  railCard: {
+    width: 170,
+    height: 190,
+    borderRadius: 18,
+    overflow: 'hidden',
+    justifyContent: 'flex-end',
+    backgroundColor: '#19231B',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+  },
+  railInfo: {
+    padding: Spacing.three,
+    gap: 2,
+  },
+  railName: {
+    color: '#fff',
+    fontSize: 15,
+  },
+  railMeta: {
+    color: 'rgba(255,255,255,0.82)',
   },
   dateRow: {
     flexDirection: 'row',
