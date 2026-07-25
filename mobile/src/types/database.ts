@@ -1494,6 +1494,24 @@ export type Database = {
         Args: { p_id: string; p_cover_url: string }
         Returns: undefined
       }
+      admin_list_reservations: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          venue_id: string
+          venue_name: string
+          guest_name: string
+          party_size: number
+          reserved_for: string
+          note: string | null
+          status: string
+          created_at: string
+        }[]
+      }
+      admin_set_reservation_status: {
+        Args: { p_id: string; p_status: string }
+        Returns: undefined
+      }
       request_friend: { Args: { p_other: string }; Returns: string }
       respond_friend: { Args: { p_other: string; p_accept: boolean }; Returns: undefined }
       remove_friend: { Args: { p_other: string }; Returns: undefined }

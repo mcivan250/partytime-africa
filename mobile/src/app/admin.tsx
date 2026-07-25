@@ -13,15 +13,25 @@ import { supabase } from '@/lib/supabase';
 type Member = { id: string; name: string; city: string | null; suspended: boolean; created_at: string };
 type Post = { id: string; author_name: string; body: string; image_path: string | null; created_at: string };
 type Venue = { id: string; name: string; kind: string; city: string | null; cover_url: string | null };
+type Reservation = {
+  id: string;
+  venue_name: string;
+  guest_name: string;
+  party_size: number;
+  reserved_for: string;
+  note: string | null;
+  status: string;
+};
 
 const VENUE_KINDS = ['bar', 'restaurant', 'club', 'lounge'];
 
 export default function AdminScreen() {
   const { session } = useAuth();
-  const [tab, setTab] = useState<'members' | 'content' | 'venues'>('members');
+  const [tab, setTab] = useState<'bookings' | 'members' | 'content' | 'venues'>('bookings');
   const [members, setMembers] = useState<Member[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [venues, setVenues] = useState<Venue[]>([]);
+  const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
   const [denied, setDenied] = useState(false);
 
@@ -36,10 +46,11 @@ export default function AdminScreen() {
   const [uploadingId, setUploadingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const [mRes, pRes, vRes] = await Promise.all([
+    const [mRes, pRes, vRes, rRes] = await Promise.all([
       supabase.rpc('admin_members'),
       supabase.rpc('admin_recent_posts'),
       supabase.from('venues').select('id, name, kind, city, cover_url').order('name'),
+      supabase.rpc('admin_list_reservations'),
     ]);
     if (mRes.error && pRes.error) {
       setDenied(true);
@@ -47,6 +58,7 @@ export default function AdminScreen() {
       setMembers((mRes.data ?? []) as Member[]);
       setPosts((pRes.data ?? []) as Post[]);
       setVenues((vRes.data ?? []) as Venue[]);
+      setReservations((rRes.data ?? []) as Reservation[]);
     }
     setLoading(false);
   }, []);
@@ -121,6 +133,17 @@ export default function AdminScreen() {
     }
   };
 
+  const setReservation = async (r: Reservation, status: 'confirmed' | 'declined') => {
+    setReservations((prev) => prev.map((x) => (x.id === r.id ? { ...x, status } : x)));
+    const { error } = await supabase.rpc('admin_set_reservation_status', { p_id: r.id, p_status: status });
+    if (error) {
+      Alert.alert('Could not update', error.message);
+      setReservations((prev) => prev.map((x) => (x.id === r.id ? { ...x, status: r.status } : x)));
+      return;
+    }
+    tapSuccess();
+  };
+
   if (loading) {
     return (
       <ThemedView style={[styles.container, styles.center]}>
@@ -139,14 +162,19 @@ export default function AdminScreen() {
   return (
     <ThemedView style={styles.container}>
       <View style={styles.segment}>
+        <Pressable style={[styles.segItem, tab === 'bookings' && styles.segOn]} onPress={() => setTab('bookings')}>
+          <ThemedText type="smallBold" style={tab === 'bookings' ? styles.segOnText : styles.segText}>
+            Bookings
+          </ThemedText>
+        </Pressable>
         <Pressable style={[styles.segItem, tab === 'members' && styles.segOn]} onPress={() => setTab('members')}>
           <ThemedText type="smallBold" style={tab === 'members' ? styles.segOnText : styles.segText}>
             Members
           </ThemedText>
         </Pressable>
         <Pressable style={[styles.segItem, tab === 'content' && styles.segOn]} onPress={() => setTab('content')}>
-          <ThemedText type="smallBold" style={tab === 'content' ? styles.segOnText : styles.segText}>
-            Feed content
+          <ThemedText type="smallBold" numberOfLines={1} style={tab === 'content' ? styles.segOnText : styles.segText}>
+            Content
           </ThemedText>
         </Pressable>
         <Pressable style={[styles.segItem, tab === 'venues' && styles.segOn]} onPress={() => setTab('venues')}>
@@ -157,7 +185,74 @@ export default function AdminScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {tab === 'venues' ? (
+        {tab === 'bookings' ? (
+          reservations.length === 0 ? (
+            <ThemedText type="small" themeColor="textSecondary" style={styles.empty}>
+              No table requests yet. When guests reserve a table, they&apos;ll show up here to confirm.
+            </ThemedText>
+          ) : (
+            reservations.map((r) => {
+              const pending = r.status === 'requested';
+              return (
+                <ThemedView key={r.id} type="backgroundElement" style={styles.bookingCard}>
+                  <View style={styles.bookingTop}>
+                    <View style={styles.flex}>
+                      <ThemedText type="smallBold">{r.venue_name}</ThemedText>
+                      <ThemedText type="small" themeColor="textSecondary">
+                        {r.guest_name} · party of {r.party_size}
+                      </ThemedText>
+                      <ThemedText type="small" themeColor="textSecondary">
+                        {new Date(r.reserved_for).toLocaleString(undefined, {
+                          weekday: 'short',
+                          day: 'numeric',
+                          month: 'short',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </ThemedText>
+                      {r.note ? (
+                        <ThemedText type="small" themeColor="textSecondary" style={styles.bookingNote}>
+                          “{r.note}”
+                        </ThemedText>
+                      ) : null}
+                    </View>
+                    {!pending ? (
+                      <View
+                        style={[
+                          styles.statusPill,
+                          r.status === 'confirmed' ? styles.statusConfirmed : styles.statusDeclined,
+                        ]}>
+                        <ThemedText
+                          type="small"
+                          style={r.status === 'confirmed' ? styles.unsuspendText : styles.suspendText}>
+                          {r.status === 'confirmed' ? 'Confirmed' : 'Declined'}
+                        </ThemedText>
+                      </View>
+                    ) : null}
+                  </View>
+                  {pending ? (
+                    <View style={styles.bookingActions}>
+                      <Pressable
+                        style={[styles.actionBtn, styles.unsuspend, styles.flex]}
+                        onPress={() => setReservation(r, 'confirmed')}>
+                        <ThemedText type="smallBold" style={styles.unsuspendText}>
+                          Confirm
+                        </ThemedText>
+                      </Pressable>
+                      <Pressable
+                        style={[styles.actionBtn, styles.suspend, styles.flex]}
+                        onPress={() => setReservation(r, 'declined')}>
+                        <ThemedText type="smallBold" style={styles.suspendText}>
+                          Decline
+                        </ThemedText>
+                      </Pressable>
+                    </View>
+                  ) : null}
+                </ThemedView>
+              );
+            })
+          )
+        ) : tab === 'venues' ? (
           <>
             <ThemedView type="backgroundElement" style={styles.formCard}>
               <ThemedText type="smallBold">Add a venue</ThemedText>
@@ -339,7 +434,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: Spacing.three,
   },
-  actionBtn: { borderRadius: 999, paddingVertical: Spacing.two, paddingHorizontal: Spacing.three },
+  actionBtn: { borderRadius: 999, paddingVertical: Spacing.two, paddingHorizontal: Spacing.three, alignItems: 'center' },
   suspend: { backgroundColor: 'rgba(247,53,88,0.15)' },
   suspendText: { color: '#F73558' },
   unsuspend: { backgroundColor: 'rgba(61,220,151,0.15)' },
@@ -376,6 +471,13 @@ const styles = StyleSheet.create({
     marginTop: Spacing.one,
   },
   disabled: { opacity: 0.6 },
+  bookingCard: { borderRadius: 16, padding: Spacing.three, gap: Spacing.three },
+  bookingTop: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.two },
+  bookingNote: { fontStyle: 'italic', marginTop: 2 },
+  bookingActions: { flexDirection: 'row', gap: Spacing.two },
+  statusPill: { borderRadius: 999, paddingVertical: Spacing.one, paddingHorizontal: Spacing.three },
+  statusConfirmed: { backgroundColor: 'rgba(61,220,151,0.15)' },
+  statusDeclined: { backgroundColor: 'rgba(247,53,88,0.15)' },
   venueThumb: { width: 52, height: 52, borderRadius: 12 },
   venueThumbEmpty: { alignItems: 'center', justifyContent: 'center', backgroundColor: '#243527' },
   photoBtn: {

@@ -62,6 +62,36 @@ function render(n: Note): { icon: string; title: string; body: string; onPress: 
       onPress: () => router.push('/friends'),
     };
   }
+  if (n.ntype === 'reservation_update') {
+    const confirmed = p.status === 'confirmed';
+    const when = p.reserved_for
+      ? new Date(String(p.reserved_for)).toLocaleString(undefined, {
+          weekday: 'short',
+          day: 'numeric',
+          month: 'short',
+          hour: '2-digit',
+          minute: '2-digit',
+        })
+      : '';
+    return {
+      icon: confirmed ? '✅' : '😔',
+      title: confirmed
+        ? `Table confirmed at ${p.venue ?? 'the venue'}`
+        : `Reservation declined at ${p.venue ?? 'the venue'}`,
+      body: confirmed
+        ? `Your table for ${p.party_size ?? ''} is set${when ? ` — ${when}` : ''}. See you there!`
+        : `Sorry, ${p.venue ?? 'the venue'} couldn't take${when ? ` ${when}` : ' your booking'}. Try another night.`,
+      onPress: () => router.push('/venues'),
+    };
+  }
+  if (n.ntype === 'reservation') {
+    return {
+      icon: '🍽️',
+      title: `New table request at ${p.venue ?? 'your venue'}`,
+      body: `${p.actor ?? 'A guest'} · party of ${p.party_size ?? ''}`,
+      onPress: () => router.push('/admin'),
+    };
+  }
   if (n.ntype === 'friend_accepted') {
     return {
       icon: '🤝',
