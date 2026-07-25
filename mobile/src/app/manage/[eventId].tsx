@@ -32,6 +32,7 @@ type MerchPickup = Pick<Tables<'merch_purchases'>, 'id' | 'buyer_name' | 'quanti
   merch_variants: { label: string } | null;
 };
 type Leader = { promoter_name: string; tickets_sold: number; earned_minor: number };
+type Cohost = { profile_id: string; name: string; status: string };
 
 const STATUS_EMOJI: Record<Rsvp['status'], string> = { going: '🔥', maybe: '🤔', declined: '😢' };
 
@@ -61,6 +62,7 @@ export default function ManageEventScreen() {
   const [tables, setTables] = useState<TableRow[]>([]);
   const [merch, setMerch] = useState<MerchPickup[]>([]);
   const [leaders, setLeaders] = useState<Leader[]>([]);
+  const [cohosts, setCohosts] = useState<Cohost[]>([]);
   const [rsvps, setRsvps] = useState<Rsvp[]>([]);
   const [ticketStatuses, setTicketStatuses] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -103,6 +105,9 @@ export default function ManageEventScreen() {
           }))
           .filter((b) => b.tickets_sold > 0),
       );
+
+      const { data: chs } = await supabase.rpc('event_cohosts', { p_event_id: ev.id });
+      setCohosts((chs ?? []) as Cohost[]);
     }
     setLoading(false);
   }, [eventId]);
@@ -125,6 +130,19 @@ export default function ManageEventScreen() {
     }
     setBlast('');
     setBlastResult(data?.sent > 0 ? `Sent to ${data.sent} guest(s). 📣` : (data?.note ?? 'No guests with phone numbers yet.'));
+  };
+
+  const respondCohost = async (profileId: string, accept: boolean) => {
+    setCohosts((prev) =>
+      accept
+        ? prev.map((c) => (c.profile_id === profileId ? { ...c, status: 'accepted' } : c))
+        : prev.filter((c) => c.profile_id !== profileId),
+    );
+    await supabase.rpc('respond_cohost', {
+      p_event_id: eventId,
+      p_profile_id: profileId,
+      p_accept: accept,
+    });
   };
 
   const setRate = async (bps: number) => {
@@ -265,6 +283,43 @@ export default function ManageEventScreen() {
                 </View>
               );
             })}
+          </ThemedView>
+        ) : null}
+
+        {cohosts.length > 0 ? (
+          <ThemedView type="backgroundElement" style={styles.card}>
+            <View style={styles.headingRow}>
+              <View style={styles.headingBar} />
+              <ThemedText type="subtitle">Co-hosts</ThemedText>
+            </View>
+            {cohosts.map((c) => (
+              <View key={c.profile_id} style={styles.tierRow}>
+                <View style={styles.flex}>
+                  <ThemedText type="smallBold">{c.name}</ThemedText>
+                  <ThemedText type="small" themeColor="textSecondary">
+                    {c.status === 'requested' ? 'wants to co-host' : 'co-host'}
+                  </ThemedText>
+                </View>
+                {c.status === 'requested' ? (
+                  <View style={styles.cohostActions}>
+                    <Pressable style={styles.acceptBtn} onPress={() => respondCohost(c.profile_id, true)}>
+                      <ThemedText type="smallBold" style={styles.onBrand}>
+                        Accept
+                      </ThemedText>
+                    </Pressable>
+                    <Pressable style={styles.refuseBtn} onPress={() => respondCohost(c.profile_id, false)}>
+                      <ThemedText type="smallBold" themeColor="textSecondary">
+                        Refuse
+                      </ThemedText>
+                    </Pressable>
+                  </View>
+                ) : (
+                  <ThemedText type="smallBold" style={{ color: StateGo }}>
+                    ✓
+                  </ThemedText>
+                )}
+              </View>
+            ))}
           </ThemedView>
         ) : null}
 
@@ -422,6 +477,23 @@ const styles = StyleSheet.create({
   rateChipOn: {
     backgroundColor: Brand,
     borderColor: 'transparent',
+  },
+  cohostActions: {
+    flexDirection: 'row',
+    gap: Spacing.two,
+  },
+  acceptBtn: {
+    backgroundColor: Brand,
+    borderRadius: 999,
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.three,
+  },
+  refuseBtn: {
+    borderRadius: 999,
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
   },
   rank: {
     width: 28,

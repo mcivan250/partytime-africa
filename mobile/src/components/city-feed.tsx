@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
@@ -18,6 +19,7 @@ import { BottomNavInset, Brand, OnBrand, Spacing, StateGo } from '@/constants/th
 import { useTheme } from '@/hooks/use-theme';
 import { tapLight } from '@/lib/haptics';
 import { useAuth } from '@/lib/auth-context';
+import { pickImage, publicUrl, uploadImage } from '@/lib/storage';
 import { supabase } from '@/lib/supabase';
 
 const CITY = 'Kampala';
@@ -28,6 +30,7 @@ type Post = {
   author_avatar: string | null;
   body: string;
   tag: string | null;
+  image_path: string | null;
   event_id: string | null;
   event_slug: string | null;
   event_title: string | null;
@@ -71,6 +74,8 @@ export function CityFeed() {
   const [refreshing, setRefreshing] = useState(false);
   const [body, setBody] = useState('');
   const [tag, setTag] = useState<string | null>(null);
+  const [photo, setPhoto] = useState<Awaited<ReturnType<typeof pickImage>>>(null);
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [posting, setPosting] = useState(false);
 
   const load = useCallback(async () => {
@@ -89,24 +94,48 @@ export function CityFeed() {
     setRefreshing(false);
   }, [load]);
 
+  const choosePhoto = async () => {
+    try {
+      const img = await pickImage([4, 5]);
+      if (img) {
+        setPhoto(img);
+        setPhotoUri(`data:${img.mimeType};base64,${img.base64}`);
+      }
+    } catch {
+      // ignore — user can try again
+    }
+  };
+
   const post = async () => {
     if (!session) {
       router.push('/profile');
       return;
     }
     const text = body.trim();
-    if (!text) return;
+    if (!text && !photo) return;
     setPosting(true);
+    let imagePath: string | null = null;
+    if (photo) {
+      try {
+        imagePath = (await uploadImage('feed', session.user.id, photo)).path;
+      } catch {
+        setPosting(false);
+        return;
+      }
+    }
     const { error } = await supabase.from('feed_posts').insert({
       author_id: session.user.id,
       city: CITY,
-      body: text,
+      body: text || '📷',
       tag,
+      image_path: imagePath,
     });
     setPosting(false);
     if (!error) {
       setBody('');
       setTag(null);
+      setPhoto(null);
+      setPhotoUri(null);
       await load();
     }
   };
@@ -160,14 +189,29 @@ export function CityFeed() {
           </Pressable>
         ))}
       </View>
-      <Pressable
-        style={[styles.postButton, { opacity: posting || !body.trim() ? 0.5 : 1 }]}
-        disabled={posting || !body.trim()}
-        onPress={post}>
-        <ThemedText type="smallBold" style={styles.postLabel}>
-          {session ? 'Post to the feed' : 'Sign in to post'}
-        </ThemedText>
-      </Pressable>
+
+      {photoUri ? (
+        <Pressable onPress={() => { setPhoto(null); setPhotoUri(null); }} style={styles.photoPreviewWrap}>
+          <Image source={{ uri: photoUri }} style={styles.photoPreview} contentFit="cover" />
+          <View style={styles.photoRemove}>
+            <ThemedText type="smallBold" style={styles.photoRemoveText}>✕ Remove</ThemedText>
+          </View>
+        </Pressable>
+      ) : null}
+
+      <View style={styles.composerActions}>
+        <Pressable style={styles.photoBtn} onPress={choosePhoto}>
+          <ThemedText type="smallBold" themeColor="textSecondary">📷 Photo</ThemedText>
+        </Pressable>
+        <Pressable
+          style={[styles.postButton, { opacity: posting || (!body.trim() && !photo) ? 0.5 : 1 }]}
+          disabled={posting || (!body.trim() && !photo)}
+          onPress={post}>
+          <ThemedText type="smallBold" style={styles.postLabel}>
+            {session ? 'Post to the feed' : 'Sign in to post'}
+          </ThemedText>
+        </Pressable>
+      </View>
     </View>
   );
 
@@ -225,6 +269,14 @@ function PostCard({ post, onLike }: { post: Post; onLike: () => void }) {
       </View>
 
       <ThemedText style={styles.body}>{post.body}</ThemedText>
+
+      {post.image_path ? (
+        <Image
+          source={{ uri: publicUrl('feed', post.image_path) }}
+          style={styles.postImage}
+          contentFit="cover"
+        />
+      ) : null}
 
       {post.event_id && post.event_slug ? (
         <Pressable
@@ -302,7 +354,20 @@ const styles = StyleSheet.create({
   tagOnText: {
     color: OnBrand,
   },
+  composerActions: {
+    flexDirection: 'row',
+    gap: Spacing.two,
+  },
+  photoBtn: {
+    paddingVertical: Spacing.three,
+    paddingHorizontal: Spacing.four,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    justifyContent: 'center',
+  },
   postButton: {
+    flex: 1,
     backgroundColor: Brand,
     borderRadius: 999,
     paddingVertical: Spacing.three,
@@ -310,6 +375,34 @@ const styles = StyleSheet.create({
   },
   postLabel: {
     color: OnBrand,
+  },
+  photoPreviewWrap: {
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  photoPreview: {
+    width: '100%',
+    aspectRatio: 4 / 5,
+    maxHeight: 360,
+  },
+  photoRemove: {
+    position: 'absolute',
+    top: Spacing.two,
+    right: Spacing.two,
+    backgroundColor: 'rgba(7,15,10,0.7)',
+    borderRadius: 999,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+  },
+  photoRemoveText: {
+    color: '#fff',
+  },
+  postImage: {
+    width: '100%',
+    aspectRatio: 4 / 5,
+    maxHeight: 420,
+    borderRadius: 14,
+    backgroundColor: '#243527',
   },
   card: {
     borderRadius: 18,

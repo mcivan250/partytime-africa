@@ -273,6 +273,7 @@ export default function EventScreen() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [buyNotice, setBuyNotice] = useState<string | null>(null);
+  const [cohostStatus, setCohostStatus] = useState<string | null>(null);
   const [minTier, setMinTier] = useState<{ price_minor: number; currency: string } | null>(null);
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
@@ -333,8 +334,30 @@ export default function EventScreen() {
     setGoingNames((going ?? []).map((r) => r.guest_name));
     setMyRsvp(myRsvpResult.data ?? null);
     setMinTier(minTierResult.data ?? null);
+
+    if (session && eventRow.host_id !== session.user.id) {
+      const { data: ch } = await supabase
+        .from('co_hosts')
+        .select('status')
+        .eq('event_id', eventRow.id)
+        .eq('profile_id', session.user.id)
+        .maybeSingle();
+      setCohostStatus(ch?.status ?? null);
+    } else {
+      setCohostStatus(null);
+    }
     setLoading(false);
   }, [slug, session]);
+
+  const requestCohost = async () => {
+    if (!session) {
+      router.push('/profile');
+      return;
+    }
+    tapMedium();
+    await supabase.rpc('request_cohost', { p_event_id: event!.id });
+    setCohostStatus('requested');
+  };
 
   useEffect(() => {
     load();
@@ -516,6 +539,7 @@ export default function EventScreen() {
       })
     : 'Date TBA';
   const isHost = session?.user.id === event.host_id;
+  const isManager = isHost || cohostStatus === 'accepted';
   const vibe = getEventTheme(event.theme);
 
   return (
@@ -637,7 +661,7 @@ export default function EventScreen() {
             <TicketTiers
               eventId={event.id}
               currency={event.currency}
-              isManager={isHost}
+              isManager={isManager}
               onBuy={buyTier}
             />
           </View>
@@ -645,14 +669,14 @@ export default function EventScreen() {
           <VenueTables
             eventId={event.id}
             currency={event.currency}
-            isManager={isHost}
+            isManager={isManager}
             onBook={bookTable}
           />
 
           <MerchShop
             eventId={event.id}
             currency={event.currency}
-            isManager={isHost}
+            isManager={isManager}
             onBuy={buyMerch}
           />
           {isHost ? (
@@ -661,6 +685,24 @@ export default function EventScreen() {
               onPress={() => router.push({ pathname: '/manage/[eventId]', params: { eventId: event.id } })}>
               <ThemedText type="smallBold">Manage this event  ›</ThemedText>
             </Pressable>
+          ) : session ? (
+            cohostStatus === 'accepted' ? (
+              <View style={styles.cohostNote}>
+                <ThemedText type="smallBold" style={{ color: StateGo }}>
+                  ✓ You&apos;re a co-host — you can manage tickets, tables &amp; merch above.
+                </ThemedText>
+              </View>
+            ) : cohostStatus === 'requested' ? (
+              <View style={styles.cohostNote}>
+                <ThemedText type="smallBold" themeColor="textSecondary">
+                  ⏳ Co-host request sent — waiting for the host.
+                </ThemedText>
+              </View>
+            ) : (
+              <Pressable style={styles.checkInButton} onPress={requestCohost}>
+                <ThemedText type="smallBold">🤝 Request to co-host</ThemedText>
+              </Pressable>
+            )
           ) : null}
           {buyNotice ? (
             <ThemedText type="small" themeColor="textSecondary" style={styles.center}>
@@ -907,6 +949,15 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingVertical: Spacing.three,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  cohostNote: {
+    borderRadius: 16,
+    paddingVertical: Spacing.three,
+    paddingHorizontal: Spacing.four,
+    alignItems: 'center',
+    backgroundColor: '#19231B',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
   },

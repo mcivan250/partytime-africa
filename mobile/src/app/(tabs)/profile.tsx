@@ -30,12 +30,17 @@ function AuthForm() {
   const theme = useTheme();
   const [mode, setMode] = useState<'sign-in' | 'sign-up'>('sign-in');
   const [displayName, setDisplayName] = useState('');
+  const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
   const submit = async () => {
+    if (mode === 'sign-up' && phone.trim().replace(/\D/g, '').length < 9) {
+      setMessage('Enter a valid phone number — we use it for tickets & event updates.');
+      return;
+    }
     setBusy(true);
     setMessage(null);
     const { error } =
@@ -44,7 +49,7 @@ function AuthForm() {
         : await supabase.auth.signUp({
             email,
             password,
-            options: { data: { display_name: displayName.trim() } },
+            options: { data: { display_name: displayName.trim(), phone: phone.trim() } },
           });
     if (error) {
       setMessage(error.message);
@@ -82,14 +87,25 @@ function AuthForm() {
 
       <ThemedView type="backgroundElement" style={styles.formCard}>
         {mode === 'sign-up' && (
-          <TextInput
-            style={inputStyle}
-            placeholder="Display name"
-            placeholderTextColor={theme.textSecondary}
-            value={displayName}
-            onChangeText={setDisplayName}
-            autoCapitalize="words"
-          />
+          <>
+            <TextInput
+              style={inputStyle}
+              placeholder="Display name"
+              placeholderTextColor={theme.textSecondary}
+              value={displayName}
+              onChangeText={setDisplayName}
+              autoCapitalize="words"
+            />
+            <TextInput
+              style={inputStyle}
+              placeholder="Phone number (for tickets & updates)"
+              placeholderTextColor={theme.textSecondary}
+              value={phone}
+              onChangeText={setPhone}
+              keyboardType="phone-pad"
+              autoComplete="tel"
+            />
+          </>
         )}
         <TextInput
           style={inputStyle}
@@ -128,7 +144,7 @@ function AuthForm() {
 // Visible build marker — bumped every ship. If you can read this at the
 // bottom of the Profile, you are on this build; if it's absent, the surface
 // is running an older cached bundle and needs a redeploy/reload.
-const BUILD_TAG = 'build 2026.07.25 · delight';
+const BUILD_TAG = 'build 2026.07.25 · cohosts+phone+content';
 
 type Stats = { hosting: number; going: number; tickets: number };
 type NextEvent = {
@@ -198,6 +214,9 @@ function Dashboard() {
   const [next, setNext] = useState<NextEvent | null>(null);
   const [unread, setUnread] = useState(0);
   const [uploading, setUploading] = useState(false);
+  const [phoneInput, setPhoneInput] = useState('');
+  const [savingPhone, setSavingPhone] = useState(false);
+  const theme = useTheme();
 
   const load = useCallback(async () => {
     const now = new Date().toISOString();
@@ -256,6 +275,14 @@ function Dashboard() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const savePhone = async () => {
+    if (phoneInput.trim().replace(/\D/g, '').length < 9) return;
+    setSavingPhone(true);
+    await supabase.from('profiles').update({ phone: phoneInput.trim() }).eq('id', uid);
+    setProfile((p) => (p ? { ...p, phone: phoneInput.trim() } : p));
+    setSavingPhone(false);
+  };
 
   const changeAvatar = async () => {
     try {
@@ -320,6 +347,33 @@ function Dashboard() {
           </ThemedText>
         ) : null}
       </View>
+
+      {profile && !profile.phone ? (
+        <ThemedView type="backgroundElement" style={styles.phoneCard}>
+          <ThemedText type="smallBold">📱 Add your number</ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            We use it for your tickets and event updates — never spam.
+          </ThemedText>
+          <View style={styles.phoneRow}>
+            <TextInput
+              style={[styles.phoneInput, { color: theme.text, backgroundColor: theme.background }]}
+              placeholder="e.g. 0772 123 456"
+              placeholderTextColor={theme.textSecondary}
+              value={phoneInput}
+              onChangeText={setPhoneInput}
+              keyboardType="phone-pad"
+            />
+            <Pressable
+              style={[styles.phoneSave, { opacity: savingPhone ? 0.5 : 1 }]}
+              disabled={savingPhone}
+              onPress={savePhone}>
+              <ThemedText type="smallBold" style={styles.ctaLabel}>
+                Save
+              </ThemedText>
+            </Pressable>
+          </View>
+        </ThemedView>
+      ) : null}
 
       {/* Stats */}
       <View style={styles.statRow}>
@@ -531,6 +585,33 @@ const styles = StyleSheet.create({
   },
   meta: {
     marginTop: Spacing.half,
+  },
+
+  phoneCard: {
+    borderRadius: 18,
+    padding: Spacing.four,
+    gap: Spacing.two,
+    borderWidth: 1,
+    borderColor: 'rgba(29,201,107,0.3)',
+  },
+  phoneRow: {
+    flexDirection: 'row',
+    gap: Spacing.two,
+    marginTop: Spacing.one,
+  },
+  phoneInput: {
+    flex: 1,
+    borderRadius: 14,
+    padding: Spacing.three,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
+  },
+  phoneSave: {
+    backgroundColor: Brand,
+    borderRadius: 14,
+    paddingHorizontal: Spacing.four,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
   // Stats

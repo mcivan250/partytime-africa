@@ -58,16 +58,22 @@ export type Database = {
           can_edit: boolean
           event_id: string
           profile_id: string
+          status: string
+          created_at: string
         }
         Insert: {
           can_edit?: boolean
           event_id: string
           profile_id: string
+          status?: string
+          created_at?: string
         }
         Update: {
           can_edit?: boolean
           event_id?: string
           profile_id?: string
+          status?: string
+          created_at?: string
         }
         Relationships: [
           {
@@ -383,6 +389,7 @@ export type Database = {
           city: string
           body: string
           tag: string | null
+          image_path: string | null
           event_id: string | null
           like_count: number
           reply_count: number
@@ -394,6 +401,7 @@ export type Database = {
           city?: string
           body: string
           tag?: string | null
+          image_path?: string | null
           event_id?: string | null
           like_count?: number
           reply_count?: number
@@ -1368,6 +1376,7 @@ export type Database = {
           author_avatar: string | null
           body: string
           tag: string | null
+          image_path: string | null
           event_id: string | null
           event_slug: string | null
           event_title: string | null
@@ -1376,6 +1385,15 @@ export type Database = {
           i_reacted: boolean
           created_at: string
         }[]
+      }
+      request_cohost: { Args: { p_event_id: string }; Returns: undefined }
+      respond_cohost: {
+        Args: { p_event_id: string; p_profile_id: string; p_accept: boolean }
+        Returns: undefined
+      }
+      event_cohosts: {
+        Args: { p_event_id: string }
+        Returns: { profile_id: string; name: string; status: string }[]
       }
       event_guest_list_public: { Args: { e: string }; Returns: boolean }
       get_or_create_referral: {
