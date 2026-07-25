@@ -9,24 +9,31 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { getEventTheme } from '@/constants/event-themes';
 import { BrandGradientLocations, Brand, DisplayFont, MaxContentWidth, OnBrand, Spacing } from '@/constants/theme';
+import { tapLight } from '@/lib/haptics';
 import { supabase } from '@/lib/supabase';
 
 type Venue = { id: string; name: string; kind: string; city: string | null; description: string | null; cover_url: string | null };
 
 const KINDS: { key: string; label: string }[] = [
   { key: 'all', label: 'All' },
-  { key: 'bar', label: '🍺 Bars' },
   { key: 'restaurant', label: '🍽️ Restaurants' },
+  { key: 'bar', label: '🍺 Bars' },
   { key: 'club', label: '🔊 Clubs' },
   { key: 'lounge', label: '🍸 Lounges' },
 ];
 
-// Map a venue kind to one of the event vibes for its gradient.
 const KIND_VIBE: Record<string, string> = {
   bar: 'gold',
   restaurant: 'sunset',
   club: 'fire',
   lounge: 'ocean',
+};
+
+const KIND_LABEL: Record<string, string> = {
+  bar: 'Bar',
+  restaurant: 'Restaurant',
+  club: 'Nightclub',
+  lounge: 'Lounge',
 };
 
 export default function VenuesScreen() {
@@ -52,9 +59,13 @@ export default function VenuesScreen() {
   return (
     <ThemedView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <ThemedText style={styles.title}>Bars & restaurants</ThemedText>
-        <ThemedText type="small" themeColor="textSecondary">
-          Book a table any night — reserve your spot in a tap.
+        <ThemedText type="small" style={styles.kicker}>
+          THE PARTY TIME GUIDE
+        </ThemedText>
+        <ThemedText style={styles.title}>Eat & drink in Kampala</ThemedText>
+        <ThemedText type="default" themeColor="textSecondary" style={styles.subtitle}>
+          Our hand-picked bars & restaurants — the spots locals love and visitors ask for. Reserve a
+          table in a tap.
         </ThemedText>
 
         <View style={styles.chips}>
@@ -62,7 +73,10 @@ export default function VenuesScreen() {
             <Pressable
               key={k.key}
               style={[styles.chip, filter === k.key && styles.chipOn]}
-              onPress={() => setFilter(k.key)}>
+              onPress={() => {
+                tapLight();
+                setFilter(k.key);
+              }}>
               <ThemedText type="small" style={filter === k.key ? styles.chipOnText : undefined}>
                 {k.label}
               </ThemedText>
@@ -72,6 +86,10 @@ export default function VenuesScreen() {
 
         {loading ? (
           <ActivityIndicator color={Brand} style={styles.loader} />
+        ) : shown.length === 0 ? (
+          <ThemedText type="small" themeColor="textSecondary" style={styles.loader}>
+            Nothing here yet — check back soon.
+          </ThemedText>
         ) : (
           shown.map((v, i) => {
             const vibe = getEventTheme(KIND_VIBE[v.kind]);
@@ -80,32 +98,48 @@ export default function VenuesScreen() {
                 <Pressable
                   onPress={() => router.push({ pathname: '/v/[id]', params: { id: v.id } })}
                   style={({ pressed }) => [styles.card, pressed && styles.pressed]}>
-                  <View style={styles.thumbWrap}>
-                    {v.cover_url ? (
-                      <Image source={{ uri: v.cover_url }} style={styles.thumb} contentFit="cover" />
-                    ) : (
-                      <LinearGradient
-                        colors={vibe.gradient}
-                        locations={BrandGradientLocations}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                        style={styles.thumb}
-                      />
-                    )}
+                  {v.cover_url ? (
+                    <Image source={{ uri: v.cover_url }} style={styles.cover} contentFit="cover" transition={200} />
+                  ) : (
+                    <LinearGradient
+                      colors={vibe.gradient}
+                      locations={BrandGradientLocations}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.cover}
+                    />
+                  )}
+                  {/* Legibility scrim + info */}
+                  <LinearGradient
+                    colors={['transparent', 'rgba(9,13,10,0.35)', 'rgba(9,13,10,0.92)']}
+                    locations={[0, 0.5, 1]}
+                    style={styles.scrim}
+                  />
+                  <View style={[styles.badge, { backgroundColor: vibe.accent }]}>
+                    <ThemedText type="small" style={styles.badgeText}>
+                      {KIND_LABEL[v.kind] ?? 'Venue'}
+                    </ThemedText>
                   </View>
-                  <View style={styles.body}>
-                    <ThemedText type="smallBold" numberOfLines={1}>
+                  <View style={styles.info}>
+                    <ThemedText style={styles.name} numberOfLines={1}>
                       {v.name}
                     </ThemedText>
-                    <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>
-                      {v.description ?? v.city ?? 'Kampala'}
+                    <ThemedText type="small" style={styles.meta} numberOfLines={1}>
+                      📍 {v.city ?? 'Kampala'}
+                      {v.description ? `  ·  ${v.description}` : ''}
                     </ThemedText>
+                    <View style={styles.reservePill}>
+                      <ThemedText type="small" style={styles.reserveText}>
+                        Reserve a table →
+                      </ThemedText>
+                    </View>
                   </View>
                 </Pressable>
               </Appear>
             );
           })
         )}
+        <View style={styles.pad} />
       </ScrollView>
     </ThemedView>
   );
@@ -120,7 +154,9 @@ const styles = StyleSheet.create({
     width: '100%',
     alignSelf: 'center',
   },
-  title: { fontFamily: DisplayFont, fontSize: 28, color: '#EFF6EE' },
+  kicker: { color: Brand, letterSpacing: 2, fontSize: 11 },
+  title: { fontFamily: DisplayFont, fontSize: 30, color: '#EFF6EE', lineHeight: 34, marginTop: -Spacing.one },
+  subtitle: { lineHeight: 22, maxWidth: 460 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
   chip: {
     borderRadius: 999,
@@ -131,18 +167,39 @@ const styles = StyleSheet.create({
   },
   chipOn: { backgroundColor: Brand, borderColor: 'transparent' },
   chipOnText: { color: OnBrand },
-  loader: { marginTop: Spacing.six },
+  loader: { marginTop: Spacing.six, alignSelf: 'center' },
   card: {
-    flexDirection: 'row',
-    gap: Spacing.three,
+    height: 208,
+    borderRadius: 22,
+    overflow: 'hidden',
+    justifyContent: 'flex-end',
     backgroundColor: '#19231B',
-    borderRadius: 18,
-    padding: Spacing.two,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.06)',
   },
-  pressed: { opacity: 0.96, transform: [{ scale: 0.99 }] },
-  thumbWrap: { borderRadius: 14, overflow: 'hidden' },
-  thumb: { width: 84, height: 84, borderRadius: 14 },
-  body: { flex: 1, gap: 2, paddingVertical: Spacing.two, paddingRight: Spacing.two, justifyContent: 'center' },
+  pressed: { opacity: 0.97, transform: [{ scale: 0.99 }] },
+  cover: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%' },
+  scrim: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
+  badge: {
+    position: 'absolute',
+    top: Spacing.three,
+    left: Spacing.three,
+    borderRadius: 999,
+    paddingVertical: 3,
+    paddingHorizontal: Spacing.two,
+  },
+  badgeText: { color: OnBrand, fontSize: 11 },
+  info: { padding: Spacing.three, gap: Spacing.one },
+  name: { fontFamily: DisplayFont, fontSize: 22, color: '#FFFFFF' },
+  meta: { color: 'rgba(255,255,255,0.82)' },
+  reservePill: {
+    alignSelf: 'flex-start',
+    marginTop: Spacing.one,
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    borderRadius: 999,
+    paddingVertical: 5,
+    paddingHorizontal: Spacing.three,
+  },
+  reserveText: { color: '#FFFFFF' },
+  pad: { height: Spacing.six },
 });
