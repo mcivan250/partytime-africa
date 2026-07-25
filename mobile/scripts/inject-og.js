@@ -14,10 +14,8 @@ if (!fs.existsSync(file)) {
 const TITLE = 'Party Time — Uganda’s nightlife, ticketed';
 const DESC =
   'Discover the hottest events in Kampala. Tickets, tables and merch — pay with mobile money, share with your people.';
-// Placeholder image (ships in the build so the URL always resolves). Drop a
-// 1200×630 branded og-image.png into mobile/public and point this at it for a
-// proper hero preview.
-const IMG = 'https://partytime.africa/favicon.ico';
+// Branded 1200×630 card shipped from mobile/public/og-image.png.
+const IMG = 'https://partytime.africa/og-image.png';
 
 let html = fs.readFileSync(file, 'utf8');
 

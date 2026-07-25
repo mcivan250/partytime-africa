@@ -16,6 +16,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatars } from '@/components/avatars';
+import { KineticReveal } from '@/components/kinetic-reveal';
 import { PhotoAlbum } from '@/components/photo-album';
 import { Playlist } from '@/components/playlist';
 import { PromoteCard } from '@/components/promote-card';
@@ -36,8 +37,10 @@ import {
   StateGo,
   StateMaybe,
 } from '@/constants/theme';
+import { getEventTheme } from '@/constants/event-themes';
 import { useAuth } from '@/lib/auth-context';
 import { useTheme } from '@/hooks/use-theme';
+import { tapLight, tapMedium } from '@/lib/haptics';
 import { formatMoney } from '@/lib/money';
 import { supabase } from '@/lib/supabase';
 import type { Tables } from '@/types/database';
@@ -358,6 +361,7 @@ export default function EventScreen() {
   };
 
   const buyTier = async (tier: { id: string }) => {
+    tapMedium();
     if (!session) {
       setBuyNotice('Please sign in to buy a ticket.');
       router.push('/profile');
@@ -388,6 +392,7 @@ export default function EventScreen() {
   };
 
   const bookTable = async (table: { id: string }) => {
+    tapMedium();
     if (!session) {
       setBuyNotice('Please sign in to book a table.');
       router.push('/profile');
@@ -417,6 +422,7 @@ export default function EventScreen() {
   };
 
   const buyMerch = async (variant: { id: string }) => {
+    tapMedium();
     if (!session) {
       setBuyNotice('Please sign in to buy merch.');
       router.push('/profile');
@@ -448,6 +454,7 @@ export default function EventScreen() {
 
   const rsvp = async (status: RsvpStatus) => {
     if (!session || !event) return;
+    tapLight();
     setSaving(true);
     setError(null);
     if (myRsvp) {
@@ -509,6 +516,7 @@ export default function EventScreen() {
       })
     : 'Date TBA';
   const isHost = session?.user.id === event.host_id;
+  const vibe = getEventTheme(event.theme);
 
   return (
     <ThemedView style={styles.container}>
@@ -521,7 +529,7 @@ export default function EventScreen() {
             <Image source={{ uri: event.cover_url }} style={StyleSheet.absoluteFill} contentFit="cover" />
           ) : (
             <LinearGradient
-              colors={BrandGradient}
+              colors={vibe.gradient}
               locations={BrandGradientLocations}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
@@ -534,15 +542,19 @@ export default function EventScreen() {
             style={StyleSheet.absoluteFill}
           />
           <View style={styles.heroContent}>
-            <View style={styles.heroDate}>
-              <View style={styles.heroDateBar} />
-              <ThemedText type="smallBold" style={styles.heroKicker}>
-                {shortDate.toUpperCase()}
+            <KineticReveal delay={80}>
+              <View style={styles.heroDate}>
+                <View style={[styles.heroDateBar, { backgroundColor: vibe.accent }]} />
+                <ThemedText type="smallBold" style={styles.heroKicker}>
+                  {shortDate.toUpperCase()}
+                </ThemedText>
+              </View>
+            </KineticReveal>
+            <KineticReveal delay={180}>
+              <ThemedText type="title" style={styles.heroTitle}>
+                {event.title}
               </ThemedText>
-            </View>
-            <ThemedText type="title" style={styles.heroTitle}>
-              {event.title}
-            </ThemedText>
+            </KineticReveal>
             {event.featured && event.sponsor_name ? (
               <View style={styles.sponsorChip}>
                 <ThemedText type="smallBold" style={styles.sponsorChipText}>

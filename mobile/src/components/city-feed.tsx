@@ -11,10 +11,12 @@ import {
 } from 'react-native';
 
 import { Appear } from '@/components/appear';
+import { EmptyState } from '@/components/empty-state';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BottomNavInset, Brand, OnBrand, Spacing, StateGo } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { tapLight } from '@/lib/haptics';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
 
@@ -114,6 +116,7 @@ export function CityFeed() {
       router.push('/profile');
       return;
     }
+    tapLight();
     const next = !p.i_reacted;
     setPosts((prev) =>
       prev.map((x) =>
@@ -182,9 +185,11 @@ export function CityFeed() {
         loading ? (
           <ActivityIndicator color={Brand} style={styles.loader} />
         ) : (
-          <ThemedText type="small" themeColor="textSecondary" style={styles.empty}>
-            The feed&apos;s quiet. Be the first — ask who&apos;s going out tonight. 🌙
-          </ThemedText>
+          <EmptyState
+            glyph="🌙"
+            title="The night's just starting"
+            subtitle="Be the first to say something — who's pulling up tonight, who's got a spare ticket, where's the vibe?"
+          />
         )
       }
       renderItem={({ item, index }) => (

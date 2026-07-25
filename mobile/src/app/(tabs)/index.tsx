@@ -32,6 +32,7 @@ import {
   StateGo,
 } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { tapLight } from '@/lib/haptics';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
 
@@ -333,6 +334,7 @@ export default function EventsScreen() {
         router.push('/profile');
         return;
       }
+      tapLight();
       const next = !event.i_reacted;
       setEvents((prev) =>
         prev.map((e) =>

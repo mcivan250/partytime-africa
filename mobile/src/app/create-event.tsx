@@ -7,7 +7,8 @@ import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native
 import { SectionLabel } from '@/components/section-label';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Brand, DisplayFont, MaxContentWidth, OnBrand, Spacing } from '@/constants/theme';
+import { EVENT_THEMES } from '@/constants/event-themes';
+import { Brand, BrandGradientLocations, DisplayFont, MaxContentWidth, OnBrand, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth-context';
 import { generateSlug } from '@/lib/slug';
@@ -41,6 +42,7 @@ export default function CreateEventScreen() {
   const [startsAtText, setStartsAtText] = useState('');
   const [playlistUrl, setPlaylistUrl] = useState('');
   const [visibility, setVisibility] = useState<Visibility>('public');
+  const [vibe, setVibe] = useState('forest');
   const [coverUri, setCoverUri] = useState<string | null>(null);
   const [coverImage, setCoverImage] = useState<Awaited<ReturnType<typeof pickImage>>>(null);
   const [busy, setBusy] = useState(false);
@@ -96,6 +98,7 @@ export default function CreateEventScreen() {
         cover_url: coverUrl,
         playlist_url: playlistUrl.trim() || null,
         visibility,
+        theme: vibe,
         status,
       });
       if (insertError) {
@@ -204,6 +207,32 @@ export default function CreateEventScreen() {
             autoCapitalize="none"
             keyboardType="url"
           />
+        </View>
+
+        <View style={styles.section}>
+          <SectionLabel>PICK A VIBE</SectionLabel>
+          <ThemedText type="small" themeColor="textSecondary">
+            Sets your event&apos;s colours — shows on the page and when there&apos;s no cover photo.
+          </ThemedText>
+          <View style={styles.vibeRow}>
+            {EVENT_THEMES.map((t) => {
+              const on = vibe === t.key;
+              return (
+                <Pressable key={t.key} onPress={() => setVibe(t.key)} style={styles.vibeItem}>
+                  <LinearGradient
+                    colors={t.gradient}
+                    locations={BrandGradientLocations}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={[styles.vibeSwatch, on && styles.vibeSwatchOn]}
+                  />
+                  <ThemedText type="small" themeColor={on ? 'text' : 'textSecondary'}>
+                    {t.name}
+                  </ThemedText>
+                </Pressable>
+              );
+            })}
+          </View>
         </View>
 
         <View style={styles.section}>
@@ -316,6 +345,26 @@ const styles = StyleSheet.create({
   },
   section: {
     gap: Spacing.two,
+  },
+  vibeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.three,
+    marginTop: Spacing.one,
+  },
+  vibeItem: {
+    alignItems: 'center',
+    gap: Spacing.one,
+  },
+  vibeSwatch: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  vibeSwatchOn: {
+    borderColor: '#EFF6EE',
   },
   input: {
     borderRadius: 14,
