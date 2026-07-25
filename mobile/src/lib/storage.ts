@@ -35,7 +35,7 @@ export async function pickImage(aspect: [number, number] = [16, 9]): Promise<Pic
  * `prefix` groups objects by owner/entity (e.g. the user id).
  */
 export async function uploadImage(
-  bucket: 'event-covers' | 'event-photos' | 'avatars' | 'merch' | 'feed',
+  bucket: 'event-covers' | 'event-photos' | 'avatars' | 'merch' | 'feed' | 'venue-covers',
   prefix: string,
   image: PickedImage,
 ): Promise<{ path: string; url: string }> {
@@ -52,7 +52,7 @@ export async function uploadImage(
 
 // Build a public URL for an already-stored object path.
 export function publicUrl(
-  bucket: 'event-covers' | 'event-photos' | 'avatars' | 'merch' | 'feed',
+  bucket: 'event-covers' | 'event-photos' | 'avatars' | 'merch' | 'feed' | 'venue-covers',
   path: string,
 ) {
   return supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;

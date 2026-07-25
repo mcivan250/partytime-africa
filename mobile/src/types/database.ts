@@ -1490,6 +1490,10 @@ export type Database = {
         }
         Returns: string
       }
+      admin_set_venue_cover: {
+        Args: { p_id: string; p_cover_url: string }
+        Returns: undefined
+      }
       request_friend: { Args: { p_other: string }; Returns: string }
       respond_friend: { Args: { p_other: string; p_accept: boolean }; Returns: undefined }
       remove_friend: { Args: { p_other: string }; Returns: undefined }

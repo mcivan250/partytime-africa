@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
@@ -6,11 +7,12 @@ import { ThemedView } from '@/components/themed-view';
 import { Brand, MaxContentWidth, OnBrand, Spacing, StateGo } from '@/constants/theme';
 import { tapSuccess } from '@/lib/haptics';
 import { useAuth } from '@/lib/auth-context';
+import { pickImage, uploadImage } from '@/lib/storage';
 import { supabase } from '@/lib/supabase';
 
 type Member = { id: string; name: string; city: string | null; suspended: boolean; created_at: string };
 type Post = { id: string; author_name: string; body: string; image_path: string | null; created_at: string };
-type Venue = { id: string; name: string; kind: string; city: string | null };
+type Venue = { id: string; name: string; kind: string; city: string | null; cover_url: string | null };
 
 const VENUE_KINDS = ['bar', 'restaurant', 'club', 'lounge'];
 
@@ -31,12 +33,13 @@ export default function AdminScreen() {
   const [vDesc, setVDesc] = useState('');
   const [vPhone, setVPhone] = useState('');
   const [saving, setSaving] = useState(false);
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const [mRes, pRes, vRes] = await Promise.all([
       supabase.rpc('admin_members'),
       supabase.rpc('admin_recent_posts'),
-      supabase.from('venues').select('id, name, kind, city').order('name'),
+      supabase.from('venues').select('id, name, kind, city, cover_url').order('name'),
     ]);
     if (mRes.error && pRes.error) {
       setDenied(true);
@@ -84,14 +87,38 @@ export default function AdminScreen() {
     }
     tapSuccess();
     setVenues((prev) =>
-      [...prev, { id: (data as string) ?? Math.random().toString(), name: vName.trim(), kind: vKind, city: vCity.trim() || 'Kampala' }].sort(
-        (a, b) => a.name.localeCompare(b.name),
-      ),
+      [
+        ...prev,
+        {
+          id: (data as string) ?? Math.random().toString(),
+          name: vName.trim(),
+          kind: vKind,
+          city: vCity.trim() || 'Kampala',
+          cover_url: null,
+        },
+      ].sort((a, b) => a.name.localeCompare(b.name)),
     );
     setVName('');
     setVAddress('');
     setVDesc('');
     setVPhone('');
+  };
+
+  const setCover = async (v: Venue) => {
+    try {
+      const picked = await pickImage([16, 9]);
+      if (!picked) return;
+      setUploadingId(v.id);
+      const { url } = await uploadImage('venue-covers', v.id, picked);
+      const { error } = await supabase.rpc('admin_set_venue_cover', { p_id: v.id, p_cover_url: url });
+      if (error) throw error;
+      setVenues((prev) => prev.map((x) => (x.id === v.id ? { ...x, cover_url: url } : x)));
+      tapSuccess();
+    } catch (e) {
+      Alert.alert('Upload failed', e instanceof Error ? e.message : 'Could not set the photo.');
+    } finally {
+      setUploadingId(null);
+    }
   };
 
   if (loading) {
@@ -201,12 +228,33 @@ export default function AdminScreen() {
 
             {venues.map((v) => (
               <ThemedView key={v.id} type="backgroundElement" style={styles.row}>
+                {v.cover_url ? (
+                  <Image source={{ uri: v.cover_url }} style={styles.venueThumb} contentFit="cover" />
+                ) : (
+                  <View style={[styles.venueThumb, styles.venueThumbEmpty]}>
+                    <ThemedText type="small" themeColor="textSecondary">
+                      No photo
+                    </ThemedText>
+                  </View>
+                )}
                 <View style={styles.flex}>
                   <ThemedText type="smallBold">{v.name}</ThemedText>
                   <ThemedText type="small" themeColor="textSecondary">
                     {v.kind} · {v.city ?? 'Kampala'}
                   </ThemedText>
                 </View>
+                <Pressable
+                  style={styles.photoBtn}
+                  disabled={uploadingId === v.id}
+                  onPress={() => setCover(v)}>
+                  {uploadingId === v.id ? (
+                    <ActivityIndicator color={Brand} />
+                  ) : (
+                    <ThemedText type="smallBold" style={styles.photoText}>
+                      {v.cover_url ? 'Replace' : '📷 Photo'}
+                    </ThemedText>
+                  )}
+                </Pressable>
               </ThemedView>
             ))}
           </>
@@ -328,4 +376,16 @@ const styles = StyleSheet.create({
     marginTop: Spacing.one,
   },
   disabled: { opacity: 0.6 },
+  venueThumb: { width: 52, height: 52, borderRadius: 12 },
+  venueThumbEmpty: { alignItems: 'center', justifyContent: 'center', backgroundColor: '#243527' },
+  photoBtn: {
+    borderRadius: 999,
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+    minWidth: 72,
+    alignItems: 'center',
+  },
+  photoText: { color: '#EFF6EE' },
 });
