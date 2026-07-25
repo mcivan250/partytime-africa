@@ -288,6 +288,7 @@ export type Database = {
           address: string | null
           allow_comments: boolean
           allow_guest_photos: boolean
+          allow_plus_ones: boolean
           capacity: number | null
           cover_url: string | null
           created_at: string
@@ -318,6 +319,7 @@ export type Database = {
           address?: string | null
           allow_comments?: boolean
           allow_guest_photos?: boolean
+          allow_plus_ones?: boolean
           capacity?: number | null
           cover_url?: string | null
           created_at?: string

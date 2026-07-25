@@ -112,6 +112,7 @@ export default function CreateEventScreen() {
   const [playlistUrl, setPlaylistUrl] = useState('');
   const [visibility, setVisibility] = useState<Visibility>('public');
   const [vibe, setVibe] = useState('forest');
+  const [allowPlusOnes, setAllowPlusOnes] = useState(false);
   const [aiPrompt, setAiPrompt] = useState('');
   const [drafting, setDrafting] = useState(false);
   const [isTicketed, setIsTicketed] = useState(false);
@@ -196,6 +197,7 @@ export default function CreateEventScreen() {
           visibility,
           theme: vibe,
           is_ticketed: isTicketed || suggestedTiers.length > 0,
+          allow_plus_ones: allowPlusOnes,
           status,
         })
         .select('id')
@@ -426,6 +428,18 @@ export default function CreateEventScreen() {
           </ThemedText>
         </View>
 
+        <Pressable style={styles.toggleRow} onPress={() => setAllowPlusOnes((v) => !v)}>
+          <View style={styles.flex}>
+            <ThemedText type="smallBold">Allow +1s</ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              Let guests bring up to 5 people when they RSVP
+            </ThemedText>
+          </View>
+          <View style={[styles.toggle, allowPlusOnes && styles.toggleOn]}>
+            <View style={[styles.knob, allowPlusOnes && styles.knobOn]} />
+          </View>
+        </Pressable>
+
           {error ? <ThemedText type="small">{error}</ThemedText> : null}
         </ScrollView>
 
@@ -490,6 +504,32 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: Spacing.two,
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
+  },
+  toggle: {
+    width: 48,
+    height: 28,
+    borderRadius: 999,
+    backgroundColor: '#243527',
+    padding: 3,
+    justifyContent: 'center',
+  },
+  toggleOn: {
+    backgroundColor: Brand,
+  },
+  knob: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#EFF6EE',
+    alignSelf: 'flex-start',
+  },
+  knobOn: {
+    alignSelf: 'flex-end',
   },
   templateChip: {
     paddingVertical: Spacing.two,

@@ -268,7 +268,8 @@ export default function EventScreen() {
   const [hostName, setHostName] = useState<string | null>(null);
   const [goingCount, setGoingCount] = useState<number | null>(null);
   const [goingNames, setGoingNames] = useState<string[]>([]);
-  const [myRsvp, setMyRsvp] = useState<Pick<Tables<'rsvps'>, 'id' | 'status'> | null>(null);
+  const [myRsvp, setMyRsvp] = useState<Pick<Tables<'rsvps'>, 'id' | 'status' | 'plus_ones'> | null>(null);
+  const [plusOnes, setPlusOnes] = useState(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -316,7 +317,7 @@ export default function EventScreen() {
         session
           ? supabase
               .from('rsvps')
-              .select('id, status')
+              .select('id, status, plus_ones')
               .eq('event_id', eventRow.id)
               .eq('profile_id', session.user.id)
               .maybeSingle()
@@ -333,6 +334,7 @@ export default function EventScreen() {
     setGoingCount(count ?? null);
     setGoingNames((going ?? []).map((r) => r.guest_name));
     setMyRsvp(myRsvpResult.data ?? null);
+    setPlusOnes(myRsvpResult.data?.plus_ones ?? 0);
     setMinTier(minTierResult.data ?? null);
 
     if (session && eventRow.host_id !== session.user.id) {
@@ -480,10 +482,11 @@ export default function EventScreen() {
     tapLight();
     setSaving(true);
     setError(null);
+    const pplus = status === 'going' ? plusOnes : 0;
     if (myRsvp) {
       const { error: updateError } = await supabase
         .from('rsvps')
-        .update({ status })
+        .update({ status, plus_ones: pplus })
         .eq('id', myRsvp.id);
       if (updateError) setError(updateError.message);
     } else {
@@ -497,11 +500,19 @@ export default function EventScreen() {
         profile_id: session.user.id,
         guest_name: profile?.display_name ?? session.user.email ?? 'Guest',
         status,
+        plus_ones: pplus,
       });
       if (insertError) setError(insertError.message);
     }
     await load();
     setSaving(false);
+  };
+
+  // Update +1 count for an existing "going" RSVP.
+  const setPlus = async (n: number) => {
+    const v = Math.max(0, Math.min(5, n));
+    setPlusOnes(v);
+    if (myRsvp) await supabase.from('rsvps').update({ plus_ones: v }).eq('id', myRsvp.id);
   };
 
   if (loading) {
@@ -616,6 +627,32 @@ export default function EventScreen() {
                   <ThemedText type="small" themeColor="textSecondary" style={styles.center}>
                     {RSVP_CONFIRM[myRsvp.status]}
                   </ThemedText>
+                ) : null}
+                {event.allow_plus_ones && myRsvp?.status === 'going' ? (
+                  <View style={styles.plusRow}>
+                    <ThemedText type="smallBold" style={styles.flex}>
+                      Bringing anyone?
+                    </ThemedText>
+                    <Pressable
+                      style={styles.plusBtn}
+                      disabled={plusOnes <= 0}
+                      onPress={() => setPlus(plusOnes - 1)}>
+                      <ThemedText type="smallBold" style={styles.plusSign}>
+                        −
+                      </ThemedText>
+                    </Pressable>
+                    <ThemedText type="smallBold" style={styles.plusCount}>
+                      +{plusOnes}
+                    </ThemedText>
+                    <Pressable
+                      style={styles.plusBtn}
+                      disabled={plusOnes >= 5}
+                      onPress={() => setPlus(plusOnes + 1)}>
+                      <ThemedText type="smallBold" style={styles.plusSign}>
+                        +
+                      </ThemedText>
+                    </Pressable>
+                  </View>
                 ) : null}
               </>
             ) : (
@@ -922,6 +959,32 @@ const styles = StyleSheet.create({
   },
   rsvpEmoji: {
     fontSize: 20,
+  },
+  plusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    marginTop: Spacing.one,
+  },
+  flex: {
+    flex: 1,
+  },
+  plusBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.16)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  plusSign: {
+    fontSize: 18,
+  },
+  plusCount: {
+    minWidth: 34,
+    textAlign: 'center',
+    fontSize: 16,
   },
   onState: {
     color: OnBrand,
