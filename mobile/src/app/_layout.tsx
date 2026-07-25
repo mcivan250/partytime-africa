@@ -131,6 +131,14 @@ export default function RootLayout() {
             name="u/[id]"
             options={{ headerShown: true, headerTitle: 'Profile' }}
           />
+          <Stack.Screen
+            name="venues"
+            options={{ headerShown: true, headerTitle: 'Bars & restaurants' }}
+          />
+          <Stack.Screen
+            name="v/[id]"
+            options={{ headerShown: true, headerTitle: '' }}
+          />
         </Stack>
       </ThemeProvider>
     </AuthProvider>

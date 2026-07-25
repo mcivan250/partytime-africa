@@ -312,6 +312,7 @@ export type Database = {
           theme: string
           timezone: string
           title: string
+          venue_id: string | null
           venue_name: string | null
           visibility: Database["public"]["Enums"]["event_visibility"]
         }
@@ -1336,28 +1337,69 @@ export type Database = {
           },
         ]
       }
+      reservations: {
+        Row: {
+          id: string
+          venue_id: string
+          profile_id: string
+          party_size: number
+          reserved_for: string
+          note: string | null
+          status: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          venue_id: string
+          profile_id: string
+          party_size: number
+          reserved_for: string
+          note?: string | null
+          status?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          venue_id?: string
+          profile_id?: string
+          party_size?: number
+          reserved_for?: string
+          note?: string | null
+          status?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
       venues: {
         Row: {
           address: string | null
           city: string | null
           country_code: string | null
+          cover_url: string | null
           created_at: string
+          description: string | null
           id: string
+          kind: string
           lat: number | null
           lng: number | null
           name: string
           owner_id: string | null
+          phone: string | null
         }
         Insert: {
           address?: string | null
           city?: string | null
           country_code?: string | null
+          cover_url?: string | null
           created_at?: string
+          description?: string | null
           id?: string
+          kind?: string
           lat?: number | null
           lng?: number | null
           name: string
           owner_id?: string | null
+          phone?: string | null
         }
         Update: {
           address?: string | null
@@ -1437,6 +1479,17 @@ export type Database = {
       }
       admin_set_suspended: { Args: { p_id: string; p_suspended: boolean }; Returns: undefined }
       admin_delete_post: { Args: { p_id: string }; Returns: undefined }
+      admin_create_venue: {
+        Args: {
+          p_name: string
+          p_kind: string
+          p_city: string
+          p_address: string
+          p_description: string
+          p_phone: string
+        }
+        Returns: string
+      }
       request_friend: { Args: { p_other: string }; Returns: string }
       respond_friend: { Args: { p_other: string; p_accept: boolean }; Returns: undefined }
       remove_friend: { Args: { p_other: string }; Returns: undefined }
