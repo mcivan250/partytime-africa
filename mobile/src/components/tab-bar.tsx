@@ -8,9 +8,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { BrandGradient, BrandGradientLocations, MaxContentWidth, OnBrand, Spacing } from '@/constants/theme';
 
-// One bottom nav for web AND native: Discover · Tickets · [+] · Events ·
-// Profile, with the signature green gradient FAB. Discover/Profile are tabs;
-// the rest push their stack routes.
+// One bottom nav for web AND native: Discover · Tickets · [+] · Friends ·
+// Venues · Profile, with the signature green gradient FAB. Discover/Profile
+// are tabs; the rest push their stack routes.
 export function AppTabs() {
   return (
     <Tabs>
@@ -38,7 +38,7 @@ function NavItem({
   return (
     <Pressable {...props} style={styles.item}>
       <ThemedText style={[styles.icon, { opacity: isFocused ? 1 : 0.55 }]}>{icon}</ThemedText>
-      <ThemedText type="small" themeColor={isFocused ? 'text' : 'textSecondary'}>
+      <ThemedText type="small" numberOfLines={1} themeColor={isFocused ? 'text' : 'textSecondary'}>
         {label}
       </ThemedText>
     </Pressable>
@@ -49,7 +49,7 @@ function StaticItem({ icon, label, onPress }: { icon: string; label: string; onP
   return (
     <Pressable style={styles.item} onPress={onPress}>
       <ThemedText style={[styles.icon, { opacity: 0.55 }]}>{icon}</ThemedText>
-      <ThemedText type="small" themeColor="textSecondary">
+      <ThemedText type="small" numberOfLines={1} themeColor="textSecondary">
         {label}
       </ThemedText>
     </Pressable>
@@ -82,7 +82,8 @@ function BottomBar(props: TabListProps) {
         {kids[0]}
         <StaticItem icon="🎟" label="Tickets" onPress={() => router.push('/tickets')} />
         <Fab />
-        <StaticItem icon="☰" label="Events" onPress={() => router.push('/my-events')} />
+        <StaticItem icon="👯" label="Friends" onPress={() => router.push('/friends')} />
+        <StaticItem icon="🍸" label="Venues" onPress={() => router.push('/venues')} />
         {kids[1]}
       </View>
     </View>
@@ -111,19 +112,20 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.08)',
     borderRadius: 26,
     paddingVertical: Spacing.two,
-    paddingHorizontal: Spacing.four,
+    paddingHorizontal: Spacing.two,
     width: '100%',
     maxWidth: MaxContentWidth,
-    gap: Spacing.two,
+    gap: Spacing.one,
   },
   item: {
     alignItems: 'center',
     gap: 2,
     paddingVertical: 4,
-    minWidth: 56,
+    minWidth: 44,
+    flexShrink: 1,
   },
   icon: {
-    fontSize: 20,
+    fontSize: 18,
   },
   fabWrap: {
     marginTop: -28,

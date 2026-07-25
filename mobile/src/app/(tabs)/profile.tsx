@@ -144,7 +144,7 @@ function AuthForm() {
 // Visible build marker — bumped every ship. If you can read this at the
 // bottom of the Profile, you are on this build; if it's absent, the surface
 // is running an older cached bundle and needs a redeploy/reload.
-const BUILD_TAG = 'build 2026.07.25 · venues';
+const BUILD_TAG = 'build 2026.07.25 · venues-tab';
 
 type Stats = { hosting: number; going: number; tickets: number };
 type NextEvent = {
@@ -444,18 +444,6 @@ function Dashboard() {
           title="My tickets"
           subtitle="Passes & merch pickups"
           onPress={() => router.push('/tickets')}
-        />
-        <ActionRow
-          glyph="🍸"
-          title="Bars & restaurants"
-          subtitle="Reserve a table any night"
-          onPress={() => router.push('/venues')}
-        />
-        <ActionRow
-          glyph="👯"
-          title="Friends"
-          subtitle="Your crew & requests"
-          onPress={() => router.push('/friends')}
         />
         <ActionRow
           glyph="💸"
