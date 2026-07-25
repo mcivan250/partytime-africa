@@ -32,6 +32,8 @@ export function PromoteCard({
   const { session } = useAuth();
   const [promo, setPromo] = useState<Promo | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
+  const [aiCaption, setAiCaption] = useState<string | null>(null);
+  const [captionBusy, setCaptionBusy] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const link = promo ? `https://partytime.africa/e/${slug}?ref=${promo.code}` : '';
@@ -71,7 +73,14 @@ export function PromoteCard({
   // Host has promotion switched off (and the viewer isn't already a promoter).
   if (promoterBps <= 0 && !promo) return null;
 
-  const shareMessage = `Pull up to ${title} 🎉 Get your tickets here:\n${link}`;
+  const genCaption = async () => {
+    setCaptionBusy(true);
+    const { data } = await supabase.functions.invoke('promo-caption', { body: { title, link } });
+    setCaptionBusy(false);
+    if (data?.caption) setAiCaption(data.caption as string);
+  };
+
+  const shareMessage = aiCaption ?? `Pull up to ${title} 🎉 Get your tickets here:\n${link}`;
   const share = () => Share.share({ message: shareMessage });
   const shareWhatsApp = () => {
     const url = `https://wa.me/?text=${encodeURIComponent(shareMessage)}`;
@@ -109,6 +118,23 @@ export function PromoteCard({
               {link.replace('https://', '')}
             </ThemedText>
           </View>
+
+          {aiCaption ? (
+            <View style={styles.captionBox}>
+              <ThemedText type="small" style={styles.captionText}>
+                {aiCaption}
+              </ThemedText>
+            </View>
+          ) : null}
+
+          <Pressable
+            style={[styles.captionBtn, { opacity: captionBusy ? 0.5 : 1 }]}
+            disabled={captionBusy}
+            onPress={genCaption}>
+            <ThemedText type="smallBold" style={styles.captionBtnText}>
+              {captionBusy ? 'Writing…' : aiCaption ? '✨ Rewrite caption' : '✨ Write my caption'}
+            </ThemedText>
+          </Pressable>
 
           <View style={styles.shareRow}>
             <Pressable style={[styles.shareBtn, styles.shareGhost]} onPress={share}>
@@ -178,6 +204,26 @@ const styles = StyleSheet.create({
   },
   linkText: {
     color: StateGo,
+  },
+  captionBox: {
+    backgroundColor: 'rgba(0,0,0,0.25)',
+    borderRadius: 12,
+    padding: Spacing.three,
+    borderWidth: 1,
+    borderColor: 'rgba(233,196,106,0.25)',
+  },
+  captionText: {
+    lineHeight: 19,
+  },
+  captionBtn: {
+    borderRadius: 999,
+    paddingVertical: Spacing.two,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(233,196,106,0.4)',
+  },
+  captionBtnText: {
+    color: Gold,
   },
   shareRow: {
     flexDirection: 'row',

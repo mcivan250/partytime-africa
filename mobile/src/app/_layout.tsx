@@ -107,6 +107,10 @@ export default function RootLayout() {
             name="plan"
             options={{ headerShown: true, headerTitle: 'Concierge' }}
           />
+          <Stack.Screen
+            name="ops"
+            options={{ headerShown: true, headerTitle: 'Ops Copilot' }}
+          />
         </Stack>
       </ThemeProvider>
     </AuthProvider>

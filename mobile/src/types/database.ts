@@ -1396,6 +1396,7 @@ export type Database = {
         Returns: { profile_id: string; name: string; status: string }[]
       }
       event_guest_list_public: { Args: { e: string }; Returns: boolean }
+      is_admin: { Args: Record<PropertyKey, never>; Returns: boolean }
       get_or_create_referral: {
         Args: { p_event_id: string }
         Returns: { code: string; commission_bps: number }[]

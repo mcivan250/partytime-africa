@@ -144,7 +144,7 @@ function AuthForm() {
 // Visible build marker — bumped every ship. If you can read this at the
 // bottom of the Profile, you are on this build; if it's absent, the surface
 // is running an older cached bundle and needs a redeploy/reload.
-const BUILD_TAG = 'build 2026.07.25 · ai-host-studio';
+const BUILD_TAG = 'build 2026.07.25 · ai-captions+ops';
 
 type Stats = { hosting: number; going: number; tickets: number };
 type NextEvent = {
@@ -213,6 +213,7 @@ function Dashboard() {
   const [stats, setStats] = useState<Stats>({ hosting: 0, going: 0, tickets: 0 });
   const [next, setNext] = useState<NextEvent | null>(null);
   const [unread, setUnread] = useState(0);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [phoneInput, setPhoneInput] = useState('');
   const [savingPhone, setSavingPhone] = useState(false);
@@ -255,6 +256,7 @@ function Dashboard() {
 
     if (profileRes.data) setProfile(profileRes.data);
     setUnread(unreadRes.count ?? 0);
+    supabase.rpc('is_admin').then(({ data }) => setIsAdmin(data === true));
     setStats({
       hosting: hostingRes.count ?? 0,
       going: goingRes.count ?? 0,
@@ -454,8 +456,17 @@ function Dashboard() {
           title="Host an event"
           subtitle="Start selling in minutes"
           onPress={() => router.push('/create-event')}
-          last
+          last={!isAdmin}
         />
+        {isAdmin ? (
+          <ActionRow
+            glyph="📊"
+            title="Ops Copilot"
+            subtitle="Ask your data anything"
+            onPress={() => router.push('/ops')}
+            last
+          />
+        ) : null}
       </ThemedView>
 
       <Pressable style={styles.signOut} onPress={() => supabase.auth.signOut()}>
