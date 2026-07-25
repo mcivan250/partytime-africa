@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { SectionLabel } from '@/components/section-label';
@@ -108,6 +108,8 @@ export default function CreateEventScreen() {
   const [description, setDescription] = useState('');
   const [venueName, setVenueName] = useState('');
   const [address, setAddress] = useState('');
+  const [venueId, setVenueId] = useState<string | null>(null);
+  const [venueOptions, setVenueOptions] = useState<{ id: string; name: string; city: string | null }[]>([]);
   const [startsAtText, setStartsAtText] = useState('');
   const [playlistUrl, setPlaylistUrl] = useState('');
   const [visibility, setVisibility] = useState<Visibility>('public');
@@ -121,6 +123,24 @@ export default function CreateEventScreen() {
   const [coverImage, setCoverImage] = useState<Awaited<ReturnType<typeof pickImage>>>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase
+      .from('venues')
+      .select('id, name, city')
+      .order('name')
+      .then(({ data }) => setVenueOptions(data ?? []));
+  }, []);
+
+  // Pick a listed venue: link it and prefill the name; "Other" clears the link.
+  const chooseVenue = (v: { id: string; name: string; city: string | null } | null) => {
+    if (v) {
+      setVenueId(v.id);
+      setVenueName(v.name);
+    } else {
+      setVenueId(null);
+    }
+  };
 
   if (!session) {
     return (
@@ -189,6 +209,7 @@ export default function CreateEventScreen() {
           title: title.trim(),
           slug,
           description: description.trim() || null,
+          venue_id: venueId,
           venue_name: venueName.trim() || null,
           address: address.trim() || null,
           starts_at: startsAt,
@@ -351,12 +372,41 @@ export default function CreateEventScreen() {
             onChangeText={setStartsAtText}
             autoCapitalize="none"
           />
+          {venueOptions.length > 0 ? (
+            <View style={styles.venuePick}>
+              <ThemedText type="small" themeColor="textSecondary">
+                At one of our venues? (optional)
+              </ThemedText>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.venueChips}>
+                {venueOptions.map((v) => (
+                  <Pressable
+                    key={v.id}
+                    style={[styles.venueChip, venueId === v.id && styles.venueChipOn]}
+                    onPress={() => chooseVenue(v)}>
+                    <ThemedText type="small" style={venueId === v.id ? styles.venueChipOnText : undefined}>
+                      {v.name}
+                    </ThemedText>
+                  </Pressable>
+                ))}
+                <Pressable
+                  style={[styles.venueChip, venueId === null && styles.venueChipOn]}
+                  onPress={() => chooseVenue(null)}>
+                  <ThemedText type="small" style={venueId === null ? styles.venueChipOnText : undefined}>
+                    Somewhere else
+                  </ThemedText>
+                </Pressable>
+              </ScrollView>
+            </View>
+          ) : null}
           <TextInput
             style={inputStyle}
             placeholder="Venue name"
             placeholderTextColor={theme.textSecondary}
             value={venueName}
-            onChangeText={setVenueName}
+            onChangeText={(t) => {
+              setVenueName(t);
+              if (venueId) setVenueId(null);
+            }}
           />
           <TextInput
             style={inputStyle}
@@ -589,6 +639,28 @@ const styles = StyleSheet.create({
   },
   section: {
     gap: Spacing.two,
+  },
+  venuePick: {
+    gap: Spacing.two,
+  },
+  venueChips: {
+    gap: Spacing.two,
+    paddingVertical: Spacing.one,
+    paddingRight: Spacing.four,
+  },
+  venueChip: {
+    borderRadius: 999,
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+  },
+  venueChipOn: {
+    backgroundColor: Brand,
+    borderColor: 'transparent',
+  },
+  venueChipOnText: {
+    color: OnBrand,
   },
   studio: {
     borderRadius: 20,

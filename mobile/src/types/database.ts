@@ -343,6 +343,7 @@ export type Database = {
           theme?: string
           timezone?: string
           title: string
+          venue_id?: string | null
           venue_name?: string | null
           visibility?: Database["public"]["Enums"]["event_visibility"]
         }

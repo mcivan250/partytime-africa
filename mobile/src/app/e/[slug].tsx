@@ -672,9 +672,20 @@ export default function EventScreen() {
               <View style={styles.infoBlock}>
                 <SectionLabel>WHERE</SectionLabel>
                 {event.venue_name ? (
-                  <ThemedText type="smallBold" style={styles.infoValue}>
-                    {event.venue_name}
-                  </ThemedText>
+                  event.venue_id ? (
+                    <Pressable
+                      onPress={() =>
+                        router.push({ pathname: '/v/[id]', params: { id: String(event.venue_id) } })
+                      }>
+                      <ThemedText type="smallBold" style={styles.venueLink}>
+                        {event.venue_name}  ›
+                      </ThemedText>
+                    </Pressable>
+                  ) : (
+                    <ThemedText type="smallBold" style={styles.infoValue}>
+                      {event.venue_name}
+                    </ThemedText>
+                  )
                 ) : null}
                 {event.address ? (
                   <ThemedText type="small" themeColor="textSecondary">
@@ -939,6 +950,11 @@ const styles = StyleSheet.create({
   infoValue: {
     fontSize: 16,
     lineHeight: 22,
+  },
+  venueLink: {
+    fontSize: 16,
+    lineHeight: 22,
+    color: StateGo,
   },
   description: {
     lineHeight: 24,
