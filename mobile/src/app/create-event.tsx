@@ -2,7 +2,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { SectionLabel } from '@/components/section-label';
 import { ThemedText } from '@/components/themed-text';
@@ -24,6 +24,73 @@ const VISIBILITY_OPTIONS: { value: Visibility; label: string; hint: string }[] =
   { value: 'public', label: 'Public', hint: 'Anyone can find it in the feed' },
   { value: 'unlisted', label: 'Unlisted', hint: 'Only people with the link' },
   { value: 'private', label: 'Private', hint: 'Only invited guests' },
+];
+
+// One-tap starting points. Prefill the form so hosting feels effortless.
+type Template = {
+  key: string;
+  label: string;
+  emoji: string;
+  title: string;
+  description: string;
+  vibe: string;
+  visibility: Visibility;
+};
+const EVENT_TEMPLATES: Template[] = [
+  {
+    key: 'gathering',
+    label: 'Get-together',
+    emoji: '🥂',
+    title: 'Friends Get-Together',
+    description: "Just us, good food and better company. Pull up, unwind, and let's catch up properly.",
+    vibe: 'forest',
+    visibility: 'private',
+  },
+  {
+    key: 'birthday',
+    label: 'Birthday',
+    emoji: '🎂',
+    title: 'Birthday Bash',
+    description: "It's going down! Come help me celebrate another trip around the sun 🎉 Cake, drinks, and good vibes only.",
+    vibe: 'sunset',
+    visibility: 'private',
+  },
+  {
+    key: 'bachelor',
+    label: 'Bachelor party',
+    emoji: '🥃',
+    title: 'Bachelor Party',
+    description: "One last ride before the ring. Let's send him off in style — you know what to do.",
+    vibe: 'fire',
+    visibility: 'private',
+  },
+  {
+    key: 'vacation',
+    label: 'Getaway',
+    emoji: '🌴',
+    title: 'Friends Getaway',
+    description: "Sun, the crew, and zero responsibilities. Let's escape the city and make memories.",
+    vibe: 'ocean',
+    visibility: 'unlisted',
+  },
+  {
+    key: 'house',
+    label: 'House party',
+    emoji: '🏠',
+    title: 'House Party',
+    description: 'BYOB, a proper playlist, no drama. Doors open late — bring your people.',
+    vibe: 'mono',
+    visibility: 'private',
+  },
+  {
+    key: 'dinner',
+    label: 'Dinner',
+    emoji: '🍽️',
+    title: 'Dinner Night',
+    description: 'Great food, great people. A relaxed evening — reserve your seat at the table.',
+    vibe: 'gold',
+    visibility: 'private',
+  },
 ];
 
 // Accepts "2026-08-01 20:00" (device timezone); the DB stores timestamptz.
@@ -158,6 +225,14 @@ export default function CreateEventScreen() {
     }
   };
 
+  const applyTemplate = (t: (typeof EVENT_TEMPLATES)[number]) => {
+    tapMedium();
+    setTitle(t.title);
+    setDescription(t.description);
+    setVibe(t.vibe);
+    setVisibility(t.visibility);
+  };
+
   const inputStyle = [
     styles.input,
     { color: theme.text, backgroundColor: theme.background },
@@ -165,10 +240,30 @@ export default function CreateEventScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.intro}>
-          <ThemedText style={styles.introTitle}>Throw something{'\n'}worth showing up for.</ThemedText>
-        </View>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={90}>
+        <ScrollView
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled">
+          <View style={styles.intro}>
+            <ThemedText style={styles.introTitle}>Throw something{'\n'}worth showing up for.</ThemedText>
+          </View>
+
+          <View style={styles.section}>
+            <SectionLabel>QUICK START</SectionLabel>
+            <View style={styles.templateRow}>
+              {EVENT_TEMPLATES.map((t) => (
+                <Pressable key={t.key} style={styles.templateChip} onPress={() => applyTemplate(t)}>
+                  <ThemedText type="small">
+                    {t.emoji}  {t.label}
+                  </ThemedText>
+                </Pressable>
+              ))}
+            </View>
+          </View>
 
         <ThemedView type="backgroundElement" style={styles.studio}>
           <SectionLabel color={Gold}>✨ EVENT STUDIO</SectionLabel>
@@ -331,22 +426,26 @@ export default function CreateEventScreen() {
           </ThemedText>
         </View>
 
-        {error ? <ThemedText type="small">{error}</ThemedText> : null}
+          {error ? <ThemedText type="small">{error}</ThemedText> : null}
+        </ScrollView>
 
-        <Pressable
-          style={[styles.primaryButton, { opacity: busy ? 0.5 : 1 }]}
-          disabled={busy}
-          onPress={() => submit('published')}>
-          <ThemedText type="smallBold" style={styles.publishLabel}>
-            Publish event
-          </ThemedText>
-        </Pressable>
-        <Pressable disabled={busy} onPress={() => submit('draft')}>
-          <ThemedText type="link" style={styles.draftLink}>
-            Save as draft instead
-          </ThemedText>
-        </Pressable>
-      </ScrollView>
+        {/* Sticky footer — Publish is always reachable, above the keyboard. */}
+        <View style={styles.footer}>
+          <Pressable
+            style={[styles.primaryButton, { opacity: busy ? 0.5 : 1 }]}
+            disabled={busy}
+            onPress={() => submit('published')}>
+            <ThemedText type="smallBold" style={styles.publishLabel}>
+              {busy ? 'Publishing…' : 'Publish event'}
+            </ThemedText>
+          </Pressable>
+          <Pressable disabled={busy} onPress={() => submit('draft')} style={styles.draftBtn}>
+            <ThemedText type="link" style={styles.draftLink}>
+              Save as draft instead
+            </ThemedText>
+          </Pressable>
+        </View>
+      </KeyboardAvoidingView>
     </ThemedView>
   );
 }
@@ -354,10 +453,14 @@ export default function CreateEventScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
+  },
+  flex: {
+    flex: 1,
   },
   center: {
+    flex: 1,
     justifyContent: 'center',
+    alignItems: 'center',
     padding: Spacing.four,
   },
   content: {
@@ -366,7 +469,34 @@ const styles = StyleSheet.create({
     maxWidth: MaxContentWidth,
     width: '100%',
     alignSelf: 'center',
-    paddingBottom: Spacing.six,
+    paddingBottom: Spacing.four,
+  },
+  footer: {
+    width: '100%',
+    maxWidth: MaxContentWidth,
+    alignSelf: 'center',
+    paddingHorizontal: Spacing.four,
+    paddingTop: Spacing.three,
+    paddingBottom: Spacing.four,
+    gap: Spacing.two,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: '#111811',
+  },
+  draftBtn: {
+    alignItems: 'center',
+  },
+  templateRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.two,
+  },
+  templateChip: {
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
   },
   intro: {
     marginBottom: Spacing.one,

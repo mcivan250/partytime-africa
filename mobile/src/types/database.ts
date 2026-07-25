@@ -1424,6 +1424,16 @@ export type Database = {
       }
       event_guest_list_public: { Args: { e: string }; Returns: boolean }
       is_admin: { Args: Record<PropertyKey, never>; Returns: boolean }
+      admin_members: {
+        Args: Record<PropertyKey, never>
+        Returns: { id: string; name: string; city: string | null; suspended: boolean; created_at: string }[]
+      }
+      admin_recent_posts: {
+        Args: Record<PropertyKey, never>
+        Returns: { id: string; author_name: string; body: string; image_path: string | null; created_at: string }[]
+      }
+      admin_set_suspended: { Args: { p_id: string; p_suspended: boolean }; Returns: undefined }
+      admin_delete_post: { Args: { p_id: string }; Returns: undefined }
       my_conversations: {
         Args: Record<PropertyKey, never>
         Returns: {

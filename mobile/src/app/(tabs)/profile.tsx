@@ -144,7 +144,7 @@ function AuthForm() {
 // Visible build marker — bumped every ship. If you can read this at the
 // bottom of the Profile, you are on this build; if it's absent, the surface
 // is running an older cached bundle and needs a redeploy/reload.
-const BUILD_TAG = 'build 2026.07.25 · messaging';
+const BUILD_TAG = 'build 2026.07.25 · templates+moderation';
 
 type Stats = { hosting: number; going: number; tickets: number };
 type NextEvent = {
@@ -464,6 +464,14 @@ function Dashboard() {
             title="Ops Copilot"
             subtitle="Ask your data anything"
             onPress={() => router.push('/ops')}
+          />
+        ) : null}
+        {isAdmin ? (
+          <ActionRow
+            glyph="🛡️"
+            title="Moderation"
+            subtitle="Members & content"
+            onPress={() => router.push('/admin')}
             last
           />
         ) : null}

@@ -119,6 +119,10 @@ export default function RootLayout() {
             name="dm/[id]"
             options={{ headerShown: true, headerTitle: 'Chat' }}
           />
+          <Stack.Screen
+            name="admin"
+            options={{ headerShown: true, headerTitle: 'Moderation' }}
+          />
         </Stack>
       </ThemeProvider>
     </AuthProvider>
