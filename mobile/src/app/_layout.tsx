@@ -103,6 +103,10 @@ export default function RootLayout() {
             name="notifications"
             options={{ headerShown: true, headerTitle: 'Notifications' }}
           />
+          <Stack.Screen
+            name="plan"
+            options={{ headerShown: true, headerTitle: 'Concierge' }}
+          />
         </Stack>
       </ThemeProvider>
     </AuthProvider>

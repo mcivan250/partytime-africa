@@ -457,9 +457,28 @@ export default function EventsScreen() {
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
           ListHeaderComponent={
-            !loading && filter === 'all' && !query.trim() ? (
-              <ActivityStrip items={activity} />
-            ) : null
+            <>
+              <Pressable style={styles.planBanner} onPress={() => router.push('/plan')}>
+                <LinearGradient
+                  colors={BrandGradient}
+                  locations={BrandGradientLocations}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.planIcon}>
+                  <ThemedText style={styles.planSpark}>✨</ThemedText>
+                </LinearGradient>
+                <View style={styles.flex}>
+                  <ThemedText type="smallBold">Plan my night</ThemedText>
+                  <ThemedText type="small" themeColor="textSecondary">
+                    Ask the AI concierge what&apos;s the move
+                  </ThemedText>
+                </View>
+                <ThemedText style={styles.planChevron}>›</ThemedText>
+              </Pressable>
+              {!loading && filter === 'all' && !query.trim() ? (
+                <ActivityStrip items={activity} />
+              ) : null}
+            </>
           }
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.text} />
@@ -696,6 +715,27 @@ const styles = StyleSheet.create({
   actionOnText: {
     color: OnBrand,
   },
+  planBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
+    backgroundColor: '#19231B',
+    borderWidth: 1,
+    borderColor: 'rgba(29,201,107,0.25)',
+    borderRadius: 18,
+    padding: Spacing.three,
+    marginBottom: Spacing.three,
+  },
+  planIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  planSpark: { fontSize: 18, color: OnBrand },
+  planChevron: { fontSize: 26, color: '#94A697' },
+  flex: { flex: 1 },
   activityWrap: {
     gap: Spacing.two,
     marginBottom: Spacing.three,
