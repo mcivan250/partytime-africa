@@ -8,9 +8,11 @@ import { SectionLabel } from '@/components/section-label';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { EVENT_THEMES } from '@/constants/event-themes';
-import { Brand, BrandGradientLocations, DisplayFont, MaxContentWidth, OnBrand, Spacing } from '@/constants/theme';
+import { Brand, BrandGradientLocations, DisplayFont, Gold, MaxContentWidth, OnBrand, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth-context';
+import { tapMedium } from '@/lib/haptics';
+import { formatMoney } from '@/lib/money';
 import { generateSlug } from '@/lib/slug';
 import { pickImage, uploadImage } from '@/lib/storage';
 import { supabase } from '@/lib/supabase';
@@ -43,6 +45,10 @@ export default function CreateEventScreen() {
   const [playlistUrl, setPlaylistUrl] = useState('');
   const [visibility, setVisibility] = useState<Visibility>('public');
   const [vibe, setVibe] = useState('forest');
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [drafting, setDrafting] = useState(false);
+  const [isTicketed, setIsTicketed] = useState(false);
+  const [suggestedTiers, setSuggestedTiers] = useState<{ name: string; price_minor: number }[]>([]);
   const [coverUri, setCoverUri] = useState<string | null>(null);
   const [coverImage, setCoverImage] = useState<Awaited<ReturnType<typeof pickImage>>>(null);
   const [busy, setBusy] = useState(false);
@@ -69,6 +75,27 @@ export default function CreateEventScreen() {
     }
   };
 
+  const draftIt = async () => {
+    if (!aiPrompt.trim() || drafting) return;
+    setError(null);
+    tapMedium();
+    setDrafting(true);
+    const { data, error: fnError } = await supabase.functions.invoke('draft-event', {
+      body: { prompt: aiPrompt.trim() },
+    });
+    setDrafting(false);
+    const d = data?.draft;
+    if (fnError || !d) {
+      setError('Studio is busy — try again, or fill it in yourself.');
+      return;
+    }
+    if (d.title) setTitle(d.title);
+    if (d.description) setDescription(d.description);
+    if (d.theme) setVibe(d.theme);
+    setIsTicketed(!!d.is_ticketed);
+    setSuggestedTiers(Array.isArray(d.tiers) ? d.tiers : []);
+  };
+
   const submit = async (status: 'draft' | 'published') => {
     setError(null);
     if (!title.trim()) {
@@ -87,23 +114,41 @@ export default function CreateEventScreen() {
         coverUrl = (await uploadImage('event-covers', session.user.id, coverImage)).url;
       }
       const slug = generateSlug(title);
-      const { error: insertError } = await supabase.from('events').insert({
-        host_id: session.user.id,
-        title: title.trim(),
-        slug,
-        description: description.trim() || null,
-        venue_name: venueName.trim() || null,
-        address: address.trim() || null,
-        starts_at: startsAt,
-        cover_url: coverUrl,
-        playlist_url: playlistUrl.trim() || null,
-        visibility,
-        theme: vibe,
-        status,
-      });
-      if (insertError) {
-        setError(insertError.message);
+      const { data: created, error: insertError } = await supabase
+        .from('events')
+        .insert({
+          host_id: session.user.id,
+          title: title.trim(),
+          slug,
+          description: description.trim() || null,
+          venue_name: venueName.trim() || null,
+          address: address.trim() || null,
+          starts_at: startsAt,
+          cover_url: coverUrl,
+          playlist_url: playlistUrl.trim() || null,
+          visibility,
+          theme: vibe,
+          is_ticketed: isTicketed || suggestedTiers.length > 0,
+          status,
+        })
+        .select('id')
+        .single();
+      if (insertError || !created) {
+        setError(insertError?.message ?? 'Could not create the event.');
         return;
+      }
+      // Create the AI-suggested ticket tiers so the event is ready to sell.
+      if (suggestedTiers.length > 0) {
+        await supabase.from('ticket_tiers').insert(
+          suggestedTiers.map((t, i) => ({
+            event_id: created.id,
+            name: t.name,
+            price_minor: t.price_minor,
+            currency: 'UGX',
+            quantity: 200,
+            position: i,
+          })),
+        );
       }
       router.replace({ pathname: '/e/[slug]', params: { slug } });
     } catch (e) {
@@ -124,6 +169,35 @@ export default function CreateEventScreen() {
         <View style={styles.intro}>
           <ThemedText style={styles.introTitle}>Throw something{'\n'}worth showing up for.</ThemedText>
         </View>
+
+        <ThemedView type="backgroundElement" style={styles.studio}>
+          <SectionLabel color={Gold}>✨ EVENT STUDIO</SectionLabel>
+          <ThemedText type="small" themeColor="textSecondary">
+            Describe your event in a sentence — the studio drafts the rest.
+          </ThemedText>
+          <TextInput
+            style={[styles.input, styles.studioInput, { color: theme.text, backgroundColor: theme.background }]}
+            placeholder="e.g. amapiano rooftop party this Friday, 30k entry"
+            placeholderTextColor={theme.textSecondary}
+            value={aiPrompt}
+            onChangeText={setAiPrompt}
+            multiline
+          />
+          <Pressable
+            style={[styles.studioBtn, { opacity: drafting || !aiPrompt.trim() ? 0.5 : 1 }]}
+            disabled={drafting || !aiPrompt.trim()}
+            onPress={draftIt}>
+            <ThemedText type="smallBold" style={styles.studioLabel}>
+              {drafting ? 'Drafting…' : '✨ Draft it for me'}
+            </ThemedText>
+          </Pressable>
+          {suggestedTiers.length > 0 ? (
+            <ThemedText type="small" themeColor="textSecondary">
+              Suggested tickets:{' '}
+              {suggestedTiers.map((t) => `${t.name} ${formatMoney(t.price_minor, 'UGX')}`).join('  ·  ')} — added on publish, editable later.
+            </ThemedText>
+          ) : null}
+        </ThemedView>
 
         {/* Cover hero — the first thing people see, so we make it the star. */}
         <Pressable onPress={chooseCover} style={styles.coverPicker}>
@@ -345,6 +419,26 @@ const styles = StyleSheet.create({
   },
   section: {
     gap: Spacing.two,
+  },
+  studio: {
+    borderRadius: 20,
+    padding: Spacing.four,
+    gap: Spacing.two,
+    borderWidth: 1,
+    borderColor: 'rgba(233,196,106,0.28)',
+  },
+  studioInput: {
+    minHeight: 64,
+    textAlignVertical: 'top',
+  },
+  studioBtn: {
+    backgroundColor: Gold,
+    borderRadius: 999,
+    paddingVertical: Spacing.three,
+    alignItems: 'center',
+  },
+  studioLabel: {
+    color: '#1A1403',
   },
   vibeRow: {
     flexDirection: 'row',
