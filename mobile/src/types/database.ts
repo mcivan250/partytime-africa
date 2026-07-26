@@ -1371,6 +1371,33 @@ export type Database = {
         }
         Relationships: []
       }
+      venue_claims: {
+        Row: {
+          id: string
+          venue_id: string
+          profile_id: string
+          note: string | null
+          status: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          venue_id: string
+          profile_id: string
+          note?: string | null
+          status?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          venue_id?: string
+          profile_id?: string
+          note?: string | null
+          status?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
       venues: {
         Row: {
           address: string | null
@@ -1513,6 +1540,74 @@ export type Database = {
         }[]
       }
       admin_set_reservation_status: {
+        Args: { p_id: string; p_status: string }
+        Returns: undefined
+      }
+      my_owned_venue: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          name: string
+          kind: string
+          city: string | null
+          address: string | null
+          description: string | null
+          cover_url: string | null
+          phone: string | null
+          price_range: string | null
+          cuisines: string[]
+          hours: string | null
+        }[]
+      }
+      request_venue_claim: {
+        Args: { p_venue_id: string; p_note?: string }
+        Returns: string
+      }
+      admin_list_claims: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          venue_id: string
+          venue_name: string
+          claimant: string
+          note: string | null
+          created_at: string
+        }[]
+      }
+      admin_resolve_claim: {
+        Args: { p_id: string; p_approve: boolean }
+        Returns: undefined
+      }
+      set_venue_cover: {
+        Args: { p_id: string; p_cover_url: string }
+        Returns: undefined
+      }
+      owner_update_venue: {
+        Args: {
+          p_id: string
+          p_description: string
+          p_hours: string
+          p_phone: string
+          p_price_range: string
+          p_cuisines: string[]
+        }
+        Returns: undefined
+      }
+      owner_list_reservations: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          venue_id: string
+          venue_name: string
+          guest_name: string
+          party_size: number
+          reserved_for: string
+          note: string | null
+          status: string
+          created_at: string
+        }[]
+      }
+      owner_set_reservation_status: {
         Args: { p_id: string; p_status: string }
         Returns: undefined
       }

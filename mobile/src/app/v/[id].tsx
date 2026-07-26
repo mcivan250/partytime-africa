@@ -42,6 +42,7 @@ type Venue = {
   price_range: string | null;
   cuisines: string[];
   hours: string | null;
+  owner_id: string | null;
 };
 
 type EventLite = {
@@ -98,13 +99,14 @@ export default function VenueScreen() {
   const [note, setNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+  const [claimed, setClaimed] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
     const [vRes, eRes] = await Promise.all([
       supabase
         .from('venues')
-        .select('id, name, kind, city, address, description, cover_url, phone, price_range, cuisines, hours')
+        .select('id, name, kind, city, address, description, cover_url, phone, price_range, cuisines, hours, owner_id')
         .eq('id', id)
         .maybeSingle(),
       supabase
@@ -150,6 +152,21 @@ export default function VenueScreen() {
     }
     tapSuccess();
     setDone(true);
+  };
+
+  const claim = async () => {
+    if (!session) {
+      Alert.alert('Sign in first', 'Create a free account to claim your venue.');
+      return;
+    }
+    if (!venue) return;
+    const { error } = await supabase.rpc('request_venue_claim', { p_venue_id: venue.id, p_note: '' });
+    if (error) {
+      Alert.alert('Could not send', error.message);
+      return;
+    }
+    tapSuccess();
+    setClaimed(true);
   };
 
   if (loading) {
@@ -408,6 +425,28 @@ export default function VenueScreen() {
           </View>
         ) : null}
 
+        {/* Claim CTA — only when the venue has no manager yet */}
+        {!venue.owner_id ? (
+          <View style={styles.claimBox}>
+            {claimed ? (
+              <ThemedText type="small" themeColor="textSecondary" style={styles.claimDone}>
+                ✓ Request sent. We&apos;ll verify and get you set up to manage {venue.name}.
+              </ThemedText>
+            ) : (
+              <>
+                <ThemedText type="small" themeColor="textSecondary">
+                  Do you run {venue.name}?
+                </ThemedText>
+                <Pressable style={styles.claimBtn} onPress={claim}>
+                  <ThemedText type="smallBold" style={styles.callText}>
+                    Claim this venue
+                  </ThemedText>
+                </Pressable>
+              </>
+            )}
+          </View>
+        ) : null}
+
         <View style={styles.pad} />
       </ScrollView>
     </ThemedView>
@@ -507,5 +546,18 @@ const styles = StyleSheet.create({
   eventThumb: { width: 64, height: 64, borderRadius: 14 },
   flex: { flex: 1 },
   chevron: { color: '#66766A', fontSize: 24, paddingRight: Spacing.two },
+  claimBox: {
+    marginTop: Spacing.four,
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  claimBtn: {
+    borderRadius: 999,
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.four,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.16)',
+  },
+  claimDone: { textAlign: 'center', maxWidth: 360, lineHeight: 20 },
   pad: { height: Spacing.six },
 });

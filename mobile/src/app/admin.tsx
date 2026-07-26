@@ -22,6 +22,7 @@ type Reservation = {
   note: string | null;
   status: string;
 };
+type Claim = { id: string; venue_name: string; claimant: string; note: string | null };
 
 const VENUE_KINDS = ['bar', 'restaurant', 'club', 'lounge'];
 
@@ -32,6 +33,7 @@ export default function AdminScreen() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [venues, setVenues] = useState<Venue[]>([]);
   const [reservations, setReservations] = useState<Reservation[]>([]);
+  const [claims, setClaims] = useState<Claim[]>([]);
   const [loading, setLoading] = useState(true);
   const [denied, setDenied] = useState(false);
 
@@ -59,9 +61,23 @@ export default function AdminScreen() {
       setPosts((pRes.data ?? []) as Post[]);
       setVenues((vRes.data ?? []) as Venue[]);
       setReservations((rRes.data ?? []) as Reservation[]);
+      const { data: cRows } = await supabase.rpc('admin_list_claims');
+      setClaims((cRows ?? []) as Claim[]);
     }
     setLoading(false);
   }, []);
+
+  const resolveClaim = async (c: Claim, approve: boolean) => {
+    setClaims((prev) => prev.filter((x) => x.id !== c.id));
+    const { error } = await supabase.rpc('admin_resolve_claim', { p_id: c.id, p_approve: approve });
+    if (error) {
+      Alert.alert('Could not update', error.message);
+      load();
+      return;
+    }
+    tapSuccess();
+    if (approve) load();
+  };
 
   useEffect(() => {
     if (session) load();
@@ -254,6 +270,32 @@ export default function AdminScreen() {
           )
         ) : tab === 'venues' ? (
           <>
+            {claims.length > 0 ? (
+              <ThemedView type="backgroundElement" style={styles.formCard}>
+                <ThemedText type="smallBold">Venue claims ({claims.length})</ThemedText>
+                {claims.map((c) => (
+                  <View key={c.id} style={styles.row}>
+                    <View style={styles.flex}>
+                      <ThemedText type="smallBold">{c.venue_name}</ThemedText>
+                      <ThemedText type="small" themeColor="textSecondary">
+                        {c.claimant}
+                        {c.note ? ` · “${c.note}”` : ''}
+                      </ThemedText>
+                    </View>
+                    <Pressable style={[styles.actionBtn, styles.unsuspend]} onPress={() => resolveClaim(c, true)}>
+                      <ThemedText type="smallBold" style={styles.unsuspendText}>
+                        Approve
+                      </ThemedText>
+                    </Pressable>
+                    <Pressable style={[styles.actionBtn, styles.suspend]} onPress={() => resolveClaim(c, false)}>
+                      <ThemedText type="smallBold" style={styles.suspendText}>
+                        Decline
+                      </ThemedText>
+                    </Pressable>
+                  </View>
+                ))}
+              </ThemedView>
+            ) : null}
             <ThemedView type="backgroundElement" style={styles.formCard}>
               <ThemedText type="smallBold">Add a venue</ThemedText>
               <TextInput

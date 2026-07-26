@@ -84,6 +84,19 @@ function render(n: Note): { icon: string; title: string; body: string; onPress: 
       onPress: () => router.push('/venues'),
     };
   }
+  if (n.ntype === 'venue_claim') {
+    const approved = p.approved === true;
+    return {
+      icon: approved ? '🎉' : '😔',
+      title: approved
+        ? `You now manage ${p.venue ?? 'your venue'}`
+        : `Claim for ${p.venue ?? 'the venue'} declined`,
+      body: approved
+        ? 'Open “My venue” to edit details, add photos, and manage bookings.'
+        : 'If this is a mistake, reach out and we’ll sort it.',
+      onPress: () => router.push(approved ? '/my-venue' : '/venues'),
+    };
+  }
   if (n.ntype === 'reservation') {
     return {
       icon: '🍽️',
