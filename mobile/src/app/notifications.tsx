@@ -84,6 +84,17 @@ function render(n: Note): { icon: string; title: string; body: string; onPress: 
       onPress: () => router.push('/venues'),
     };
   }
+  if (n.ntype === 'event_message') {
+    return {
+      icon: '📣',
+      title: `Update from ${p.event_title ?? 'the host'}`,
+      body: String(p.message ?? ''),
+      onPress: () =>
+        p.event_slug
+          ? router.push({ pathname: '/e/[slug]', params: { slug: String(p.event_slug) } })
+          : undefined,
+    };
+  }
   if (n.ntype === 'venue_claim') {
     const approved = p.approved === true;
     return {

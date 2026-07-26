@@ -125,11 +125,11 @@ export default function ManageEventScreen() {
     });
     setBlastBusy(false);
     if (error || data?.error) {
-      setBlastResult(data?.error || 'Could not send. SMS may not be set up yet.');
+      setBlastResult(data?.error || 'Could not send — please try again.');
       return;
     }
     setBlast('');
-    setBlastResult(data?.sent > 0 ? `Sent to ${data.sent} guest(s). 📣` : (data?.note ?? 'No guests with phone numbers yet.'));
+    setBlastResult(data?.note ?? 'Message sent. 📣');
   };
 
   const respondCohost = async (profileId: string, accept: boolean) => {
@@ -375,7 +375,10 @@ export default function ManageEventScreen() {
         ) : null}
 
         <ThemedView type="backgroundElement" style={styles.card}>
-          <SectionLabel>TEXT YOUR GUESTS</SectionLabel>
+          <SectionLabel>MESSAGE YOUR GUESTS</SectionLabel>
+          <ThemedText type="small" themeColor="textSecondary">
+            Everyone going gets it in their notifications (and by SMS if set up).
+          </ThemedText>
           <TextInput
             style={[styles.input, { color: theme.text, backgroundColor: theme.background }]}
             placeholder="e.g. Doors at 6 — don't be late!"
@@ -389,7 +392,7 @@ export default function ManageEventScreen() {
             disabled={blastBusy || !blast.trim()}
             onPress={sendBlast}>
             <ThemedText type="smallBold" style={styles.onState}>
-              Send SMS to everyone going
+              Send to everyone going
             </ThemedText>
           </Pressable>
           {blastResult ? (

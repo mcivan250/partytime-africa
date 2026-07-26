@@ -1,12 +1,11 @@
-// notify-guests: lets an event host/co-host send an SMS "blast" to their
-// guests via Africa's Talking. Only managers of the event may call it — the
-// caller's JWT is verified (verify_jwt on) and checked against the event.
+// notify-guests: lets an event host/co-host message their guests. Every
+// registered guest receives an in-app notification (works with no external
+// setup); if Africa's Talking SMS is configured, guests with phone numbers
+// also get an SMS as a bonus. Only managers of the event may call it.
 //
-// Secrets (set in Supabase → Project Settings → Edge Functions):
-//   AFRICASTALKING_API_KEY       (required)
-//   AFRICASTALKING_USERNAME      (required; "sandbox" uses the sandbox API)
-//   AFRICASTALKING_SENDER_ID     (optional shortcode/sender id)
-//   AFRICASTALKING_DEFAULT_CC    (optional, default "+256") for local numbers
+// Optional SMS secrets (Supabase → Project Settings → Edge Functions):
+//   AFRICASTALKING_API_KEY, AFRICASTALKING_USERNAME (use "sandbox" for tests)
+//   AFRICASTALKING_SENDER_ID (optional), AFRICASTALKING_DEFAULT_CC (default "+256")
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
@@ -23,8 +22,7 @@ function json(payload: unknown, status = 200): Response {
   });
 }
 
-// Best-effort E.164 normalisation. Numbers already starting with "+" are kept;
-// "00" prefixes become "+"; local "0…" numbers get the default country code.
+// Best-effort E.164 normalisation.
 function normalisePhone(raw: string, defaultCc: string): string | null {
   const trimmed = raw.replace(/[\s-()]/g, '');
   if (!trimmed) return null;
@@ -41,9 +39,7 @@ Deno.serve(async (req) => {
 
   const apiKey = Deno.env.get('AFRICASTALKING_API_KEY');
   const username = Deno.env.get('AFRICASTALKING_USERNAME');
-  if (!apiKey || !username) {
-    return json({ error: 'SMS is not configured yet. Ask the host to set it up.' }, 503);
-  }
+  const smsConfigured = !!apiKey && !!username;
   const senderId = Deno.env.get('AFRICASTALKING_SENDER_ID') ?? '';
   const defaultCc = Deno.env.get('AFRICASTALKING_DEFAULT_CC') ?? '+256';
 
@@ -77,7 +73,7 @@ Deno.serve(async (req) => {
   // Authorise: caller must be the host or a co-host of the event.
   const { data: event } = await admin
     .from('events')
-    .select('id, host_id, title')
+    .select('id, host_id, title, slug')
     .eq('id', eventId)
     .maybeSingle();
   if (!event) return json({ error: 'Event not found.' }, 404);
@@ -93,14 +89,17 @@ Deno.serve(async (req) => {
   }
   if (!isManager) return json({ error: 'Only the host can message guests.' }, 403);
 
-  // Collect recipient phone numbers.
+  // Collect recipients (registered guests for in-app, phone numbers for SMS).
   let query = admin
     .from('rsvps')
-    .select('guest_phone, status')
-    .eq('event_id', eventId)
-    .not('guest_phone', 'is', null);
+    .select('profile_id, guest_phone, status')
+    .eq('event_id', eventId);
   if (audience === 'going') query = query.eq('status', 'going');
   const { data: rsvps } = await query;
+
+  const profileIds = Array.from(
+    new Set((rsvps ?? []).map((r) => r.profile_id).filter((p): p is string => !!p)),
+  ).filter((p) => p !== user.id); // don't notify the sender
 
   const numbers = Array.from(
     new Set(
@@ -109,38 +108,62 @@ Deno.serve(async (req) => {
         .filter((n): n is string => !!n),
     ),
   );
-  if (numbers.length === 0) {
-    return json({ sent: 0, recipients: 0, note: 'No guests with phone numbers yet.' });
+
+  // 1) In-app notifications for every registered guest.
+  let sentInApp = 0;
+  if (profileIds.length > 0) {
+    const rows = profileIds.map((pid) => ({
+      profile_id: pid,
+      ntype: 'event_message',
+      payload: {
+        event_id: event.id,
+        event_slug: event.slug,
+        event_title: event.title,
+        message,
+      },
+    }));
+    const { error: notifErr } = await admin.from('notifications').insert(rows);
+    if (!notifErr) sentInApp = rows.length;
   }
 
-  // Send via Africa's Talking.
-  const base =
-    username === 'sandbox'
-      ? 'https://api.sandbox.africastalking.com'
-      : 'https://api.africastalking.com';
-  const form = new URLSearchParams();
-  form.set('username', username);
-  form.set('to', numbers.join(','));
-  form.set('message', message);
-  if (senderId) form.set('from', senderId);
-
-  const atRes = await fetch(`${base}/version1/messaging`, {
-    method: 'POST',
-    headers: {
-      apiKey,
-      'Content-Type': 'application/x-www-form-urlencoded',
-      Accept: 'application/json',
-    },
-    body: form.toString(),
-  });
-  const atBody = await atRes.json().catch(() => ({}));
-  if (!atRes.ok) {
-    return json({ error: 'SMS provider rejected the request.', detail: atBody }, 502);
+  // 2) Best-effort SMS (only if configured).
+  let sentSms = 0;
+  if (smsConfigured && numbers.length > 0) {
+    try {
+      const base =
+        username === 'sandbox'
+          ? 'https://api.sandbox.africastalking.com'
+          : 'https://api.africastalking.com';
+      const form = new URLSearchParams();
+      form.set('username', username!);
+      form.set('to', numbers.join(','));
+      form.set('message', message);
+      if (senderId) form.set('from', senderId);
+      const atRes = await fetch(`${base}/version1/messaging`, {
+        method: 'POST',
+        headers: {
+          apiKey: apiKey!,
+          'Content-Type': 'application/x-www-form-urlencoded',
+          Accept: 'application/json',
+        },
+        body: form.toString(),
+      });
+      const atBody = await atRes.json().catch(() => ({}));
+      const recipients = atBody?.SMSMessageData?.Recipients ?? [];
+      sentSms = Array.isArray(recipients)
+        ? recipients.filter((r: { status?: string }) => r.status === 'Success').length
+        : 0;
+    } catch {
+      // Swallow SMS errors — the in-app message already went out.
+      sentSms = 0;
+    }
   }
 
-  const recipients = atBody?.SMSMessageData?.Recipients ?? [];
-  const sent = Array.isArray(recipients)
-    ? recipients.filter((r: { status?: string }) => r.status === 'Success').length
-    : 0;
-  return json({ sent, recipients: numbers.length });
+  const total = sentInApp + sentSms;
+  const note =
+    total === 0
+      ? 'No guests to notify yet — invite people or wait for RSVPs.'
+      : `Notified ${sentInApp} guest(s) in-app${sentSms > 0 ? ` and ${sentSms} by SMS` : ''}. 📣`;
+
+  return json({ ok: true, sent: total, sent_inapp: sentInApp, sent_sms: sentSms, note });
 });

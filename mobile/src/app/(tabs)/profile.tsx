@@ -2,7 +2,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
@@ -49,7 +49,15 @@ function AuthForm() {
         : await supabase.auth.signUp({
             email,
             password,
-            options: { data: { display_name: displayName.trim(), phone: phone.trim() } },
+            options: {
+              data: { display_name: displayName.trim(), phone: phone.trim() },
+              // Send the confirmation link back to the live web app so people
+              // land on Party Time (not a dev/localhost URL) and can log in.
+              emailRedirectTo:
+                Platform.OS === 'web' && typeof window !== 'undefined'
+                  ? window.location.origin
+                  : 'https://partytime.africa',
+            },
           });
     if (error) {
       setMessage(error.message);
@@ -144,7 +152,7 @@ function AuthForm() {
 // Visible build marker — bumped every ship. If you can read this at the
 // bottom of the Profile, you are on this build; if it's absent, the surface
 // is running an older cached bundle and needs a redeploy/reload.
-const BUILD_TAG = 'build 2026.07.25 · venue-accounts';
+const BUILD_TAG = 'build 2026.07.26 · guest-messaging';
 
 type Stats = { hosting: number; going: number; tickets: number };
 type NextEvent = {
