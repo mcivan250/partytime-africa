@@ -1,5 +1,15 @@
-<!-- BEGIN:nextjs-agent-rules -->
-# This is NOT the Next.js you know
+# Party Time — repository guide
 
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
-<!-- END:nextjs-agent-rules -->
+The product is a single **Expo (SDK 57) + Expo Router** app in **`mobile/`** — it
+builds to native (iOS/Android) and to web. The web build is deployed to
+**partytime.africa** via `expo export --platform web` (see `vercel.json`).
+
+The backend is **Supabase**: Postgres + RLS, SECURITY DEFINER RPCs, and edge
+functions under **`supabase/functions/`**. Schema changes are applied as
+migrations.
+
+Before writing any app code, read **`mobile/AGENTS.md`** — Expo SDK 57 has
+breaking changes from older versions, so consult the versioned docs.
+
+`migrations/` and `mockups/` are historical reference only; the live schema is
+managed through Supabase.
