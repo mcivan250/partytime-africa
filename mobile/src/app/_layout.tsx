@@ -160,6 +160,10 @@ function RootLayout() {
             name="my-venue"
             options={{ headerShown: true, headerTitle: 'My venue' }}
           />
+          <Stack.Screen
+            name="i/[token]"
+            options={{ headerShown: true, headerTitle: "You're invited" }}
+          />
         </Stack>
       </ThemeProvider>
     </AuthProvider>

@@ -134,6 +134,28 @@ function render(n: Note): { icon: string; title: string; body: string; onPress: 
       onPress: () => router.push('/admin'),
     };
   }
+  if (n.ntype === 'event_invite') {
+    return {
+      icon: '🎟️',
+      title: `${p.from ?? 'A host'} invited you to ${p.title ?? 'an event'}`,
+      body: 'Tap to see the details and RSVP',
+      onPress: () =>
+        p.slug
+          ? router.push({ pathname: '/e/[slug]', params: { slug: String(p.slug) } })
+          : undefined,
+    };
+  }
+  if (n.ntype === 'plus_one_joined') {
+    return {
+      icon: '🎉',
+      title: `${p.name ?? 'Your guest'} joined you at ${p.title ?? 'the event'}`,
+      body: 'Your plus-one made an account and is on the list',
+      onPress: () =>
+        p.slug
+          ? router.push({ pathname: '/e/[slug]', params: { slug: String(p.slug) } })
+          : undefined,
+    };
+  }
   if (n.ntype === 'friend_accepted') {
     return {
       icon: '🤝',

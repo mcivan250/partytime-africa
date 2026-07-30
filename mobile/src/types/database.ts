@@ -206,6 +206,60 @@ export type Database = {
           },
         ]
       }
+      event_plus_ones: {
+        Row: {
+          claimed_at: string | null
+          claimed_profile_id: string | null
+          created_at: string
+          event_id: string
+          id: string
+          invite_token: string
+          inviter_name: string
+          inviter_profile_id: string | null
+          name: string
+          rsvp_id: string | null
+        }
+        Insert: {
+          claimed_at?: string | null
+          claimed_profile_id?: string | null
+          created_at?: string
+          event_id: string
+          id?: string
+          invite_token?: string
+          inviter_name?: string
+          inviter_profile_id?: string | null
+          name: string
+          rsvp_id?: string | null
+        }
+        Update: {
+          claimed_at?: string | null
+          claimed_profile_id?: string | null
+          created_at?: string
+          event_id?: string
+          id?: string
+          invite_token?: string
+          inviter_name?: string
+          inviter_profile_id?: string | null
+          name?: string
+          rsvp_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_plus_ones_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_plus_ones_rsvp_id_fkey"
+            columns: ["rsvp_id"]
+            isOneToOne: false
+            referencedRelation: "rsvps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_questions: {
         Row: {
           event_id: string
@@ -1524,6 +1578,30 @@ export type Database = {
         Returns: { profile_id: string; name: string; status: string }[]
       }
       event_guest_list_public: { Args: { e: string }; Returns: boolean }
+      set_plus_ones: {
+        Args: { p_rsvp_id: string; p_names: string[] }
+        Returns: { id: string; name: string; invite_token: string; claimed: boolean }[]
+      }
+      host_guest_list: {
+        Args: { p_event_id: string }
+        Returns: {
+          rsvp_id: string
+          profile_id: string | null
+          guest_name: string
+          guest_phone: string | null
+          status: string
+          plus_ones: number
+          avatar_url: string | null
+          username: string | null
+          created_at: string
+          plus_one_names: string[]
+        }[]
+      }
+      invite_past_guests: {
+        Args: { p_source_event: string; p_target_event: string }
+        Returns: { notified: number; skipped: number }
+      }
+      claim_plus_one: { Args: { p_token: string }; Returns: { slug: string; title: string } }
       is_admin: { Args: Record<PropertyKey, never>; Returns: boolean }
       admin_members: {
         Args: Record<PropertyKey, never>

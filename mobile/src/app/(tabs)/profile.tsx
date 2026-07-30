@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -562,6 +563,18 @@ function Dashboard() {
 
 export default function ProfileScreen() {
   const { session, loading } = useAuth();
+
+  // If the user just signed in to claim a plus-one invite, resume that flow.
+  useEffect(() => {
+    if (!session) return;
+    (async () => {
+      const token = await AsyncStorage.getItem('pending_plus_one');
+      if (token) {
+        await AsyncStorage.removeItem('pending_plus_one');
+        router.replace({ pathname: '/i/[token]', params: { token } });
+      }
+    })();
+  }, [session]);
 
   return (
     <ThemedView style={styles.container}>

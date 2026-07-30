@@ -174,6 +174,110 @@ function GuestRsvp({ slug, eventId }: { slug: string; eventId: string }) {
   );
 }
 
+// Named plus-ones for a signed-in guest who's going. Each saved guest gets a
+// unique "you're my +1" link they can be sent, which lets them RSVP and make a
+// free account. Replaces the old numeric +1 stepper.
+function PlusOnesEditor({ rsvpId, eventTitle }: { rsvpId: string; eventTitle: string }) {
+  const theme = useTheme();
+  const [rows, setRows] = useState<{ name: string; token: string | null }[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from('event_plus_ones')
+        .select('name, invite_token')
+        .eq('rsvp_id', rsvpId)
+        .order('created_at');
+      setRows((data ?? []).map((d) => ({ name: d.name, token: d.invite_token })));
+      setLoaded(true);
+    })();
+  }, [rsvpId]);
+
+  // Editing a name invalidates its old link until re-saved.
+  const setName = (i: number, val: string) =>
+    setRows((r) => r.map((x, idx) => (idx === i ? { name: val, token: null } : x)));
+  const addRow = () => setRows((r) => (r.length < 20 ? [...r, { name: '', token: null }] : r));
+  const removeRow = (i: number) => setRows((r) => r.filter((_, idx) => idx !== i));
+
+  const save = async () => {
+    setBusy(true);
+    setNote(null);
+    const names = rows.map((r) => r.name.trim()).filter(Boolean);
+    const { data, error } = await supabase.rpc('set_plus_ones', { p_rsvp_id: rsvpId, p_names: names });
+    setBusy(false);
+    if (error) {
+      setNote(error.message);
+      return;
+    }
+    const next = ((data ?? []) as { name: string; invite_token: string }[]).map((d) => ({
+      name: d.name,
+      token: d.invite_token,
+    }));
+    setRows(next);
+    setNote(next.length ? 'Saved. Send each guest their invite below. 🎉' : 'Saved.');
+  };
+
+  const shareOne = (name: string, token: string) => {
+    const link = `https://partytime.africa/i/${token}`;
+    Share.share({
+      message: `Hey ${name}! You're my +1 to ${eventTitle} 🎉 Tap to RSVP and make your free Party Time account: ${link}`,
+    });
+  };
+
+  if (!loaded) return null;
+
+  return (
+    <View style={styles.poWrap}>
+      <ThemedText type="smallBold">Bringing guests? Add their names</ThemedText>
+      <ThemedText type="small" themeColor="textSecondary">
+        Each guest gets their own invite link to RSVP and join Party Time.
+      </ThemedText>
+      {rows.map((r, i) => (
+        <View key={i} style={styles.poRow}>
+          <TextInput
+            style={[styles.poInput, { color: theme.text, backgroundColor: theme.background }]}
+            placeholder={`Guest ${i + 1} full name`}
+            placeholderTextColor={theme.textSecondary}
+            value={r.name}
+            onChangeText={(v) => setName(i, v)}
+            autoCapitalize="words"
+          />
+          {r.token ? (
+            <Pressable style={styles.poShareBtn} onPress={() => shareOne(r.name, r.token!)}>
+              <ThemedText type="smallBold" style={styles.onState}>
+                Share
+              </ThemedText>
+            </Pressable>
+          ) : null}
+          <Pressable style={styles.poRemove} onPress={() => removeRow(i)} hitSlop={8}>
+            <ThemedText type="smallBold" themeColor="textSecondary">
+              ✕
+            </ThemedText>
+          </Pressable>
+        </View>
+      ))}
+      <View style={styles.poActions}>
+        <Pressable style={styles.poAddBtn} onPress={addRow}>
+          <ThemedText type="smallBold">＋ Add a guest</ThemedText>
+        </Pressable>
+        <Pressable style={[styles.poSaveBtn, { opacity: busy ? 0.5 : 1 }]} disabled={busy} onPress={save}>
+          <ThemedText type="smallBold" style={styles.onState}>
+            Save guests
+          </ThemedText>
+        </Pressable>
+      </View>
+      {note ? (
+        <ThemedText type="small" themeColor="textSecondary">
+          {note}
+        </ThemedText>
+      ) : null}
+    </View>
+  );
+}
+
 type ChatRow = {
   id: string;
   body: string;
@@ -270,7 +374,6 @@ export default function EventScreen() {
   const [goingCount, setGoingCount] = useState<number | null>(null);
   const [goingNames, setGoingNames] = useState<string[]>([]);
   const [myRsvp, setMyRsvp] = useState<Pick<Tables<'rsvps'>, 'id' | 'status' | 'plus_ones'> | null>(null);
-  const [plusOnes, setPlusOnes] = useState(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -336,7 +439,6 @@ export default function EventScreen() {
     setGoingCount(count ?? null);
     setGoingNames((going ?? []).map((r) => r.guest_name));
     setMyRsvp(myRsvpResult.data ?? null);
-    setPlusOnes(myRsvpResult.data?.plus_ones ?? 0);
     setMinTier(minTierResult.data ?? null);
 
     if (session && eventRow.host_id !== session.user.id) {
@@ -487,11 +589,12 @@ export default function EventScreen() {
     tapLight();
     setSaving(true);
     setError(null);
-    const pplus = status === 'going' ? plusOnes : 0;
+    // plus_ones is managed by PlusOnesEditor (named guests), so we don't touch
+    // it here — only the status.
     if (myRsvp) {
       const { error: updateError } = await supabase
         .from('rsvps')
-        .update({ status, plus_ones: pplus })
+        .update({ status })
         .eq('id', myRsvp.id);
       if (updateError) setError(updateError.message);
     } else {
@@ -505,20 +608,13 @@ export default function EventScreen() {
         profile_id: session.user.id,
         guest_name: profile?.display_name ?? session.user.email ?? 'Guest',
         status,
-        plus_ones: pplus,
+        plus_ones: 0,
       });
       if (insertError) setError(insertError.message);
       else track('rsvp', { status });
     }
     await load();
     setSaving(false);
-  };
-
-  // Update +1 count for an existing "going" RSVP.
-  const setPlus = async (n: number) => {
-    const v = Math.max(0, Math.min(5, n));
-    setPlusOnes(v);
-    if (myRsvp) await supabase.from('rsvps').update({ plus_ones: v }).eq('id', myRsvp.id);
   };
 
   if (loading) {
@@ -634,31 +730,8 @@ export default function EventScreen() {
                     {RSVP_CONFIRM[myRsvp.status]}
                   </ThemedText>
                 ) : null}
-                {event.allow_plus_ones && myRsvp?.status === 'going' ? (
-                  <View style={styles.plusRow}>
-                    <ThemedText type="smallBold" style={styles.flex}>
-                      Bringing anyone?
-                    </ThemedText>
-                    <Pressable
-                      style={styles.plusBtn}
-                      disabled={plusOnes <= 0}
-                      onPress={() => setPlus(plusOnes - 1)}>
-                      <ThemedText type="smallBold" style={styles.plusSign}>
-                        −
-                      </ThemedText>
-                    </Pressable>
-                    <ThemedText type="smallBold" style={styles.plusCount}>
-                      +{plusOnes}
-                    </ThemedText>
-                    <Pressable
-                      style={styles.plusBtn}
-                      disabled={plusOnes >= 5}
-                      onPress={() => setPlus(plusOnes + 1)}>
-                      <ThemedText type="smallBold" style={styles.plusSign}>
-                        +
-                      </ThemedText>
-                    </Pressable>
-                  </View>
+                {event.allow_plus_ones && myRsvp?.status === 'going' && myRsvp.id ? (
+                  <PlusOnesEditor rsvpId={myRsvp.id} eventTitle={event.title} />
                 ) : null}
               </>
             ) : (
@@ -1010,6 +1083,55 @@ const styles = StyleSheet.create({
   },
   onState: {
     color: OnBrand,
+  },
+  poWrap: {
+    gap: Spacing.two,
+    marginTop: Spacing.one,
+  },
+  poRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  poInput: {
+    flex: 1,
+    borderRadius: 14,
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+  },
+  poShareBtn: {
+    backgroundColor: Brand,
+    borderRadius: 999,
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.three,
+  },
+  poRemove: {
+    width: 30,
+    height: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  poActions: {
+    flexDirection: 'row',
+    gap: Spacing.two,
+    marginTop: Spacing.one,
+  },
+  poAddBtn: {
+    flex: 1,
+    borderRadius: 14,
+    paddingVertical: Spacing.two,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.16)',
+  },
+  poSaveBtn: {
+    flex: 1,
+    backgroundColor: StateGo,
+    borderRadius: 14,
+    paddingVertical: Spacing.two,
+    alignItems: 'center',
   },
   guestForm: {
     gap: Spacing.three,

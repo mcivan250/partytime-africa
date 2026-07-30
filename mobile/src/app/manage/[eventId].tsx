@@ -1,6 +1,7 @@
+import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { SectionLabel } from '@/components/section-label';
 import { ThemedText } from '@/components/themed-text';
@@ -26,7 +27,19 @@ type EventRow = Pick<
 >;
 type Tier = Pick<Tables<'ticket_tiers'>, 'id' | 'name' | 'sold' | 'quantity' | 'price_minor' | 'currency'>;
 type TableRow = Pick<Tables<'venue_tables'>, 'price_minor' | 'status'>;
-type Rsvp = Pick<Tables<'rsvps'>, 'guest_name' | 'status' | 'plus_ones'>;
+type Guest = {
+  rsvp_id: string;
+  profile_id: string | null;
+  guest_name: string;
+  guest_phone: string | null;
+  status: 'going' | 'maybe' | 'declined';
+  plus_ones: number;
+  avatar_url: string | null;
+  username: string | null;
+  created_at: string;
+  plus_one_names: string[];
+};
+type MyEvent = { id: string; title: string; starts_at: string | null };
 type MerchPickup = Pick<Tables<'merch_purchases'>, 'id' | 'buyer_name' | 'quantity' | 'status'> & {
   merch_items: { name: string; price_minor: number } | null;
   merch_variants: { label: string } | null;
@@ -34,7 +47,7 @@ type MerchPickup = Pick<Tables<'merch_purchases'>, 'id' | 'buyer_name' | 'quanti
 type Leader = { promoter_name: string; tickets_sold: number; earned_minor: number };
 type Cohost = { profile_id: string; name: string; status: string };
 
-const STATUS_EMOJI: Record<Rsvp['status'], string> = { going: '🔥', maybe: '🤔', declined: '😢' };
+const STATUS_EMOJI: Record<Guest['status'], string> = { going: '🔥', maybe: '🤔', declined: '😢' };
 
 function StatTile({ value, label, color }: { value: string; label: string; color?: string }) {
   return (
@@ -63,7 +76,10 @@ export default function ManageEventScreen() {
   const [merch, setMerch] = useState<MerchPickup[]>([]);
   const [leaders, setLeaders] = useState<Leader[]>([]);
   const [cohosts, setCohosts] = useState<Cohost[]>([]);
-  const [rsvps, setRsvps] = useState<Rsvp[]>([]);
+  const [guests, setGuests] = useState<Guest[]>([]);
+  const [myEvents, setMyEvents] = useState<MyEvent[]>([]);
+  const [reinviteBusy, setReinviteBusy] = useState<string | null>(null);
+  const [reinviteNote, setReinviteNote] = useState<string | null>(null);
   const [ticketStatuses, setTicketStatuses] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [blast, setBlast] = useState('');
@@ -81,7 +97,7 @@ export default function ManageEventScreen() {
       .maybeSingle();
     setEvent(ev);
     if (ev) {
-      const [tiersRes, tablesRes, merchRes, rsvpRes, ticketRes] = await Promise.all([
+      const [tiersRes, tablesRes, merchRes, guestRes, ticketRes, myEventsRes] = await Promise.all([
         supabase.from('ticket_tiers').select('id, name, sold, quantity, price_minor, currency').eq('event_id', ev.id).order('position'),
         supabase.from('venue_tables').select('price_minor, status').eq('event_id', ev.id),
         supabase
@@ -89,13 +105,20 @@ export default function ManageEventScreen() {
           .select('id, buyer_name, quantity, status, merch_items(name, price_minor), merch_variants(label)')
           .eq('event_id', ev.id)
           .order('created_at', { ascending: false }),
-        supabase.from('rsvps').select('guest_name, status, plus_ones').eq('event_id', ev.id).order('created_at', { ascending: false }),
+        supabase.rpc('host_guest_list', { p_event_id: ev.id }),
         supabase.from('tickets').select('status').eq('event_id', ev.id),
+        supabase
+          .from('events')
+          .select('id, title, starts_at')
+          .eq('host_id', ev.host_id)
+          .neq('id', ev.id)
+          .order('starts_at', { ascending: false }),
       ]);
       setTiers(tiersRes.data ?? []);
       setTables(tablesRes.data ?? []);
       setMerch((merchRes.data ?? []) as unknown as MerchPickup[]);
-      setRsvps(rsvpRes.data ?? []);
+      setGuests((guestRes.data ?? []) as Guest[]);
+      setMyEvents((myEventsRes.data ?? []) as MyEvent[]);
       setTicketStatuses((ticketRes.data ?? []).map((t) => t.status));
 
       const { data: board } = await supabase.rpc('event_promoter_leaderboard', { p_event_id: ev.id });
@@ -185,6 +208,27 @@ export default function ManageEventScreen() {
       .eq('id', id);
   };
 
+  const reinviteTo = async (target: MyEvent) => {
+    if (!event) return;
+    setReinviteBusy(target.id);
+    setReinviteNote(null);
+    const { data, error } = await supabase.rpc('invite_past_guests', {
+      p_source_event: event.id,
+      p_target_event: target.id,
+    });
+    setReinviteBusy(null);
+    if (error) {
+      setReinviteNote(error.message);
+      return;
+    }
+    const res = data as { notified: number; skipped: number };
+    const parts = [`Invited ${res.notified} guest${res.notified === 1 ? '' : 's'} to “${target.title}”.`];
+    if (res.skipped > 0) {
+      parts.push(`${res.skipped} phone-only guest${res.skipped === 1 ? '' : 's'} couldn't be reached in-app.`);
+    }
+    setReinviteNote(parts.join(' '));
+  };
+
   if (loading) {
     return (
       <ThemedView style={[styles.container, styles.center]}>
@@ -201,8 +245,8 @@ export default function ManageEventScreen() {
     );
   }
 
-  const going = rsvps.filter((r) => r.status === 'going').length;
-  const maybe = rsvps.filter((r) => r.status === 'maybe').length;
+  const going = guests.filter((r) => r.status === 'going').length;
+  const maybe = guests.filter((r) => r.status === 'maybe').length;
   const sold = tiers.reduce((n, t) => n + t.sold, 0);
   const bookedTables = tables.filter((t) => t.status === 'booked');
   const tableRevenueMinor = bookedTables.reduce((n, t) => n + t.price_minor, 0);
@@ -462,26 +506,94 @@ export default function ManageEventScreen() {
         </ThemedView>
 
         <ThemedView type="backgroundElement" style={styles.card}>
-          <ThemedText type="subtitle">Guest list ({rsvps.length})</ThemedText>
-          {rsvps.length === 0 ? (
+          <ThemedText type="subtitle">Guest list ({guests.length})</ThemedText>
+          {guests.length === 0 ? (
             <ThemedText type="small" themeColor="textSecondary">
               No RSVPs yet. Share the event to get people on the list.
             </ThemedText>
           ) : (
-            rsvps.map((g, i) => (
-              <View key={`${g.guest_name}-${i}`} style={styles.guestRow}>
-                <ThemedText type="small">{STATUS_EMOJI[g.status]}</ThemedText>
-                <ThemedText type="smallBold" style={styles.flex}>
-                  {g.guest_name}
-                  {g.plus_ones > 0 ? ` +${g.plus_ones}` : ''}
-                </ThemedText>
-                <ThemedText type="small" themeColor="textSecondary">
-                  {g.status}
-                </ThemedText>
+            guests.map((g) => (
+              <View key={g.rsvp_id} style={styles.guestBlock}>
+                <View style={styles.guestRow}>
+                  {g.avatar_url ? (
+                    <Image source={{ uri: g.avatar_url }} style={styles.guestAvatar} contentFit="cover" />
+                  ) : (
+                    <View style={[styles.guestAvatar, styles.guestAvatarFallback]}>
+                      <ThemedText type="smallBold">{g.guest_name.slice(0, 1).toUpperCase()}</ThemedText>
+                    </View>
+                  )}
+                  <View style={styles.flex}>
+                    <ThemedText type="smallBold">
+                      {STATUS_EMOJI[g.status]} {g.guest_name}
+                      {g.plus_ones > 0 ? ` +${g.plus_ones}` : ''}
+                    </ThemedText>
+                    <ThemedText type="small" themeColor="textSecondary">
+                      {g.username ? `@${g.username}` : g.profile_id ? 'Member' : 'Guest'}
+                      {' · '}
+                      {g.status}
+                    </ThemedText>
+                  </View>
+                  {g.guest_phone ? (
+                    <Pressable
+                      style={styles.callBtn}
+                      onPress={() => Linking.openURL(`tel:${g.guest_phone}`)}>
+                      <ThemedText type="smallBold" style={styles.callBtnText}>
+                        📞 {g.guest_phone}
+                      </ThemedText>
+                    </Pressable>
+                  ) : null}
+                </View>
+                {g.plus_one_names.length > 0 ? (
+                  <ThemedText type="small" themeColor="textSecondary" style={styles.plusNames}>
+                    Bringing: {g.plus_one_names.join(', ')}
+                  </ThemedText>
+                ) : null}
               </View>
             ))
           )}
         </ThemedView>
+
+        {myEvents.length > 0 && guests.length > 0 ? (
+          <ThemedView type="backgroundElement" style={styles.card}>
+            <View style={styles.headingRow}>
+              <View style={styles.headingBar} />
+              <ThemedText type="subtitle">Invite these guests to another event</ThemedText>
+            </View>
+            <ThemedText type="small" themeColor="textSecondary">
+              Send everyone who came to a notification for one of your other events. Members with an
+              account get it instantly.
+            </ThemedText>
+            {myEvents.map((ev) => (
+              <View key={ev.id} style={styles.tierRow}>
+                <View style={styles.flex}>
+                  <ThemedText type="smallBold">{ev.title}</ThemedText>
+                  {ev.starts_at ? (
+                    <ThemedText type="small" themeColor="textSecondary">
+                      {new Date(ev.starts_at).toLocaleDateString(undefined, {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                      })}
+                    </ThemedText>
+                  ) : null}
+                </View>
+                <Pressable
+                  style={[styles.inviteBtn, { opacity: reinviteBusy === ev.id ? 0.5 : 1 }]}
+                  disabled={reinviteBusy === ev.id}
+                  onPress={() => reinviteTo(ev)}>
+                  <ThemedText type="smallBold" style={styles.onBrand}>
+                    {reinviteBusy === ev.id ? 'Sending…' : 'Invite'}
+                  </ThemedText>
+                </Pressable>
+              </View>
+            ))}
+            {reinviteNote ? (
+              <ThemedText type="small" themeColor="textSecondary">
+                {reinviteNote}
+              </ThemedText>
+            ) : null}
+          </ThemedView>
+        ) : null}
       </ScrollView>
     </ThemedView>
   );
@@ -623,10 +735,43 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.three,
     alignItems: 'center',
   },
+  guestBlock: {
+    paddingVertical: Spacing.two,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.06)',
+    gap: Spacing.one,
+  },
   guestRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.three,
+  },
+  guestAvatar: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+  },
+  guestAvatarFallback: {
+    backgroundColor: '#243527',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  plusNames: {
+    marginLeft: 38 + Spacing.three,
+    lineHeight: 18,
+  },
+  callBtn: {
+    borderRadius: 999,
     paddingVertical: Spacing.one,
+    paddingHorizontal: Spacing.two,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.16)',
+  },
+  callBtnText: { color: StateGo },
+  inviteBtn: {
+    backgroundColor: Brand,
+    borderRadius: 999,
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.three,
   },
 });
