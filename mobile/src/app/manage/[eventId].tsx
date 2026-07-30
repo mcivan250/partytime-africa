@@ -24,7 +24,7 @@ type EventRow = Pick<
   | 'is_ticketed'
   | 'promoter_bps'
 >;
-type Tier = Pick<Tables<'ticket_tiers'>, 'name' | 'sold' | 'quantity' | 'price_minor' | 'currency'>;
+type Tier = Pick<Tables<'ticket_tiers'>, 'id' | 'name' | 'sold' | 'quantity' | 'price_minor' | 'currency'>;
 type TableRow = Pick<Tables<'venue_tables'>, 'price_minor' | 'status'>;
 type Rsvp = Pick<Tables<'rsvps'>, 'guest_name' | 'status' | 'plus_ones'>;
 type MerchPickup = Pick<Tables<'merch_purchases'>, 'id' | 'buyer_name' | 'quantity' | 'status'> & {
@@ -69,6 +69,9 @@ export default function ManageEventScreen() {
   const [blast, setBlast] = useState('');
   const [blastBusy, setBlastBusy] = useState(false);
   const [blastResult, setBlastResult] = useState<string | null>(null);
+  const [editTierId, setEditTierId] = useState<string | null>(null);
+  const [editQty, setEditQty] = useState('');
+  const [savingTier, setSavingTier] = useState(false);
 
   const load = useCallback(async () => {
     const { data: ev } = await supabase
@@ -79,7 +82,7 @@ export default function ManageEventScreen() {
     setEvent(ev);
     if (ev) {
       const [tiersRes, tablesRes, merchRes, rsvpRes, ticketRes] = await Promise.all([
-        supabase.from('ticket_tiers').select('name, sold, quantity, price_minor, currency').eq('event_id', ev.id).order('position'),
+        supabase.from('ticket_tiers').select('id, name, sold, quantity, price_minor, currency').eq('event_id', ev.id).order('position'),
         supabase.from('venue_tables').select('price_minor, status').eq('event_id', ev.id),
         supabase
           .from('merch_purchases')
@@ -130,6 +133,29 @@ export default function ManageEventScreen() {
     }
     setBlast('');
     setBlastResult(data?.note ?? 'Message sent. 📣');
+  };
+
+  const startEditTier = (t: Tier) => {
+    setEditTierId(t.id);
+    setEditQty(String(t.quantity));
+  };
+
+  const saveTierQty = async (t: Tier) => {
+    const next = Math.trunc(Number(editQty));
+    if (!Number.isFinite(next) || next < 1) return;
+    if (next < t.sold) {
+      setBlastResult(`Can't set below ${t.sold} — that many are already sold.`);
+      return;
+    }
+    setSavingTier(true);
+    const { error } = await supabase.from('ticket_tiers').update({ quantity: next }).eq('id', t.id);
+    setSavingTier(false);
+    if (error) {
+      setBlastResult(error.message);
+      return;
+    }
+    setTiers((prev) => prev.map((x) => (x.id === t.id ? { ...x, quantity: next } : x)));
+    setEditTierId(null);
   };
 
   const respondCohost = async (profileId: string, accept: boolean) => {
@@ -232,16 +258,49 @@ export default function ManageEventScreen() {
               <View style={styles.headingBar} />
               <ThemedText type="subtitle">Ticket sales</ThemedText>
             </View>
-            {tiers.map((t, i) => (
-              <View key={`${t.name}-${i}`} style={styles.tierRow}>
+            {tiers.map((t) => (
+              <View key={t.id} style={styles.tierRow}>
                 <ThemedText type="smallBold" style={styles.flex}>
                   {t.name}
                 </ThemedText>
-                <ThemedText type="small" themeColor="textSecondary">
-                  {t.sold}/{t.quantity} · {formatMoney(t.sold * t.price_minor, t.currency)}
-                </ThemedText>
+                {editTierId === t.id ? (
+                  <View style={styles.tierEditRow}>
+                    <TextInput
+                      style={[styles.qtyInput, { color: theme.text, backgroundColor: theme.background }]}
+                      value={editQty}
+                      onChangeText={setEditQty}
+                      keyboardType="number-pad"
+                      autoFocus
+                    />
+                    <Pressable
+                      style={[styles.qtyBtn, styles.qtySave, { opacity: savingTier ? 0.5 : 1 }]}
+                      disabled={savingTier}
+                      onPress={() => saveTierQty(t)}>
+                      <ThemedText type="smallBold" style={styles.qtySaveText}>
+                        Save
+                      </ThemedText>
+                    </Pressable>
+                    <Pressable style={styles.qtyBtn} onPress={() => setEditTierId(null)}>
+                      <ThemedText type="smallBold" themeColor="textSecondary">
+                        Cancel
+                      </ThemedText>
+                    </Pressable>
+                  </View>
+                ) : (
+                  <Pressable style={styles.tierEditRow} onPress={() => startEditTier(t)} hitSlop={6}>
+                    <ThemedText type="small" themeColor="textSecondary">
+                      {t.sold}/{t.quantity} · {formatMoney(t.sold * t.price_minor, t.currency)}
+                    </ThemedText>
+                    <ThemedText type="smallBold" style={styles.editLink}>
+                      Edit
+                    </ThemedText>
+                  </Pressable>
+                )}
               </View>
             ))}
+            <ThemedText type="small" themeColor="textSecondary" style={styles.tierHint}>
+              Tap “Edit” to add or reduce tickets on a tier. You can&apos;t go below the number already sold.
+            </ThemedText>
           </ThemedView>
         ) : null}
 
@@ -526,6 +585,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.two,
   },
+  tierEditRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  editLink: { color: StateGo },
+  qtyInput: {
+    borderRadius: 10,
+    paddingVertical: Spacing.one,
+    paddingHorizontal: Spacing.two,
+    minWidth: 64,
+    textAlign: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+  },
+  qtyBtn: { paddingVertical: Spacing.one, paddingHorizontal: Spacing.two, borderRadius: 999 },
+  qtySave: { backgroundColor: Brand },
+  qtySaveText: { color: OnBrand },
+  tierHint: { marginTop: Spacing.two, lineHeight: 18 },
   collectButton: {
     backgroundColor: Brand,
     borderRadius: 999,
