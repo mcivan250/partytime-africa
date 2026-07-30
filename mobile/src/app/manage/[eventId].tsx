@@ -212,19 +212,28 @@ export default function ManageEventScreen() {
     if (!event) return;
     setReinviteBusy(target.id);
     setReinviteNote(null);
-    const { data, error } = await supabase.rpc('invite_past_guests', {
-      p_source_event: event.id,
-      p_target_event: target.id,
+    const { data, error } = await supabase.functions.invoke('reinvite-guests', {
+      body: { source_event: event.id, target_event: target.id },
     });
     setReinviteBusy(null);
-    if (error) {
-      setReinviteNote(error.message);
+    if (error || data?.error) {
+      setReinviteNote(data?.error || 'Could not send invites — please try again.');
       return;
     }
-    const res = data as { notified: number; skipped: number };
-    const parts = [`Invited ${res.notified} guest${res.notified === 1 ? '' : 's'} to “${target.title}”.`];
-    if (res.skipped > 0) {
-      parts.push(`${res.skipped} phone-only guest${res.skipped === 1 ? '' : 's'} couldn't be reached in-app.`);
+    const res = data as {
+      notified: number;
+      sms_sent: number;
+      phone_guests: number;
+      sms_configured: boolean;
+    };
+    const parts = [`Invited ${res.notified} member${res.notified === 1 ? '' : 's'} to “${target.title}”.`];
+    if (res.sms_sent > 0) {
+      parts.push(`Texted ${res.sms_sent} guest${res.sms_sent === 1 ? '' : 's'} the invite link.`);
+    } else if (res.phone_guests > 0 && !res.sms_configured) {
+      parts.push(`${res.phone_guests} phone-only guest${res.phone_guests === 1 ? '' : 's'} need SMS set up to reach.`);
+    }
+    if (res.notified === 0 && res.sms_sent === 0) {
+      parts.push('Everyone was already invited or on the list.');
     }
     setReinviteNote(parts.join(' '));
   };
@@ -560,8 +569,8 @@ export default function ManageEventScreen() {
               <ThemedText type="subtitle">Invite these guests to another event</ThemedText>
             </View>
             <ThemedText type="small" themeColor="textSecondary">
-              Send everyone who came to a notification for one of your other events. Members with an
-              account get it instantly.
+              Invite everyone who came to one of your other events. Members get an in-app
+              notification; guests who left a phone number get an SMS with the link.
             </ThemedText>
             {myEvents.map((ev) => (
               <View key={ev.id} style={styles.tierRow}>
