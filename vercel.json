@@ -3,5 +3,18 @@
   "buildCommand": "cd mobile && npx expo export --platform web && node scripts/inject-og.js",
   "outputDirectory": "mobile/dist",
   "framework": null,
-  "rewrites": [{ "source": "/(.*)", "destination": "/" }]
+  "rewrites": [
+    {
+      "source": "/e/:slug",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(facebookexternalhit|Facebot|Twitterbot|WhatsApp|LinkedInBot|Slackbot|Discordbot|TelegramBot|Pinterest|redditbot|Googlebot|bingbot|Applebot|vkShare|Embedly|Iframely|SkypeUriPreview|Mastodon|Bluesky|WordPress).*"
+        }
+      ],
+      "destination": "/api/og?slug=:slug"
+    },
+    { "source": "/(.*)", "destination": "/" }
+  ]
 }
