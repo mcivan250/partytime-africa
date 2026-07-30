@@ -3,8 +3,10 @@
 // and recommends the best matches for a natural-language request — "chill
 // rooftop this weekend under 50k" or "fine dining for a dinner date". When the
 // caller shares their location, results are distance-aware ("1.2 km away").
-// Uses Claude when ANTHROPIC_API_KEY is set; otherwise a keyword/price/distance
-// heuristic so it still works.
+//
+// Uses a hosted LLM when a key is set — free Google Gemini (GEMINI_API_KEY)
+// first, then Claude (ANTHROPIC_API_KEY) — otherwise a keyword/price/distance
+// heuristic so it always works.
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
@@ -16,18 +18,71 @@ const cors = {
 const json = (b: unknown, s = 200) =>
   new Response(JSON.stringify(b), { status: s, headers: { ...cors, 'Content-Type': 'application/json' } });
 
-// Default to the most capable model for the best recommendations; override with
-// the ANTHROPIC_MODEL secret (e.g. claude-sonnet-5) to trade quality for
-// speed/cost.
-const MODEL = Deno.env.get('ANTHROPIC_MODEL') ?? 'claude-opus-5';
-
-// Pull the first text block out of a Messages API response. Resilient to
-// responses that lead with other block types.
+// ---- AI provider: free Gemini first, then Claude, then null (→ heuristic) ----
+function geminiText(data: unknown): string {
+  const parts = (data as { candidates?: { content?: { parts?: { text?: string }[] } }[] })
+    ?.candidates?.[0]?.content?.parts;
+  if (!Array.isArray(parts)) return '';
+  return parts.map((p) => p?.text ?? '').join('');
+}
 function claudeText(data: unknown): string {
   const blocks = (data as { content?: { type?: string; text?: string }[] })?.content;
   if (!Array.isArray(blocks)) return '';
   const t = blocks.find((b) => b?.type === 'text' && typeof b?.text === 'string');
   return t?.text ?? '';
+}
+// Returns generated text, or null if no provider is configured. Throws on a
+// provider HTTP error so callers fall back to the heuristic.
+async function generate(system: string, user: string, maxTokens: number, wantJson: boolean): Promise<string | null> {
+  const gemini = Deno.env.get('GEMINI_API_KEY');
+  if (gemini) {
+    const model = Deno.env.get('GEMINI_MODEL') ?? 'gemini-2.5-flash';
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+      {
+        method: 'POST',
+        headers: { 'x-goog-api-key': gemini, 'content-type': 'application/json' },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: system }] },
+          contents: [{ role: 'user', parts: [{ text: user }] }],
+          generationConfig: {
+            maxOutputTokens: maxTokens,
+            temperature: 0.9,
+            // Disable "thinking" — on 2.5 flash it otherwise eats the output
+            // budget and can return an empty response for small maxOutputTokens.
+            thinkingConfig: { thinkingBudget: 0 },
+            ...(wantJson ? { responseMimeType: 'application/json' } : {}),
+          },
+        }),
+      },
+    );
+    const data = await res.json();
+    if (!res.ok) {
+      console.error('plan-my-night: Gemini API error', res.status, JSON.stringify(data).slice(0, 500));
+      throw new Error(`gemini ${res.status}`);
+    }
+    return geminiText(data);
+  }
+  const anthropic = Deno.env.get('ANTHROPIC_API_KEY');
+  if (anthropic) {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'x-api-key': anthropic, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+      body: JSON.stringify({
+        model: Deno.env.get('ANTHROPIC_MODEL') ?? 'claude-opus-5',
+        max_tokens: maxTokens,
+        system,
+        messages: [{ role: 'user', content: user }],
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      console.error('plan-my-night: Claude API error', res.status, JSON.stringify(data).slice(0, 500));
+      throw new Error(`claude ${res.status}`);
+    }
+    return claudeText(data);
+  }
+  return null;
 }
 
 const ZERO_DECIMAL = new Set(['UGX', 'KES', 'TZS', 'RWF', 'XOF', 'XAF', 'BIF', 'DJF', 'JPY']);
@@ -191,33 +246,30 @@ Deno.serve(async (req) => {
       .filter(Boolean)
       .slice(0, 5);
 
-  const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
+  // --- LLM path (Gemini/Claude) ---
+  try {
+    const eventLines = events
+      .map((e) => {
+        const when = e.starts_at
+          ? new Date(e.starts_at).toLocaleString('en-US', {
+              weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
+              timeZone: e.timezone,
+            })
+          : 'TBA';
+        const price = e.from_minor != null ? `from ${money(e.from_minor, e.currency)}` : 'free entry';
+        const dist = distanceLabel(e.distance_km);
+        return `ref:"e:${e.slug}" | EVENT | ${e.title} | ${when} | ${e.venue_name ?? 'venue TBA'} | ${price} | vibe:${e.theme}${dist ? ` | ${dist}` : ''} | ${(e.description ?? '').slice(0, 110)}`;
+      })
+      .join('\n');
+    const venueLines = venues
+      .map((v) => {
+        const dist = distanceLabel(v.distance_km);
+        const cuisine = v.cuisines.length ? ` | ${v.cuisines.join(', ')}` : '';
+        return `ref:"v:${v.id}" | PLACE | ${v.name} | ${v.kind} | ${v.price_range ?? ''}${cuisine}${dist ? ` | ${dist}` : ''} | ${(v.description ?? '').slice(0, 110)}`;
+      })
+      .join('\n');
 
-  // --- Claude path ---
-  if (apiKey) {
-    try {
-      const eventLines = events
-        .map((e) => {
-          const when = e.starts_at
-            ? new Date(e.starts_at).toLocaleString('en-US', {
-                weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
-                timeZone: e.timezone,
-              })
-            : 'TBA';
-          const price = e.from_minor != null ? `from ${money(e.from_minor, e.currency)}` : 'free entry';
-          const dist = distanceLabel(e.distance_km);
-          return `ref:"e:${e.slug}" | EVENT | ${e.title} | ${when} | ${e.venue_name ?? 'venue TBA'} | ${price} | vibe:${e.theme}${dist ? ` | ${dist}` : ''} | ${(e.description ?? '').slice(0, 110)}`;
-        })
-        .join('\n');
-      const venueLines = venues
-        .map((v) => {
-          const dist = distanceLabel(v.distance_km);
-          const cuisine = v.cuisines.length ? ` | ${v.cuisines.join(', ')}` : '';
-          return `ref:"v:${v.id}" | PLACE | ${v.name} | ${v.kind} | ${v.price_range ?? ''}${cuisine}${dist ? ` | ${dist}` : ''} | ${(v.description ?? '').slice(0, 110)}`;
-        })
-        .join('\n');
-
-      const sys = `You are Party Time's concierge for ${city} — you know the city's nightlife AND dining scene and talk like a plugged-in local friend, never a brochure. You recommend two kinds of things:
+    const sys = `You are Party Time's concierge for ${city} — you know the city's nightlife AND dining scene and talk like a plugged-in local friend, never a brochure. You recommend two kinds of things:
 - EVENTS: one-off happenings on a specific date (parties, shows, ladies' nights).
 - PLACES: bars, restaurants, lounges and clubs from our curated guide, open regularly (great for "dinner with my wife", "fine dining", "a nice bar", "date night").
 
@@ -225,48 +277,27 @@ Pick the best matches for the user's request from the lists below ONLY. Never in
 
 Reply with STRICT JSON only, no prose, no markdown fences: {"intro": string (one warm, specific sentence that speaks to what they asked for), "picks": [{"ref": string (must copy a ref value above EXACTLY, including the e:/v: prefix), "reason": string (max 12 words — the concrete reason it fits: the cuisine, vibe, price, or timing)}]}. Up to 5 picks, best first. If nothing genuinely fits, return an empty picks array with a friendly, honest intro.`;
 
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-          'content-type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: MODEL,
-          max_tokens: 900,
-          system: sys,
-          messages: [
-            {
-              role: 'user',
-              content: `EVENTS:\n${eventLines || '(none on the calendar right now)'}\n\nPLACES:\n${venueLines || '(no places listed yet)'}\n\nUser: ${query}`,
-            },
-          ],
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        console.error('plan-my-night: Claude API error', res.status, JSON.stringify(data).slice(0, 500));
-      } else {
-        const text = claudeText(data);
-        const match = text.match(/\{[\s\S]*\}/);
-        if (match) {
-          const parsed = JSON.parse(match[0]) as { intro?: string; picks?: { ref: string; reason: string }[] };
-          return json({
-            intro: parsed.intro ?? "Here's what I'd do:",
-            picks: decorate(parsed.picks ?? []),
-            ai: true,
-          });
-        }
-        console.error('plan-my-night: no JSON in Claude reply', text.slice(0, 200));
+    const userContent = `EVENTS:\n${eventLines || '(none on the calendar right now)'}\n\nPLACES:\n${venueLines || '(no places listed yet)'}\n\nUser: ${query}`;
+
+    const text = await generate(sys, userContent, 900, true);
+    if (text) {
+      const match = text.match(/\{[\s\S]*\}/);
+      if (match) {
+        const parsed = JSON.parse(match[0]) as { intro?: string; picks?: { ref: string; reason: string }[] };
+        return json({
+          intro: parsed.intro ?? "Here's what I'd do:",
+          picks: decorate(parsed.picks ?? []),
+          ai: true,
+        });
       }
-    } catch (e) {
-      console.error('plan-my-night: Claude call failed', e instanceof Error ? e.message : String(e));
-      // fall through to heuristic
+      console.error('plan-my-night: no JSON in AI reply', text.slice(0, 200));
     }
+  } catch (e) {
+    console.error('plan-my-night: AI call failed', e instanceof Error ? e.message : String(e));
+    // fall through to heuristic
   }
 
-  // --- Heuristic fallback (no key or Claude error) ---
+  // --- Heuristic fallback (no key or AI error) ---
   const q = query.toLowerCase();
   const capMatch = q.match(/(\d+)\s*k/);
   const cap = capMatch ? parseInt(capMatch[1], 10) * 1000 : null;

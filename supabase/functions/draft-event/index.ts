@@ -1,7 +1,10 @@
 // draft-event: Party Time's AI Host Studio. Turns a one-line idea into a
 // ready-to-publish event draft (title, hype description, vibe theme, and
-// suggested ticket tiers). Uses Claude when ANTHROPIC_API_KEY is set; otherwise
-// a keyword/price heuristic so hosts still get a helpful draft.
+// suggested ticket tiers).
+//
+// Uses a hosted LLM when a key is set — free Google Gemini (GEMINI_API_KEY)
+// first, then Claude (ANTHROPIC_API_KEY) — otherwise a keyword/price heuristic
+// so hosts still get a helpful draft.
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 
 const cors = {
@@ -12,15 +15,67 @@ const cors = {
 const json = (b: unknown, s = 200) =>
   new Response(JSON.stringify(b), { status: s, headers: { ...cors, 'Content-Type': 'application/json' } });
 
-// Default to the most capable model for the best copy; override with the
-// ANTHROPIC_MODEL secret to trade quality for speed/cost.
-const MODEL = Deno.env.get('ANTHROPIC_MODEL') ?? 'claude-opus-5';
-
+// ---- AI provider: free Gemini first, then Claude, then null (→ heuristic) ----
+function geminiText(data: unknown): string {
+  const parts = (data as { candidates?: { content?: { parts?: { text?: string }[] } }[] })
+    ?.candidates?.[0]?.content?.parts;
+  if (!Array.isArray(parts)) return '';
+  return parts.map((p) => p?.text ?? '').join('');
+}
 function claudeText(data: unknown): string {
   const blocks = (data as { content?: { type?: string; text?: string }[] })?.content;
   if (!Array.isArray(blocks)) return '';
   const t = blocks.find((b) => b?.type === 'text' && typeof b?.text === 'string');
   return t?.text ?? '';
+}
+async function generate(system: string, user: string, maxTokens: number, wantJson: boolean): Promise<string | null> {
+  const gemini = Deno.env.get('GEMINI_API_KEY');
+  if (gemini) {
+    const model = Deno.env.get('GEMINI_MODEL') ?? 'gemini-2.5-flash';
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+      {
+        method: 'POST',
+        headers: { 'x-goog-api-key': gemini, 'content-type': 'application/json' },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: system }] },
+          contents: [{ role: 'user', parts: [{ text: user }] }],
+          generationConfig: {
+            maxOutputTokens: maxTokens,
+            temperature: 0.9,
+            thinkingConfig: { thinkingBudget: 0 },
+            ...(wantJson ? { responseMimeType: 'application/json' } : {}),
+          },
+        }),
+      },
+    );
+    const data = await res.json();
+    if (!res.ok) {
+      console.error('draft-event: Gemini API error', res.status, JSON.stringify(data).slice(0, 500));
+      throw new Error(`gemini ${res.status}`);
+    }
+    return geminiText(data);
+  }
+  const anthropic = Deno.env.get('ANTHROPIC_API_KEY');
+  if (anthropic) {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'x-api-key': anthropic, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+      body: JSON.stringify({
+        model: Deno.env.get('ANTHROPIC_MODEL') ?? 'claude-opus-5',
+        max_tokens: maxTokens,
+        system,
+        messages: [{ role: 'user', content: user }],
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      console.error('draft-event: Claude API error', res.status, JSON.stringify(data).slice(0, 500));
+      throw new Error(`claude ${res.status}`);
+    }
+    return claudeText(data);
+  }
+  return null;
 }
 
 const THEMES = ['forest', 'sunset', 'gold', 'ocean', 'fire', 'mono'];
@@ -76,58 +131,37 @@ Deno.serve(async (req) => {
   const prompt = typeof body.prompt === 'string' ? body.prompt.trim().slice(0, 400) : '';
   if (!prompt) return json({ error: 'Describe your event in a sentence.' }, 400);
 
-  const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
+  try {
+    const sys = `You are Party Time's event studio for Kampala nightlife. From the host's rough idea, craft a compelling, ready-to-publish event. Write for a young Ugandan crowd — vivid, confident, culturally on-point, never cheesy or corporate. Reply with STRICT JSON only, no prose, no markdown fences: {"title": string (punchy, max 5 words, no emojis), "description": string (2-3 hype sentences that sell the vibe and give a reason to come; minimal emojis), "theme": one of ${JSON.stringify(THEMES)} (pick the closest mood), "is_ticketed": boolean, "tiers": [{"name": string, "price_minor": integer}] up to 3}. Prices are in UGX shillings as whole integers (e.g. 30000 = UGX 30,000); pick realistic Kampala nightlife prices if the host didn't specify. If it reads as free entry / ladies night, set is_ticketed false and tiers []. Order tiers cheapest first (e.g. Advance, then At the door, then VIP).`;
 
-  if (apiKey) {
-    try {
-      const sys = `You are Party Time's event studio for Kampala nightlife. From the host's rough idea, craft a compelling, ready-to-publish event. Write for a young Ugandan crowd — vivid, confident, culturally on-point, never cheesy or corporate. Reply with STRICT JSON only, no prose, no markdown fences: {"title": string (punchy, max 5 words, no emojis), "description": string (2-3 hype sentences that sell the vibe and give a reason to come; minimal emojis), "theme": one of ${JSON.stringify(THEMES)} (pick the closest mood), "is_ticketed": boolean, "tiers": [{"name": string, "price_minor": integer}] up to 3}. Prices are in UGX shillings as whole integers (e.g. 30000 = UGX 30,000); pick realistic Kampala nightlife prices if the host didn't specify. If it reads as free entry / ladies night, set is_ticketed false and tiers []. Order tiers cheapest first (e.g. Advance, then At the door, then VIP).`;
-
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-          'content-type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: MODEL,
-          max_tokens: 700,
-          system: sys,
-          messages: [{ role: 'user', content: prompt }],
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        console.error('draft-event: Claude API error', res.status, JSON.stringify(data).slice(0, 500));
-      } else {
-        const text = claudeText(data);
-        const match = text.match(/\{[\s\S]*\}/);
-        if (match) {
-          const parsed = JSON.parse(match[0]) as Partial<Draft>;
-          const theme = THEMES.includes(String(parsed.theme)) ? String(parsed.theme) : 'forest';
-          const tiers = Array.isArray(parsed.tiers)
-            ? parsed.tiers
-                .filter((t) => t && typeof t.name === 'string' && Number.isFinite(Number(t.price_minor)))
-                .slice(0, 3)
-                .map((t) => ({ name: String(t.name).slice(0, 40), price_minor: Math.max(0, Math.round(Number(t.price_minor))) }))
-            : [];
-          return json({
-            draft: {
-              title: String(parsed.title ?? '').slice(0, 80),
-              description: String(parsed.description ?? '').slice(0, 800),
-              theme,
-              is_ticketed: parsed.is_ticketed ?? tiers.length > 0,
-              tiers,
-            },
-            ai: true,
-          });
-        }
-        console.error('draft-event: no JSON in Claude reply', text.slice(0, 200));
+    const text = await generate(sys, prompt, 700, true);
+    if (text) {
+      const match = text.match(/\{[\s\S]*\}/);
+      if (match) {
+        const parsed = JSON.parse(match[0]) as Partial<Draft>;
+        const theme = THEMES.includes(String(parsed.theme)) ? String(parsed.theme) : 'forest';
+        const tiers = Array.isArray(parsed.tiers)
+          ? parsed.tiers
+              .filter((t) => t && typeof t.name === 'string' && Number.isFinite(Number(t.price_minor)))
+              .slice(0, 3)
+              .map((t) => ({ name: String(t.name).slice(0, 40), price_minor: Math.max(0, Math.round(Number(t.price_minor))) }))
+          : [];
+        return json({
+          draft: {
+            title: String(parsed.title ?? '').slice(0, 80),
+            description: String(parsed.description ?? '').slice(0, 800),
+            theme,
+            is_ticketed: parsed.is_ticketed ?? tiers.length > 0,
+            tiers,
+          },
+          ai: true,
+        });
       }
-    } catch (e) {
-      console.error('draft-event: Claude call failed', e instanceof Error ? e.message : String(e));
-      // fall through
+      console.error('draft-event: no JSON in AI reply', text.slice(0, 200));
     }
+  } catch (e) {
+    console.error('draft-event: AI call failed', e instanceof Error ? e.message : String(e));
+    // fall through
   }
 
   return json({ draft: heuristicDraft(prompt), ai: false });
