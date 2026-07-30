@@ -49,6 +49,16 @@ type Cohost = { profile_id: string; name: string; status: string };
 
 const STATUS_EMOJI: Record<Guest['status'], string> = { going: '🔥', maybe: '🤔', declined: '😢' };
 
+// Normalise a phone to WhatsApp's wa.me format (international digits, no +).
+// Ugandan local numbers (leading 0) default to +256.
+function waNumber(raw: string): string | null {
+  let t = raw.replace(/[^\d+]/g, '');
+  if (t.startsWith('+')) t = t.slice(1);
+  else if (t.startsWith('00')) t = t.slice(2);
+  else if (t.startsWith('0')) t = `256${t.slice(1)}`;
+  return /^\d{7,15}$/.test(t) ? t : null;
+}
+
 function StatTile({ value, label, color }: { value: string; label: string; color?: string }) {
   return (
     <ThemedView type="backgroundElement" style={styles.tile}>
@@ -542,7 +552,22 @@ export default function ManageEventScreen() {
                       {g.status}
                     </ThemedText>
                   </View>
-                  {g.guest_phone ? (
+                </View>
+                {g.guest_phone ? (
+                  <View style={styles.guestActions}>
+                    {event && waNumber(g.guest_phone) ? (
+                      <Pressable
+                        style={styles.waBtn}
+                        onPress={() => {
+                          const num = waNumber(g.guest_phone!);
+                          const msg = `Hi ${g.guest_name.split(' ')[0]}! You're on the list for ${event.title} 🎉 Details & updates: https://partytime.africa/e/${event.slug} — see you there!`;
+                          Linking.openURL(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`);
+                        }}>
+                        <ThemedText type="smallBold" style={styles.onState}>
+                          💬 WhatsApp
+                        </ThemedText>
+                      </Pressable>
+                    ) : null}
                     <Pressable
                       style={styles.callBtn}
                       onPress={() => Linking.openURL(`tel:${g.guest_phone}`)}>
@@ -550,8 +575,8 @@ export default function ManageEventScreen() {
                         📞 {g.guest_phone}
                       </ThemedText>
                     </Pressable>
-                  ) : null}
-                </View>
+                  </View>
+                ) : null}
                 {g.plus_one_names.length > 0 ? (
                   <ThemedText type="small" themeColor="textSecondary" style={styles.plusNames}>
                     Bringing: {g.plus_one_names.join(', ')}
@@ -768,6 +793,18 @@ const styles = StyleSheet.create({
   plusNames: {
     marginLeft: 38 + Spacing.three,
     lineHeight: 18,
+  },
+  guestActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.two,
+    marginLeft: 38 + Spacing.three,
+  },
+  waBtn: {
+    backgroundColor: StateGo,
+    borderRadius: 999,
+    paddingVertical: Spacing.one,
+    paddingHorizontal: Spacing.three,
   },
   callBtn: {
     borderRadius: 999,
