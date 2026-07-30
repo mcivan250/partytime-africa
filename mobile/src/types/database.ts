@@ -972,7 +972,9 @@ export type Database = {
           display_name: string
           id: string
           phone: string | null
+          phone_verified: boolean
           username: string | null
+          wa_opt_in: boolean
         }
         Insert: {
           avatar_url?: string | null
@@ -983,7 +985,9 @@ export type Database = {
           display_name: string
           id: string
           phone?: string | null
+          phone_verified?: boolean
           username?: string | null
+          wa_opt_in?: boolean
         }
         Update: {
           avatar_url?: string | null
@@ -994,7 +998,9 @@ export type Database = {
           display_name?: string
           id?: string
           phone?: string | null
+          phone_verified?: boolean
           username?: string | null
+          wa_opt_in?: boolean
         }
         Relationships: []
       }

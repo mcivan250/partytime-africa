@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { PhoneVerify } from '@/components/phone-verify';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import {
@@ -27,6 +28,10 @@ import { pickImage, uploadImage } from '@/lib/storage';
 import { track } from '@/lib/analytics';
 import { supabase } from '@/lib/supabase';
 import type { Tables } from '@/types/database';
+
+// Show WhatsApp number verification only once the WhatsApp Business setup is
+// live. Set EXPO_PUBLIC_PHONE_VERIFY_ENABLED=1 (Vercel env) to switch it on.
+const PHONE_VERIFY_ENABLED = process.env.EXPO_PUBLIC_PHONE_VERIFY_ENABLED === '1';
 
 // Confirmation links should return people to the live web app (or the current
 // origin on web), never a dev/localhost URL.
@@ -415,7 +420,9 @@ function Dashboard() {
         ) : null}
       </View>
 
-      {profile && !profile.phone ? (
+      {PHONE_VERIFY_ENABLED ? <PhoneVerify /> : null}
+
+      {!PHONE_VERIFY_ENABLED && profile && !profile.phone ? (
         <ThemedView type="backgroundElement" style={styles.phoneCard}>
           <ThemedText type="smallBold">📱 Add your number</ThemedText>
           <ThemedText type="small" themeColor="textSecondary">
