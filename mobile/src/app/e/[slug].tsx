@@ -38,6 +38,7 @@ import {
   StateMaybe,
 } from '@/constants/theme';
 import { getEventTheme } from '@/constants/event-themes';
+import { track } from '@/lib/analytics';
 import { useAuth } from '@/lib/auth-context';
 import { useTheme } from '@/hooks/use-theme';
 import { tapLight, tapMedium } from '@/lib/haptics';
@@ -297,6 +298,7 @@ export default function EventScreen() {
       return;
     }
     setEvent(eventRow);
+    track('event_view', { slug: eventRow.slug });
 
     const [{ data: host }, { count }, { data: going }, myRsvpResult, minTierResult] =
       await Promise.all([
@@ -393,6 +395,7 @@ export default function EventScreen() {
       return;
     }
     setBuyNotice('Starting secure checkout…');
+    track('checkout_start', { kind: 'ticket' });
     const { data: profile } = await supabase
       .from('profiles')
       .select('display_name, phone')
@@ -424,6 +427,7 @@ export default function EventScreen() {
       return;
     }
     setBuyNotice('Starting secure checkout…');
+    track('checkout_start', { kind: 'table' });
     const { data: profile } = await supabase
       .from('profiles')
       .select('display_name, phone')
@@ -454,6 +458,7 @@ export default function EventScreen() {
       return;
     }
     setBuyNotice('Starting secure checkout…');
+    track('checkout_start', { kind: 'merch' });
     const { data: profile } = await supabase
       .from('profiles')
       .select('display_name, phone')
@@ -503,6 +508,7 @@ export default function EventScreen() {
         plus_ones: pplus,
       });
       if (insertError) setError(insertError.message);
+      else track('rsvp', { status });
     }
     await load();
     setSaving(false);

@@ -12,6 +12,7 @@ import { useEffect } from 'react';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { BodyFontBold, Colors } from '@/constants/theme';
+import { track } from '@/lib/analytics';
 import { AuthProvider } from '@/lib/auth-context';
 
 SplashScreen.preventAutoHideAsync();
@@ -43,6 +44,10 @@ export default function RootLayout() {
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded]);
+
+  useEffect(() => {
+    track('app_open');
+  }, []);
 
   if (!fontsLoaded) {
     return null;

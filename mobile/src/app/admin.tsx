@@ -34,8 +34,10 @@ type Payout = {
   created_at: string;
 };
 
-type TabKey = 'bookings' | 'payouts' | 'members' | 'content' | 'venues';
+type FunnelRow = { name: string; events: number; users: number };
+type TabKey = 'analytics' | 'bookings' | 'payouts' | 'members' | 'content' | 'venues';
 const TABS: { key: TabKey; label: string }[] = [
+  { key: 'analytics', label: 'Analytics' },
   { key: 'bookings', label: 'Bookings' },
   { key: 'payouts', label: 'Payouts' },
   { key: 'members', label: 'Members' },
@@ -43,11 +45,35 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: 'venues', label: 'Venues' },
 ];
 
+// Readable labels + funnel order for the tracked events.
+const FUNNEL_LABEL: Record<string, string> = {
+  app_open: 'App opens',
+  event_view: 'Event views',
+  sign_up: 'Sign-ups',
+  rsvp: 'RSVPs',
+  checkout_start: 'Checkouts started',
+  promote_share: 'Promoter shares',
+  reservation_request: 'Table requests',
+  payout_request: 'Payout requests',
+};
+const FUNNEL_ORDER = [
+  'app_open',
+  'event_view',
+  'sign_up',
+  'rsvp',
+  'checkout_start',
+  'promote_share',
+  'reservation_request',
+  'payout_request',
+];
+
 const VENUE_KINDS = ['bar', 'restaurant', 'club', 'lounge'];
 
 export default function AdminScreen() {
   const { session } = useAuth();
-  const [tab, setTab] = useState<TabKey>('bookings');
+  const [tab, setTab] = useState<TabKey>('analytics');
+  const [funnel, setFunnel] = useState<FunnelRow[]>([]);
+  const [funnelDays, setFunnelDays] = useState(7);
   const [members, setMembers] = useState<Member[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [venues, setVenues] = useState<Venue[]>([]);
@@ -90,6 +116,15 @@ export default function AdminScreen() {
     }
     setLoading(false);
   }, []);
+
+  const loadFunnel = useCallback(async (days: number) => {
+    const { data } = await supabase.rpc('admin_funnel', { p_days: days });
+    setFunnel((data ?? []) as FunnelRow[]);
+  }, []);
+
+  useEffect(() => {
+    if (session) loadFunnel(funnelDays);
+  }, [session, funnelDays, loadFunnel]);
 
   const markPayout = async (p: Payout, status: 'processing' | 'paid' | 'failed') => {
     setPayouts((prev) => prev.map((x) => (x.id === p.id ? { ...x, status } : x)));
@@ -226,7 +261,58 @@ export default function AdminScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {tab === 'bookings' ? (
+        {tab === 'analytics' ? (
+          (() => {
+            const byName = new Map(funnel.map((f) => [f.name, f]));
+            const rows = FUNNEL_ORDER.map((n) => ({
+              name: n,
+              label: FUNNEL_LABEL[n] ?? n,
+              events: byName.get(n)?.events ?? 0,
+              users: byName.get(n)?.users ?? 0,
+            }));
+            const max = Math.max(1, ...rows.map((r) => r.events));
+            const anyData = rows.some((r) => r.events > 0);
+            return (
+              <>
+                <View style={styles.dayRow}>
+                  {[7, 30, 90].map((d) => (
+                    <Pressable
+                      key={d}
+                      style={[styles.dayChip, funnelDays === d && styles.dayChipOn]}
+                      onPress={() => setFunnelDays(d)}>
+                      <ThemedText type="small" style={funnelDays === d ? styles.segOnText : styles.segText}>
+                        {d}d
+                      </ThemedText>
+                    </Pressable>
+                  ))}
+                </View>
+                {!anyData ? (
+                  <ThemedText type="small" themeColor="textSecondary" style={styles.empty}>
+                    No activity tracked yet in this window. Once people use the app, your funnel — opens,
+                    views, sign-ups, RSVPs, checkouts, shares — shows up here.
+                  </ThemedText>
+                ) : (
+                  rows.map((r) => (
+                    <ThemedView key={r.name} type="backgroundElement" style={styles.funnelCard}>
+                      <View style={styles.funnelTop}>
+                        <ThemedText type="smallBold">{r.label}</ThemedText>
+                        <ThemedText type="smallBold" style={styles.funnelNum}>
+                          {r.events}
+                          <ThemedText type="small" themeColor="textSecondary">
+                            {'  '}· {r.users} {r.users === 1 ? 'user' : 'users'}
+                          </ThemedText>
+                        </ThemedText>
+                      </View>
+                      <View style={styles.barTrack}>
+                        <View style={[styles.barFill, { width: `${Math.round((r.events / max) * 100)}%` }]} />
+                      </View>
+                    </ThemedView>
+                  ))
+                )}
+              </>
+            );
+          })()
+        ) : tab === 'bookings' ? (
           reservations.length === 0 ? (
             <ThemedText type="small" themeColor="textSecondary" style={styles.empty}>
               No table requests yet. When guests reserve a table, they&apos;ll show up here to confirm.
@@ -609,6 +695,20 @@ const styles = StyleSheet.create({
   statusDeclined: { backgroundColor: 'rgba(247,53,88,0.15)' },
   processingBtn: { backgroundColor: 'rgba(255,184,77,0.15)' },
   processingText: { color: '#FFB84D' },
+  dayRow: { flexDirection: 'row', gap: Spacing.two, marginBottom: Spacing.one },
+  dayChip: {
+    borderRadius: 999,
+    paddingVertical: Spacing.one,
+    paddingHorizontal: Spacing.three,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+  },
+  dayChipOn: { backgroundColor: Brand, borderColor: 'transparent' },
+  funnelCard: { borderRadius: 14, padding: Spacing.three, gap: Spacing.two },
+  funnelTop: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
+  funnelNum: { color: '#EFF6EE' },
+  barTrack: { height: 8, borderRadius: 999, backgroundColor: '#243527', overflow: 'hidden' },
+  barFill: { height: 8, borderRadius: 999, backgroundColor: Brand },
   venueThumb: { width: 52, height: 52, borderRadius: 12 },
   venueThumbEmpty: { alignItems: 'center', justifyContent: 'center', backgroundColor: '#243527' },
   photoBtn: {

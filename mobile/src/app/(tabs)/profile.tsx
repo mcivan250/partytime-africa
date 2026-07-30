@@ -23,6 +23,7 @@ import {
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth-context';
 import { pickImage, uploadImage } from '@/lib/storage';
+import { track } from '@/lib/analytics';
 import { supabase } from '@/lib/supabase';
 import type { Tables } from '@/types/database';
 
@@ -70,6 +71,7 @@ function AuthForm() {
       // "check your email" screen so it's obvious what to do next.
       setPendingEmail(email.trim());
       setMessage(null);
+      track('sign_up');
     }
     setBusy(false);
   };
@@ -204,7 +206,7 @@ function AuthForm() {
 // Visible build marker — bumped every ship. If you can read this at the
 // bottom of the Profile, you are on this build; if it's absent, the surface
 // is running an older cached bundle and needs a redeploy/reload.
-const BUILD_TAG = 'build 2026.07.26 · launch-ready';
+const BUILD_TAG = 'build 2026.07.26 · analytics+hardening';
 
 type Stats = { hosting: number; going: number; tickets: number };
 type NextEvent = {

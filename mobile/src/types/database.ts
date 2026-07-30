@@ -1371,6 +1371,31 @@ export type Database = {
         }
         Relationships: []
       }
+      app_events: {
+        Row: {
+          id: number
+          profile_id: string | null
+          name: string
+          props: Record<string, unknown>
+          platform: string | null
+          created_at: string
+        }
+        Insert: {
+          profile_id?: string | null
+          name: string
+          props?: Record<string, unknown>
+          platform?: string | null
+          created_at?: string
+        }
+        Update: {
+          profile_id?: string | null
+          name?: string
+          props?: Record<string, unknown>
+          platform?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
       venue_claims: {
         Row: {
           id: string
@@ -1626,6 +1651,10 @@ export type Database = {
       admin_mark_promoter_payout: {
         Args: { p_id: string; p_status: string }
         Returns: undefined
+      }
+      admin_funnel: {
+        Args: { p_days?: number }
+        Returns: { name: string; events: number; users: number }[]
       }
       request_friend: { Args: { p_other: string }; Returns: string }
       respond_friend: { Args: { p_other: string; p_accept: boolean }; Returns: undefined }

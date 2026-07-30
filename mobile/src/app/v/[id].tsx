@@ -26,6 +26,7 @@ import {
   Spacing,
   StateGo,
 } from '@/constants/theme';
+import { track } from '@/lib/analytics';
 import { tapLight, tapSuccess } from '@/lib/haptics';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
@@ -151,6 +152,7 @@ export default function VenueScreen() {
       return;
     }
     tapSuccess();
+    track('reservation_request', { venue_id: venue.id });
     setDone(true);
   };
 

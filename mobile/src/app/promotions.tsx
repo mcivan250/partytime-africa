@@ -25,6 +25,7 @@ import {
   StateGo,
 } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { track } from '@/lib/analytics';
 import { useAuth } from '@/lib/auth-context';
 import { formatMoney } from '@/lib/money';
 import { supabase } from '@/lib/supabase';
@@ -88,6 +89,7 @@ export default function PromotionsScreen() {
       return;
     }
     const sentTo = destination.trim();
+    track('payout_request');
     setDestination('');
     setNotice(`Payout requested 🎉 We'll send it to ${sentTo}.`);
     await load();
@@ -104,10 +106,12 @@ export default function PromotionsScreen() {
 
   const share = (r: Promotion) => {
     const link = `https://partytime.africa/e/${r.event_slug}?ref=${r.code}`;
+    track('promote_share', { event_id: r.event_id, channel: 'native' });
     Share.share({ message: `Pull up to ${r.event_title} 🎉 Get your tickets:\n${link}` });
   };
   const shareWa = (r: Promotion) => {
     const link = `https://partytime.africa/e/${r.event_slug}?ref=${r.code}`;
+    track('promote_share', { event_id: r.event_id, channel: 'whatsapp' });
     const msg = `Pull up to ${r.event_title} 🎉 Get your tickets:\n${link}`;
     const url = `https://wa.me/?text=${encodeURIComponent(msg)}`;
     Linking.canOpenURL(url).then((ok) => Linking.openURL(ok ? url : msg));
