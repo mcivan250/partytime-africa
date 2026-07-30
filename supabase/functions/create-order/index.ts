@@ -33,8 +33,14 @@ async function pesapalToken(base: string): Promise<string> {
       consumer_secret: Deno.env.get('PESAPAL_CONSUMER_SECRET'),
     }),
   });
-  const data = await res.json();
-  if (!data?.token) throw new Error('Pesapal auth failed');
+  const data = await res.json().catch(() => ({}));
+  if (!data?.token) {
+    // Surface Pesapal's actual rejection reason (e.g. invalid key/secret,
+    // account not activated) into the logs and the thrown error.
+    const detail = data?.error?.code || data?.error?.message || data?.message || `HTTP ${res.status}`;
+    console.error('pesapal auth failed', res.status, JSON.stringify(data));
+    throw new Error(`Pesapal auth failed: ${detail}`);
+  }
   return data.token;
 }
 
@@ -57,8 +63,11 @@ async function ensureIpnId(base: string, token: string, admin: ReturnType<typeof
     },
     body: JSON.stringify({ url: ipnUrl, ipn_notification_type: 'GET' }),
   });
-  const data = await res.json();
-  if (!data?.ipn_id) throw new Error('Pesapal IPN registration failed');
+  const data = await res.json().catch(() => ({}));
+  if (!data?.ipn_id) {
+    console.error('pesapal IPN registration failed', res.status, JSON.stringify(data));
+    throw new Error(`Pesapal IPN registration failed: ${data?.error?.code || data?.message || res.status}`);
+  }
   await admin
     .from('app_config')
     .upsert({ key: 'pesapal_ipn_id', value: data.ipn_id, updated_at: new Date().toISOString() });
@@ -207,8 +216,12 @@ Deno.serve(async (req) => {
       .eq('id', order.id);
 
     return json({ redirect_url: submitData.redirect_url, order_id: order.id });
-  } catch (_e) {
+  } catch (e) {
+    const detail = e instanceof Error ? e.message : String(e);
+    console.error('create-order failed:', detail);
     await admin.from('orders').update({ status: 'failed' }).eq('id', order.id);
-    return json({ error: 'Could not reach the payment provider.' }, 502);
+    // Pass the (non-sensitive) provider reason back so it's visible while
+    // going live; it's a Pesapal error code, never our keys.
+    return json({ error: `Payment setup failed — ${detail}` }, 502);
   }
 });
