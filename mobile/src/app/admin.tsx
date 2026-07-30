@@ -13,7 +13,15 @@ import { supabase } from '@/lib/supabase';
 
 type Member = { id: string; name: string; city: string | null; suspended: boolean; created_at: string };
 type Post = { id: string; author_name: string; body: string; image_path: string | null; created_at: string };
-type Venue = { id: string; name: string; kind: string; city: string | null; cover_url: string | null };
+type Venue = {
+  id: string;
+  name: string;
+  kind: string;
+  city: string | null;
+  cover_url: string | null;
+  logo_url: string | null;
+  menu_url: string | null;
+};
 type Reservation = {
   id: string;
   venue_name: string;
@@ -97,7 +105,7 @@ export default function AdminScreen() {
     const [mRes, pRes, vRes, rRes] = await Promise.all([
       supabase.rpc('admin_members'),
       supabase.rpc('admin_recent_posts'),
-      supabase.from('venues').select('id, name, kind, city, cover_url').order('name'),
+      supabase.from('venues').select('id, name, kind, city, cover_url, logo_url, menu_url').order('name'),
       supabase.rpc('admin_list_reservations'),
     ]);
     if (mRes.error && pRes.error) {
@@ -193,6 +201,8 @@ export default function AdminScreen() {
           kind: vKind,
           city: vCity.trim() || 'Kampala',
           cover_url: null,
+          logo_url: null,
+          menu_url: null,
         },
       ].sort((a, b) => a.name.localeCompare(b.name)),
     );
@@ -214,6 +224,58 @@ export default function AdminScreen() {
       tapSuccess();
     } catch (e) {
       Alert.alert('Upload failed', e instanceof Error ? e.message : 'Could not set the photo.');
+    } finally {
+      setUploadingId(null);
+    }
+  };
+
+  const setLogo = async (v: Venue) => {
+    try {
+      const picked = await pickImage([1, 1]);
+      if (!picked) return;
+      setUploadingId(v.id);
+      const { url } = await uploadImage('venue-covers', `${v.id}/logo`, picked);
+      const { error } = await supabase.rpc('set_venue_logo', { p_id: v.id, p_logo_url: url });
+      if (error) throw error;
+      setVenues((prev) => prev.map((x) => (x.id === v.id ? { ...x, logo_url: url } : x)));
+      tapSuccess();
+    } catch (e) {
+      Alert.alert('Upload failed', e instanceof Error ? e.message : 'Could not set the logo.');
+    } finally {
+      setUploadingId(null);
+    }
+  };
+
+  const addPhoto = async (v: Venue) => {
+    try {
+      const picked = await pickImage([4, 3]);
+      if (!picked) return;
+      setUploadingId(v.id);
+      const { url } = await uploadImage('venue-covers', `${v.id}/gallery`, picked);
+      const { error } = await supabase.rpc('add_venue_photo', { p_venue_id: v.id, p_url: url });
+      if (error) throw error;
+      tapSuccess();
+      Alert.alert('Photo added', 'It now shows in the venue’s gallery.');
+    } catch (e) {
+      Alert.alert('Upload failed', e instanceof Error ? e.message : 'Could not add the photo.');
+    } finally {
+      setUploadingId(null);
+    }
+  };
+
+  // Menus are uploaded as an image (a photo of the menu) — no crop.
+  const setMenu = async (v: Venue) => {
+    try {
+      const picked = await pickImage([3, 4], false);
+      if (!picked) return;
+      setUploadingId(v.id);
+      const { url } = await uploadImage('venue-covers', `${v.id}/menu`, picked);
+      const { error } = await supabase.rpc('set_venue_menu', { p_id: v.id, p_menu_url: url });
+      if (error) throw error;
+      setVenues((prev) => prev.map((x) => (x.id === v.id ? { ...x, menu_url: url } : x)));
+      tapSuccess();
+    } catch (e) {
+      Alert.alert('Upload failed', e instanceof Error ? e.message : 'Could not set the menu.');
     } finally {
       setUploadingId(null);
     }
@@ -534,34 +596,50 @@ export default function AdminScreen() {
             </ThemedView>
 
             {venues.map((v) => (
-              <ThemedView key={v.id} type="backgroundElement" style={styles.row}>
-                {v.cover_url ? (
-                  <Image source={{ uri: v.cover_url }} style={styles.venueThumb} contentFit="cover" />
-                ) : (
-                  <View style={[styles.venueThumb, styles.venueThumbEmpty]}>
+              <ThemedView key={v.id} type="backgroundElement" style={styles.venueCard}>
+                <View style={styles.row}>
+                  {v.cover_url ? (
+                    <Image source={{ uri: v.cover_url }} style={styles.venueThumb} contentFit="cover" />
+                  ) : (
+                    <View style={[styles.venueThumb, styles.venueThumbEmpty]}>
+                      <ThemedText type="small" themeColor="textSecondary">
+                        No photo
+                      </ThemedText>
+                    </View>
+                  )}
+                  <View style={styles.flex}>
+                    <ThemedText type="smallBold">{v.name}</ThemedText>
                     <ThemedText type="small" themeColor="textSecondary">
-                      No photo
+                      {v.kind} · {v.city ?? 'Kampala'}
+                    </ThemedText>
+                    <ThemedText type="small" themeColor="textSecondary">
+                      {v.logo_url ? 'Logo ✓' : 'No logo'} · {v.menu_url ? 'Menu ✓' : 'No menu'}
                     </ThemedText>
                   </View>
-                )}
-                <View style={styles.flex}>
-                  <ThemedText type="smallBold">{v.name}</ThemedText>
-                  <ThemedText type="small" themeColor="textSecondary">
-                    {v.kind} · {v.city ?? 'Kampala'}
-                  </ThemedText>
+                  {uploadingId === v.id ? <ActivityIndicator color={Brand} /> : null}
                 </View>
-                <Pressable
-                  style={styles.photoBtn}
-                  disabled={uploadingId === v.id}
-                  onPress={() => setCover(v)}>
-                  {uploadingId === v.id ? (
-                    <ActivityIndicator color={Brand} />
-                  ) : (
+                <View style={styles.venueActions}>
+                  <Pressable style={styles.miniBtn} disabled={uploadingId === v.id} onPress={() => setCover(v)}>
                     <ThemedText type="smallBold" style={styles.photoText}>
-                      {v.cover_url ? 'Replace' : '📷 Photo'}
+                      {v.cover_url ? '📷 Cover' : '📷 Cover'}
                     </ThemedText>
-                  )}
-                </Pressable>
+                  </Pressable>
+                  <Pressable style={styles.miniBtn} disabled={uploadingId === v.id} onPress={() => setLogo(v)}>
+                    <ThemedText type="smallBold" style={styles.photoText}>
+                      🏷️ Logo
+                    </ThemedText>
+                  </Pressable>
+                  <Pressable style={styles.miniBtn} disabled={uploadingId === v.id} onPress={() => addPhoto(v)}>
+                    <ThemedText type="smallBold" style={styles.photoText}>
+                      ＋ Photo
+                    </ThemedText>
+                  </Pressable>
+                  <Pressable style={styles.miniBtn} disabled={uploadingId === v.id} onPress={() => setMenu(v)}>
+                    <ThemedText type="smallBold" style={styles.photoText}>
+                      📄 Menu
+                    </ThemedText>
+                  </Pressable>
+                </View>
               </ThemedView>
             ))}
           </>
@@ -711,6 +789,15 @@ const styles = StyleSheet.create({
   barFill: { height: 8, borderRadius: 999, backgroundColor: Brand },
   venueThumb: { width: 52, height: 52, borderRadius: 12 },
   venueThumbEmpty: { alignItems: 'center', justifyContent: 'center', backgroundColor: '#243527' },
+  venueCard: { borderRadius: 16, padding: Spacing.three, gap: Spacing.two },
+  venueActions: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
+  miniBtn: {
+    borderRadius: 999,
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+  },
   photoBtn: {
     borderRadius: 999,
     paddingVertical: Spacing.two,

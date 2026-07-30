@@ -39,6 +39,8 @@ type Venue = {
   address: string | null;
   description: string | null;
   cover_url: string | null;
+  logo_url: string | null;
+  menu_url: string | null;
   phone: string | null;
   price_range: string | null;
   cuisines: string[];
@@ -89,6 +91,7 @@ export default function VenueScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { session } = useAuth();
   const [venue, setVenue] = useState<Venue | null>(null);
+  const [photos, setPhotos] = useState<string[]>([]);
   const [events, setEvents] = useState<EventLite[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -104,10 +107,10 @@ export default function VenueScreen() {
 
   const load = useCallback(async () => {
     if (!id) return;
-    const [vRes, eRes] = await Promise.all([
+    const [vRes, eRes, pRes] = await Promise.all([
       supabase
         .from('venues')
-        .select('id, name, kind, city, address, description, cover_url, phone, price_range, cuisines, hours, owner_id')
+        .select('id, name, kind, city, address, description, cover_url, logo_url, menu_url, phone, price_range, cuisines, hours, owner_id')
         .eq('id', id)
         .maybeSingle(),
       supabase
@@ -116,8 +119,14 @@ export default function VenueScreen() {
         .eq('venue_id', id)
         .eq('status', 'published')
         .order('starts_at', { ascending: true }),
+      supabase
+        .from('venue_photos')
+        .select('url')
+        .eq('venue_id', id)
+        .order('position', { ascending: true }),
     ]);
     setVenue((vRes.data ?? null) as Venue | null);
+    setPhotos((pRes.data ?? []).map((p) => p.url));
     const now = Date.now();
     const upcoming = ((eRes.data ?? []) as EventLite[]).filter(
       (e) => !e.starts_at || new Date(e.starts_at).getTime() >= now - 6 * 3600 * 1000,
@@ -207,14 +216,32 @@ export default function VenueScreen() {
           )}
         </View>
 
-        <ThemedText type="small" style={{ color: vibe.accent }}>
-          {KIND_LABEL[venue.kind] ?? 'Venue'}
-          {venue.price_range ? `  ·  ${venue.price_range}` : ''}
-        </ThemedText>
-        <ThemedText style={styles.title}>{venue.name}</ThemedText>
-        <ThemedText type="small" themeColor="textSecondary">
-          {[venue.address, venue.city ?? 'Kampala'].filter(Boolean).join(' · ')}
-        </ThemedText>
+        <View style={styles.headerRow}>
+          {venue.logo_url ? (
+            <Image source={{ uri: venue.logo_url }} style={styles.logo} contentFit="cover" />
+          ) : null}
+          <View style={styles.flex}>
+            <ThemedText type="small" style={{ color: vibe.accent }}>
+              {KIND_LABEL[venue.kind] ?? 'Venue'}
+              {venue.price_range ? `  ·  ${venue.price_range}` : ''}
+            </ThemedText>
+            <ThemedText style={styles.title}>{venue.name}</ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              {[venue.address, venue.city ?? 'Kampala'].filter(Boolean).join(' · ')}
+            </ThemedText>
+          </View>
+        </View>
+
+        {photos.length > 0 ? (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.gallery}>
+            {photos.map((url) => (
+              <Image key={url} source={{ uri: url }} style={styles.galleryImg} contentFit="cover" />
+            ))}
+          </ScrollView>
+        ) : null}
 
         {venue.cuisines.length > 0 ? (
           <View style={styles.tagRow}>
@@ -261,6 +288,18 @@ export default function VenueScreen() {
               }}>
               <ThemedText type="smallBold" style={styles.callText}>
                 📞 Call
+              </ThemedText>
+            </Pressable>
+          ) : null}
+          {venue.menu_url ? (
+            <Pressable
+              style={styles.ghostAction}
+              onPress={() => {
+                tapLight();
+                Linking.openURL(venue.menu_url!);
+              }}>
+              <ThemedText type="smallBold" style={styles.callText}>
+                📄 Menu
               </ThemedText>
             </Pressable>
           ) : null}
@@ -467,6 +506,17 @@ const styles = StyleSheet.create({
   },
   hero: { borderRadius: 22, overflow: 'hidden', marginBottom: Spacing.two },
   heroImg: { width: '100%', height: 200, borderRadius: 22 },
+  headerRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
+  logo: {
+    width: 56,
+    height: 56,
+    borderRadius: 14,
+    backgroundColor: '#243527',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+  },
+  gallery: { gap: Spacing.two, paddingVertical: Spacing.one },
+  galleryImg: { width: 150, height: 110, borderRadius: 14 },
   title: { fontFamily: DisplayFont, fontSize: 30, color: '#EFF6EE', lineHeight: 34 },
   desc: { marginTop: Spacing.two, lineHeight: 22 },
   tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two, marginTop: Spacing.two },

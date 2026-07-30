@@ -9,15 +9,18 @@ type PickedImage = { base64: string; mimeType: string; extension: string };
  * Opens the image library and returns the chosen image as base64, or null if
  * the user cancels. Requests permission on demand.
  */
-export async function pickImage(aspect: [number, number] = [16, 9]): Promise<PickedImage | null> {
+export async function pickImage(
+  aspect: [number, number] = [16, 9],
+  allowsEditing = true,
+): Promise<PickedImage | null> {
   const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
   if (!permission.granted) {
     throw new Error('Photo library permission is required to upload an image.');
   }
   const result = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: ['images'],
-    allowsEditing: true,
-    aspect,
+    allowsEditing,
+    aspect: allowsEditing ? aspect : undefined,
     quality: 0.7,
     base64: true,
   });

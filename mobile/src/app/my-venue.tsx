@@ -120,6 +120,59 @@ export default function MyVenueScreen() {
     }
   };
 
+  const changeLogo = async () => {
+    if (!venue) return;
+    try {
+      const picked = await pickImage([1, 1]);
+      if (!picked) return;
+      setUploading(true);
+      const { url } = await uploadImage('venue-covers', `${venue.id}/logo`, picked);
+      const { error } = await supabase.rpc('set_venue_logo', { p_id: venue.id, p_logo_url: url });
+      if (error) throw error;
+      tapSuccess();
+    } catch (e) {
+      Alert.alert('Upload failed', e instanceof Error ? e.message : 'Could not set the logo.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const addPhoto = async () => {
+    if (!venue) return;
+    try {
+      const picked = await pickImage([4, 3]);
+      if (!picked) return;
+      setUploading(true);
+      const { url } = await uploadImage('venue-covers', `${venue.id}/gallery`, picked);
+      const { error } = await supabase.rpc('add_venue_photo', { p_venue_id: venue.id, p_url: url });
+      if (error) throw error;
+      tapSuccess();
+      Alert.alert('Photo added', 'It now shows in your venue’s gallery.');
+    } catch (e) {
+      Alert.alert('Upload failed', e instanceof Error ? e.message : 'Could not add the photo.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const changeMenu = async () => {
+    if (!venue) return;
+    try {
+      const picked = await pickImage([3, 4], false);
+      if (!picked) return;
+      setUploading(true);
+      const { url } = await uploadImage('venue-covers', `${venue.id}/menu`, picked);
+      const { error } = await supabase.rpc('set_venue_menu', { p_id: venue.id, p_menu_url: url });
+      if (error) throw error;
+      tapSuccess();
+      Alert.alert('Menu updated', 'Guests can now tap “Menu” on your page.');
+    } catch (e) {
+      Alert.alert('Upload failed', e instanceof Error ? e.message : 'Could not set the menu.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const setStatus = async (r: Reservation, status: 'confirmed' | 'declined') => {
     setReservations((prev) => prev.map((x) => (x.id === r.id ? { ...x, status } : x)));
     const { error } = await supabase.rpc('owner_set_reservation_status', { p_id: r.id, p_status: status });
@@ -251,6 +304,23 @@ export default function MyVenueScreen() {
                 </ThemedText>
               )}
             </Pressable>
+            <View style={styles.mediaRow}>
+              <Pressable style={styles.mediaBtn} disabled={uploading} onPress={changeLogo}>
+                <ThemedText type="smallBold" style={styles.photoText}>
+                  🏷️ Logo
+                </ThemedText>
+              </Pressable>
+              <Pressable style={styles.mediaBtn} disabled={uploading} onPress={addPhoto}>
+                <ThemedText type="smallBold" style={styles.photoText}>
+                  ＋ Photo
+                </ThemedText>
+              </Pressable>
+              <Pressable style={styles.mediaBtn} disabled={uploading} onPress={changeMenu}>
+                <ThemedText type="smallBold" style={styles.photoText}>
+                  📄 Menu
+                </ThemedText>
+              </Pressable>
+            </View>
 
             <ThemedText type="small" themeColor="textSecondary">
               Description
@@ -375,6 +445,14 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.one,
   },
   photoText: { color: '#EFF6EE' },
+  mediaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two, marginBottom: Spacing.two },
+  mediaBtn: {
+    borderRadius: 999,
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+  },
   input: {
     backgroundColor: '#243527',
     borderRadius: 12,

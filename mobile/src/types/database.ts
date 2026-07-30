@@ -1483,6 +1483,38 @@ export type Database = {
         }
         Relationships: []
       }
+      venue_photos: {
+        Row: {
+          created_at: string
+          id: string
+          position: number
+          url: string
+          venue_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          position?: number
+          url: string
+          venue_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          position?: number
+          url?: string
+          venue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "venue_photos_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       venues: {
         Row: {
           address: string | null
@@ -1497,6 +1529,8 @@ export type Database = {
           kind: string
           lat: number | null
           lng: number | null
+          logo_url: string | null
+          menu_url: string | null
           name: string
           owner_id: string | null
           phone: string | null
@@ -1513,6 +1547,8 @@ export type Database = {
           kind?: string
           lat?: number | null
           lng?: number | null
+          logo_url?: string | null
+          menu_url?: string | null
           name: string
           owner_id?: string | null
           phone?: string | null
@@ -1525,6 +1561,8 @@ export type Database = {
           id?: string
           lat?: number | null
           lng?: number | null
+          logo_url?: string | null
+          menu_url?: string | null
           name?: string
           owner_id?: string | null
         }
@@ -1608,6 +1646,11 @@ export type Database = {
         Returns: { notified: number; skipped: number }
       }
       claim_plus_one: { Args: { p_token: string }; Returns: { slug: string; title: string } }
+      venue_can_manage: { Args: { p_venue_id: string }; Returns: boolean }
+      set_venue_logo: { Args: { p_id: string; p_logo_url: string }; Returns: undefined }
+      set_venue_menu: { Args: { p_id: string; p_menu_url: string }; Returns: undefined }
+      add_venue_photo: { Args: { p_venue_id: string; p_url: string }; Returns: string }
+      remove_venue_photo: { Args: { p_photo_id: string }; Returns: undefined }
       is_admin: { Args: Record<PropertyKey, never>; Returns: boolean }
       admin_members: {
         Args: Record<PropertyKey, never>
