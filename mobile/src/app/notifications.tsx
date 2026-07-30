@@ -84,6 +84,24 @@ function render(n: Note): { icon: string; title: string; body: string; onPress: 
       onPress: () => router.push('/venues'),
     };
   }
+  if (n.ntype === 'payout_update') {
+    const paid = p.status === 'paid';
+    const amt = formatMoney(Number(p.amount_minor ?? 0), String(p.currency ?? 'UGX'));
+    return {
+      icon: paid ? '💰' : p.status === 'failed' ? '⚠️' : '⏳',
+      title: paid
+        ? `${amt} paid out`
+        : p.status === 'failed'
+          ? `Payout of ${amt} failed`
+          : `Payout of ${amt} is processing`,
+      body: paid
+        ? 'Your promoter earnings are on the way. 🎉'
+        : p.status === 'failed'
+          ? 'We couldn’t send it — your balance is back so you can try again.'
+          : 'We’re sending your earnings now.',
+      onPress: () => router.push('/promotions'),
+    };
+  }
   if (n.ntype === 'event_message') {
     return {
       icon: '📣',

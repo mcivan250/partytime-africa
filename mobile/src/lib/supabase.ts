@@ -16,7 +16,10 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     ...(Platform.OS !== 'web' ? { storage: AsyncStorage } : {}),
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: false,
+    // On web, parse the tokens Supabase appends when someone returns from an
+    // email confirmation link so they're logged in automatically (and the URL
+    // is cleaned up). Native uses its own deep-link handling, so keep it off.
+    detectSessionInUrl: Platform.OS === 'web',
   },
 });
 

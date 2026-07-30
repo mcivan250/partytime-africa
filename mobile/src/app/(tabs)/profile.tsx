@@ -26,6 +26,14 @@ import { pickImage, uploadImage } from '@/lib/storage';
 import { supabase } from '@/lib/supabase';
 import type { Tables } from '@/types/database';
 
+// Confirmation links should return people to the live web app (or the current
+// origin on web), never a dev/localhost URL.
+function authRedirectTo() {
+  return Platform.OS === 'web' && typeof window !== 'undefined'
+    ? window.location.origin
+    : 'https://partytime.africa';
+}
+
 function AuthForm() {
   const theme = useTheme();
   const [mode, setMode] = useState<'sign-in' | 'sign-up'>('sign-in');
@@ -35,6 +43,7 @@ function AuthForm() {
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
 
   const submit = async () => {
     if (mode === 'sign-up' && phone.trim().replace(/\D/g, '').length < 9) {
@@ -51,20 +60,30 @@ function AuthForm() {
             password,
             options: {
               data: { display_name: displayName.trim(), phone: phone.trim() },
-              // Send the confirmation link back to the live web app so people
-              // land on Party Time (not a dev/localhost URL) and can log in.
-              emailRedirectTo:
-                Platform.OS === 'web' && typeof window !== 'undefined'
-                  ? window.location.origin
-                  : 'https://partytime.africa',
+              emailRedirectTo: authRedirectTo(),
             },
           });
     if (error) {
       setMessage(error.message);
     } else if (mode === 'sign-up') {
-      setMessage('Account created. Check your email if confirmation is required.');
+      // If confirmation is required there's no session yet — show the
+      // "check your email" screen so it's obvious what to do next.
+      setPendingEmail(email.trim());
+      setMessage(null);
     }
     setBusy(false);
+  };
+
+  const resend = async () => {
+    if (!pendingEmail) return;
+    setBusy(true);
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: pendingEmail,
+      options: { emailRedirectTo: authRedirectTo() },
+    });
+    setBusy(false);
+    setMessage(error ? error.message : 'Sent again — check your inbox (and spam).');
   };
 
   const inputStyle = [
@@ -93,6 +112,38 @@ function AuthForm() {
         </ThemedText>
       </View>
 
+      {pendingEmail ? (
+        <ThemedView type="backgroundElement" style={styles.formCard}>
+          <ThemedText style={styles.confirmGlyph}>📩</ThemedText>
+          <ThemedText type="subtitle" style={styles.confirmTitle}>
+            Confirm your email
+          </ThemedText>
+          <ThemedText type="small" themeColor="textSecondary" style={styles.confirmBody}>
+            We sent a link to {pendingEmail}. Tap it to verify your email, then come back here and
+            sign in. Check spam if it&apos;s not there in a minute.
+          </ThemedText>
+          {message ? (
+            <ThemedText type="small" style={styles.confirmBody}>
+              {message}
+            </ThemedText>
+          ) : null}
+          <Pressable style={[styles.cta, { opacity: busy ? 0.5 : 1 }]} onPress={resend} disabled={busy}>
+            <ThemedText type="smallBold" style={styles.ctaLabel}>
+              Resend email
+            </ThemedText>
+          </Pressable>
+          <Pressable
+            onPress={() => {
+              setPendingEmail(null);
+              setMessage(null);
+              setMode('sign-in');
+            }}>
+            <ThemedText type="link" style={styles.authSwitch}>
+              Back to sign in
+            </ThemedText>
+          </Pressable>
+        </ThemedView>
+      ) : (
       <ThemedView type="backgroundElement" style={styles.formCard}>
         {mode === 'sign-up' && (
           <>
@@ -145,6 +196,7 @@ function AuthForm() {
           </ThemedText>
         </Pressable>
       </ThemedView>
+      )}
     </View>
   );
 }
@@ -152,7 +204,7 @@ function AuthForm() {
 // Visible build marker — bumped every ship. If you can read this at the
 // bottom of the Profile, you are on this build; if it's absent, the surface
 // is running an older cached bundle and needs a redeploy/reload.
-const BUILD_TAG = 'build 2026.07.26 · guest-messaging';
+const BUILD_TAG = 'build 2026.07.26 · launch-ready';
 
 type Stats = { hosting: number; going: number; tickets: number };
 type NextEvent = {
@@ -794,6 +846,17 @@ const styles = StyleSheet.create({
   authSwitch: {
     textAlign: 'center',
     marginTop: Spacing.one,
+  },
+  confirmGlyph: {
+    fontSize: 40,
+    textAlign: 'center',
+  },
+  confirmTitle: {
+    textAlign: 'center',
+  },
+  confirmBody: {
+    textAlign: 'center',
+    lineHeight: 20,
   },
   formCard: {
     borderRadius: 22,

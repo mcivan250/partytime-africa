@@ -194,14 +194,33 @@ export default function PromotionsScreen() {
           <ActivityIndicator color={Brand} style={styles.loader} />
         ) : rows.length === 0 ? (
           <ThemedView type="backgroundElement" style={styles.emptyCard}>
-            <ThemedText type="subtitle">Start earning</ThemedText>
+            <ThemedText type="subtitle">Earn by promoting events 💸</ThemedText>
             <ThemedText type="small" themeColor="textSecondary" style={styles.emptyText}>
-              Open any event and tap “Promote &amp; earn” to get your link. Share it — you earn a cut
-              of every ticket you sell.
+              Every ticket sold through your link puts money in your pocket. Here&apos;s how:
             </ThemedText>
+            <View style={styles.steps}>
+              <View style={styles.step}>
+                <ThemedText style={styles.stepNum}>1</ThemedText>
+                <ThemedText type="small" style={styles.stepText}>
+                  Open any event and tap “Promote &amp; earn” to get your personal link.
+                </ThemedText>
+              </View>
+              <View style={styles.step}>
+                <ThemedText style={styles.stepNum}>2</ThemedText>
+                <ThemedText type="small" style={styles.stepText}>
+                  Share it on WhatsApp, status, or wherever your people are.
+                </ThemedText>
+              </View>
+              <View style={styles.step}>
+                <ThemedText style={styles.stepNum}>3</ThemedText>
+                <ThemedText type="small" style={styles.stepText}>
+                  Earn a cut of every ticket you sell — then cash out to mobile money.
+                </ThemedText>
+              </View>
+            </View>
             <Pressable style={styles.browse} onPress={() => router.push('/')}>
               <ThemedText type="smallBold" style={styles.browseLabel}>
-                Browse events
+                Browse events to promote
               </ThemedText>
             </Pressable>
           </ThemedView>
@@ -356,6 +375,30 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   emptyText: {
+    lineHeight: 20,
+  },
+  steps: {
+    gap: Spacing.two,
+    marginVertical: Spacing.one,
+  },
+  step: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.two,
+  },
+  stepNum: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: Gold,
+    color: '#1A1403',
+    textAlign: 'center',
+    lineHeight: 22,
+    fontWeight: '700',
+    overflow: 'hidden',
+  },
+  stepText: {
+    flex: 1,
     lineHeight: 20,
   },
   browse: {

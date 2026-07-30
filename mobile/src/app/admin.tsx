@@ -7,6 +7,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Brand, MaxContentWidth, OnBrand, Spacing, StateGo } from '@/constants/theme';
 import { tapSuccess } from '@/lib/haptics';
 import { useAuth } from '@/lib/auth-context';
+import { formatMoney } from '@/lib/money';
 import { pickImage, uploadImage } from '@/lib/storage';
 import { supabase } from '@/lib/supabase';
 
@@ -23,17 +24,36 @@ type Reservation = {
   status: string;
 };
 type Claim = { id: string; venue_name: string; claimant: string; note: string | null };
+type Payout = {
+  id: string;
+  promoter: string;
+  amount_minor: number;
+  currency: string;
+  destination: string;
+  status: string;
+  created_at: string;
+};
+
+type TabKey = 'bookings' | 'payouts' | 'members' | 'content' | 'venues';
+const TABS: { key: TabKey; label: string }[] = [
+  { key: 'bookings', label: 'Bookings' },
+  { key: 'payouts', label: 'Payouts' },
+  { key: 'members', label: 'Members' },
+  { key: 'content', label: 'Content' },
+  { key: 'venues', label: 'Venues' },
+];
 
 const VENUE_KINDS = ['bar', 'restaurant', 'club', 'lounge'];
 
 export default function AdminScreen() {
   const { session } = useAuth();
-  const [tab, setTab] = useState<'bookings' | 'members' | 'content' | 'venues'>('bookings');
+  const [tab, setTab] = useState<TabKey>('bookings');
   const [members, setMembers] = useState<Member[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [venues, setVenues] = useState<Venue[]>([]);
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [claims, setClaims] = useState<Claim[]>([]);
+  const [payouts, setPayouts] = useState<Payout[]>([]);
   const [loading, setLoading] = useState(true);
   const [denied, setDenied] = useState(false);
 
@@ -61,11 +81,26 @@ export default function AdminScreen() {
       setPosts((pRes.data ?? []) as Post[]);
       setVenues((vRes.data ?? []) as Venue[]);
       setReservations((rRes.data ?? []) as Reservation[]);
-      const { data: cRows } = await supabase.rpc('admin_list_claims');
+      const [{ data: cRows }, { data: payRows }] = await Promise.all([
+        supabase.rpc('admin_list_claims'),
+        supabase.rpc('admin_list_promoter_payouts'),
+      ]);
       setClaims((cRows ?? []) as Claim[]);
+      setPayouts((payRows ?? []) as Payout[]);
     }
     setLoading(false);
   }, []);
+
+  const markPayout = async (p: Payout, status: 'processing' | 'paid' | 'failed') => {
+    setPayouts((prev) => prev.map((x) => (x.id === p.id ? { ...x, status } : x)));
+    const { error } = await supabase.rpc('admin_mark_promoter_payout', { p_id: p.id, p_status: status });
+    if (error) {
+      Alert.alert('Could not update', error.message);
+      setPayouts((prev) => prev.map((x) => (x.id === p.id ? { ...x, status: p.status } : x)));
+      return;
+    }
+    tapSuccess();
+  };
 
   const resolveClaim = async (c: Claim, approve: boolean) => {
     setClaims((prev) => prev.filter((x) => x.id !== c.id));
@@ -177,27 +212,17 @@ export default function AdminScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <View style={styles.segment}>
-        <Pressable style={[styles.segItem, tab === 'bookings' && styles.segOn]} onPress={() => setTab('bookings')}>
-          <ThemedText type="smallBold" style={tab === 'bookings' ? styles.segOnText : styles.segText}>
-            Bookings
-          </ThemedText>
-        </Pressable>
-        <Pressable style={[styles.segItem, tab === 'members' && styles.segOn]} onPress={() => setTab('members')}>
-          <ThemedText type="smallBold" style={tab === 'members' ? styles.segOnText : styles.segText}>
-            Members
-          </ThemedText>
-        </Pressable>
-        <Pressable style={[styles.segItem, tab === 'content' && styles.segOn]} onPress={() => setTab('content')}>
-          <ThemedText type="smallBold" numberOfLines={1} style={tab === 'content' ? styles.segOnText : styles.segText}>
-            Content
-          </ThemedText>
-        </Pressable>
-        <Pressable style={[styles.segItem, tab === 'venues' && styles.segOn]} onPress={() => setTab('venues')}>
-          <ThemedText type="smallBold" style={tab === 'venues' ? styles.segOnText : styles.segText}>
-            Venues
-          </ThemedText>
-        </Pressable>
+      <View style={styles.segmentWrap}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.segment}>
+          {TABS.map((t) => (
+            <Pressable key={t.key} style={[styles.segItem, tab === t.key && styles.segOn]} onPress={() => setTab(t.key)}>
+              <ThemedText type="smallBold" numberOfLines={1} style={tab === t.key ? styles.segOnText : styles.segText}>
+                {t.label}
+                {t.key === 'payouts' && payouts.some((p) => p.status === 'requested') ? ' •' : ''}
+              </ThemedText>
+            </Pressable>
+          ))}
+        </ScrollView>
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -260,6 +285,65 @@ export default function AdminScreen() {
                         onPress={() => setReservation(r, 'declined')}>
                         <ThemedText type="smallBold" style={styles.suspendText}>
                           Decline
+                        </ThemedText>
+                      </Pressable>
+                    </View>
+                  ) : null}
+                </ThemedView>
+              );
+            })
+          )
+        ) : tab === 'payouts' ? (
+          payouts.length === 0 ? (
+            <ThemedText type="small" themeColor="textSecondary" style={styles.empty}>
+              No payout requests yet. When promoters cash out, requests land here to mark paid.
+            </ThemedText>
+          ) : (
+            payouts.map((p) => {
+              const open = p.status === 'requested' || p.status === 'processing';
+              return (
+                <ThemedView key={p.id} type="backgroundElement" style={styles.bookingCard}>
+                  <View style={styles.bookingTop}>
+                    <View style={styles.flex}>
+                      <ThemedText type="smallBold">{formatMoney(p.amount_minor, p.currency)}</ThemedText>
+                      <ThemedText type="small" themeColor="textSecondary">
+                        {p.promoter} · {p.destination}
+                      </ThemedText>
+                      <ThemedText type="small" themeColor="textSecondary">
+                        {new Date(p.created_at).toLocaleDateString()} · {p.status}
+                      </ThemedText>
+                    </View>
+                    {!open ? (
+                      <View
+                        style={[
+                          styles.statusPill,
+                          p.status === 'paid' ? styles.statusConfirmed : styles.statusDeclined,
+                        ]}>
+                        <ThemedText
+                          type="small"
+                          style={p.status === 'paid' ? styles.unsuspendText : styles.suspendText}>
+                          {p.status === 'paid' ? 'Paid' : 'Failed'}
+                        </ThemedText>
+                      </View>
+                    ) : null}
+                  </View>
+                  {open ? (
+                    <View style={styles.bookingActions}>
+                      <Pressable style={[styles.actionBtn, styles.unsuspend, styles.flex]} onPress={() => markPayout(p, 'paid')}>
+                        <ThemedText type="smallBold" style={styles.unsuspendText}>
+                          Mark paid
+                        </ThemedText>
+                      </Pressable>
+                      {p.status === 'requested' ? (
+                        <Pressable style={[styles.actionBtn, styles.processingBtn]} onPress={() => markPayout(p, 'processing')}>
+                          <ThemedText type="smallBold" style={styles.processingText}>
+                            Processing
+                          </ThemedText>
+                        </Pressable>
+                      ) : null}
+                      <Pressable style={[styles.actionBtn, styles.suspend]} onPress={() => markPayout(p, 'failed')}>
+                        <ThemedText type="smallBold" style={styles.suspendText}>
+                          Fail
                         </ThemedText>
                       </Pressable>
                     </View>
@@ -445,19 +529,22 @@ export default function AdminScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   center: { justifyContent: 'center', alignItems: 'center', padding: Spacing.four },
+  segmentWrap: {
+    marginHorizontal: Spacing.four,
+    marginTop: Spacing.four,
+    marginBottom: Spacing.two,
+    maxWidth: MaxContentWidth,
+    alignSelf: 'center',
+    width: '100%',
+  },
   segment: {
     flexDirection: 'row',
     backgroundColor: '#19231B',
     borderRadius: 999,
     padding: 4,
     gap: 4,
-    margin: Spacing.four,
-    marginBottom: Spacing.two,
-    maxWidth: MaxContentWidth,
-    alignSelf: 'center',
-    width: '90%',
   },
-  segItem: { flex: 1, alignItems: 'center', paddingVertical: Spacing.two, borderRadius: 999 },
+  segItem: { alignItems: 'center', paddingVertical: Spacing.two, paddingHorizontal: Spacing.three, borderRadius: 999 },
   segOn: { backgroundColor: Brand },
   segText: { color: '#94A697' },
   segOnText: { color: OnBrand },
@@ -520,6 +607,8 @@ const styles = StyleSheet.create({
   statusPill: { borderRadius: 999, paddingVertical: Spacing.one, paddingHorizontal: Spacing.three },
   statusConfirmed: { backgroundColor: 'rgba(61,220,151,0.15)' },
   statusDeclined: { backgroundColor: 'rgba(247,53,88,0.15)' },
+  processingBtn: { backgroundColor: 'rgba(255,184,77,0.15)' },
+  processingText: { color: '#FFB84D' },
   venueThumb: { width: 52, height: 52, borderRadius: 12 },
   venueThumbEmpty: { alignItems: 'center', justifyContent: 'center', backgroundColor: '#243527' },
   photoBtn: {

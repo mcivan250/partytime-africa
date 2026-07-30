@@ -1611,6 +1611,22 @@ export type Database = {
         Args: { p_id: string; p_status: string }
         Returns: undefined
       }
+      admin_list_promoter_payouts: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          promoter: string
+          amount_minor: number
+          currency: string
+          destination: string
+          status: string
+          created_at: string
+        }[]
+      }
+      admin_mark_promoter_payout: {
+        Args: { p_id: string; p_status: string }
+        Returns: undefined
+      }
       request_friend: { Args: { p_other: string }; Returns: string }
       respond_friend: { Args: { p_other: string; p_accept: boolean }; Returns: undefined }
       remove_friend: { Args: { p_other: string }; Returns: undefined }
