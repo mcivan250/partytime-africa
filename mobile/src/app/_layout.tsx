@@ -10,10 +10,22 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 
+import * as Sentry from '@sentry/react-native';
+
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { BodyFontBold, Colors } from '@/constants/theme';
 import { track } from '@/lib/analytics';
 import { AuthProvider } from '@/lib/auth-context';
+
+// Crash & error monitoring. The DSN is a public client key; safe to ship.
+// Disabled in local dev so it only reports real production issues.
+Sentry.init({
+  dsn:
+    process.env.EXPO_PUBLIC_SENTRY_DSN ??
+    'https://4e57344f0ccc349ff35b382275fdfe4d@o4511824519495680.ingest.us.sentry.io/4511824531030016',
+  enabled: !__DEV__,
+  tracesSampleRate: 0.2,
+});
 
 SplashScreen.preventAutoHideAsync();
 
@@ -30,7 +42,7 @@ const navTheme = {
   },
 };
 
-export default function RootLayout() {
+function RootLayout() {
   const [fontsLoaded] = useFonts({
     Unbounded_700Bold,
     Unbounded_900Black,
@@ -153,3 +165,5 @@ export default function RootLayout() {
     </AuthProvider>
   );
 }
+
+export default Sentry.wrap(RootLayout);
