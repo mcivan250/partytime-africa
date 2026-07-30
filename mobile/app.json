@@ -47,6 +47,12 @@
         {
           "cameraPermission": "Party Time uses the camera so hosts can scan guests' ticket QR codes at the door."
         }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Party Time uses your location to recommend the best events, bars and restaurants near you."
+        }
       ]
     ],
     "experiments": {

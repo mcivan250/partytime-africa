@@ -1,7 +1,10 @@
-// plan-my-night: Party Time's AI nightlife concierge. Reads upcoming public
-// events and recommends the best matches for a natural-language request
-// ("chill rooftop this weekend under 50k"). Uses Claude when ANTHROPIC_API_KEY
-// is set; otherwise falls back to a keyword/price heuristic so it still works.
+// plan-my-night: Party Time's AI nightlife & dining concierge. Reads upcoming
+// public events AND the curated venue guide (bars, restaurants, lounges, clubs)
+// and recommends the best matches for a natural-language request — "chill
+// rooftop this weekend under 50k" or "fine dining for a dinner date". When the
+// caller shares their location, results are distance-aware ("1.2 km away").
+// Uses Claude when ANTHROPIC_API_KEY is set; otherwise a keyword/price/distance
+// heuristic so it still works.
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
@@ -33,7 +36,27 @@ function money(minor: number, ccy: string) {
   return `${ccy} ${major.toLocaleString()}`;
 }
 
+// Great-circle distance in km between two lat/lng points.
+function distanceKm(a: LatLng, b: LatLng): number {
+  const R = 6371;
+  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
+  const dLng = ((b.lng - a.lng) * Math.PI) / 180;
+  const la1 = (a.lat * Math.PI) / 180;
+  const la2 = (b.lat * Math.PI) / 180;
+  const x = Math.sin(dLat / 2) ** 2 + Math.cos(la1) * Math.cos(la2) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(x));
+}
+function distanceLabel(km: number | null): string | null {
+  if (km == null) return null;
+  if (km < 1) return `${Math.round(km * 1000)} m away`;
+  if (km < 10) return `${km.toFixed(1)} km away`;
+  return `${Math.round(km)} km away`;
+}
+
+type LatLng = { lat: number; lng: number };
+
 type Ev = {
+  type: 'event';
   slug: string;
   title: string;
   starts_at: string | null;
@@ -46,7 +69,25 @@ type Ev = {
   description: string | null;
   from_minor: number | null;
   currency: string;
+  distance_km: number | null;
 };
+
+type Ve = {
+  type: 'venue';
+  id: string;
+  title: string; // = name, so the client can render picks uniformly
+  name: string;
+  kind: string;
+  city: string | null;
+  address: string | null;
+  description: string | null;
+  cover_url: string | null;
+  price_range: string | null;
+  cuisines: string[];
+  distance_km: number | null;
+};
+
+type Pick = Ev | Ve;
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
@@ -60,6 +101,12 @@ Deno.serve(async (req) => {
   }
   const query = typeof body.query === 'string' ? body.query.trim().slice(0, 300) : '';
   const city = typeof body.city === 'string' && body.city.trim() ? body.city.trim() : 'Kampala';
+  const lat = Number(body.lat);
+  const lng = Number(body.lng);
+  const here: LatLng | null =
+    Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180
+      ? { lat, lng }
+      : null;
   if (!query) return json({ error: 'Ask me what you feel like doing.' }, 400);
 
   const admin = createClient(
@@ -68,19 +115,28 @@ Deno.serve(async (req) => {
   );
 
   const nowIso = new Date().toISOString();
-  const { data: rows } = await admin
-    .from('events')
-    .select('slug, title, starts_at, venue_name, address, timezone, cover_url, theme, is_ticketed, description, ticket_tiers(price_minor, currency)')
-    .eq('status', 'published')
-    .eq('visibility', 'public')
-    .gte('starts_at', nowIso)
-    .order('starts_at', { ascending: true })
-    .limit(40);
+  const [{ data: eventRows }, { data: venueRows }] = await Promise.all([
+    admin
+      .from('events')
+      .select('slug, title, starts_at, venue_name, address, lat, lng, timezone, cover_url, theme, is_ticketed, description, ticket_tiers(price_minor, currency)')
+      .eq('status', 'published')
+      .eq('visibility', 'public')
+      .gte('starts_at', nowIso)
+      .order('starts_at', { ascending: true })
+      .limit(40),
+    admin
+      .from('venues')
+      .select('id, name, kind, city, address, lat, lng, description, cover_url, price_range, cuisines')
+      .limit(40),
+  ]);
 
-  const events: Ev[] = (rows ?? []).map((r) => {
+  const events: Ev[] = (eventRows ?? []).map((r) => {
     const tiers = (r.ticket_tiers as { price_minor: number; currency: string }[] | null) ?? [];
     const min = tiers.length ? tiers.reduce((a, b) => (b.price_minor < a.price_minor ? b : a)) : null;
+    const evLat = r.lat as number | null;
+    const evLng = r.lng as number | null;
     return {
+      type: 'event',
       slug: r.slug,
       title: r.title,
       starts_at: r.starts_at,
@@ -93,31 +149,55 @@ Deno.serve(async (req) => {
       description: r.description,
       from_minor: min ? min.price_minor : null,
       currency: min ? min.currency : 'UGX',
+      distance_km: here && evLat != null && evLng != null ? distanceKm(here, { lat: evLat, lng: evLng }) : null,
     };
   });
 
-  if (events.length === 0) {
-    return json({ intro: `Nothing's on the calendar in ${city} yet — check back soon.`, picks: [] });
+  const venues: Ve[] = (venueRows ?? []).map((r) => {
+    const vLat = r.lat as number | null;
+    const vLng = r.lng as number | null;
+    return {
+      type: 'venue',
+      id: r.id,
+      title: r.name,
+      name: r.name,
+      kind: r.kind,
+      city: r.city,
+      address: r.address,
+      description: r.description,
+      cover_url: r.cover_url,
+      price_range: r.price_range,
+      cuisines: (r.cuisines as string[] | null) ?? [],
+      distance_km: here && vLat != null && vLng != null ? distanceKm(here, { lat: vLat, lng: vLng }) : null,
+    };
+  });
+
+  if (events.length === 0 && venues.length === 0) {
+    return json({ intro: `Nothing's on the map in ${city} yet — check back soon.`, picks: [] });
   }
 
-  const bySlug = new Map(events.map((e) => [e.slug, e]));
-  const decorate = (picks: { slug: string; reason: string }[]) =>
+  // Unified ref lookup: "e:<slug>" for events, "v:<id>" for venues.
+  const byRef = new Map<string, Pick>();
+  for (const e of events) byRef.set(`e:${e.slug}`, e);
+  for (const v of venues) byRef.set(`v:${v.id}`, v);
+
+  const decorate = (picks: { ref: string; reason: string }[]) =>
     picks
       .map((p) => {
-        const e = bySlug.get(p.slug);
-        if (!e) return null;
-        return { ...e, reason: p.reason };
+        const item = byRef.get(p.ref);
+        if (!item) return null;
+        return { ...item, reason: p.reason };
       })
       .filter(Boolean)
-      .slice(0, 4);
+      .slice(0, 5);
 
   const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
 
   // --- Claude path ---
   if (apiKey) {
     try {
-      const catalog = events
-        .map((e, i) => {
+      const eventLines = events
+        .map((e) => {
           const when = e.starts_at
             ? new Date(e.starts_at).toLocaleString('en-US', {
                 weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
@@ -125,11 +205,25 @@ Deno.serve(async (req) => {
               })
             : 'TBA';
           const price = e.from_minor != null ? `from ${money(e.from_minor, e.currency)}` : 'free entry';
-          return `${i + 1}. slug:"${e.slug}" | ${e.title} | ${when} | ${e.venue_name ?? 'venue TBA'} | ${price} | vibe:${e.theme} | ${(e.description ?? '').slice(0, 120)}`;
+          const dist = distanceLabel(e.distance_km);
+          return `ref:"e:${e.slug}" | EVENT | ${e.title} | ${when} | ${e.venue_name ?? 'venue TBA'} | ${price} | vibe:${e.theme}${dist ? ` | ${dist}` : ''} | ${(e.description ?? '').slice(0, 110)}`;
+        })
+        .join('\n');
+      const venueLines = venues
+        .map((v) => {
+          const dist = distanceLabel(v.distance_km);
+          const cuisine = v.cuisines.length ? ` | ${v.cuisines.join(', ')}` : '';
+          return `ref:"v:${v.id}" | PLACE | ${v.name} | ${v.kind} | ${v.price_range ?? ''}${cuisine}${dist ? ` | ${dist}` : ''} | ${(v.description ?? '').slice(0, 110)}`;
         })
         .join('\n');
 
-      const sys = `You are Party Time's nightlife concierge for ${city} — you know the city's scene and talk like a plugged-in local friend, never a brochure. Recommend the best events for the user's request from the list ONLY. Never invent events, venues, prices, or times. Match on vibe, budget, timing and location; prefer the best fit first, then soonest. Read budget cues ("under 50k", "cheap", "free") and honour them strictly. Reply with STRICT JSON only, no prose, no markdown fences: {"intro": string (one warm, specific sentence — reference the vibe they asked for), "picks": [{"slug": string (must match a slug above exactly), "reason": string (max 12 words, concrete reason it fits — the vibe, price, or timing)}]}. Up to 4 picks, best first. If nothing genuinely fits, return an empty picks array with a friendly, honest intro.`;
+      const sys = `You are Party Time's concierge for ${city} — you know the city's nightlife AND dining scene and talk like a plugged-in local friend, never a brochure. You recommend two kinds of things:
+- EVENTS: one-off happenings on a specific date (parties, shows, ladies' nights).
+- PLACES: bars, restaurants, lounges and clubs from our curated guide, open regularly (great for "dinner with my wife", "fine dining", "a nice bar", "date night").
+
+Pick the best matches for the user's request from the lists below ONLY. Never invent anything, and never change a price, time or name. Choose the right TYPE for the intent: a dinner/date/food/drinks request should lean on PLACES (match cuisine, price tier — $ cheap to $$$$ fine dining — and vibe); a "what's happening / tonight / this weekend / party" request should lean on EVENTS. Mix both only when it genuinely helps. Honour budget cues strictly. When "away" distances are shown and the user wants something nearby, prefer closer options.
+
+Reply with STRICT JSON only, no prose, no markdown fences: {"intro": string (one warm, specific sentence that speaks to what they asked for), "picks": [{"ref": string (must copy a ref value above EXACTLY, including the e:/v: prefix), "reason": string (max 12 words — the concrete reason it fits: the cuisine, vibe, price, or timing)}]}. Up to 5 picks, best first. If nothing genuinely fits, return an empty picks array with a friendly, honest intro.`;
 
       const res = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
@@ -140,9 +234,14 @@ Deno.serve(async (req) => {
         },
         body: JSON.stringify({
           model: MODEL,
-          max_tokens: 700,
+          max_tokens: 900,
           system: sys,
-          messages: [{ role: 'user', content: `Events:\n${catalog}\n\nUser: ${query}` }],
+          messages: [
+            {
+              role: 'user',
+              content: `EVENTS:\n${eventLines || '(none on the calendar right now)'}\n\nPLACES:\n${venueLines || '(no places listed yet)'}\n\nUser: ${query}`,
+            },
+          ],
         }),
       });
       const data = await res.json();
@@ -152,7 +251,7 @@ Deno.serve(async (req) => {
         const text = claudeText(data);
         const match = text.match(/\{[\s\S]*\}/);
         if (match) {
-          const parsed = JSON.parse(match[0]) as { intro?: string; picks?: { slug: string; reason: string }[] };
+          const parsed = JSON.parse(match[0]) as { intro?: string; picks?: { ref: string; reason: string }[] };
           return json({
             intro: parsed.intro ?? "Here's what I'd do:",
             picks: decorate(parsed.picks ?? []),
@@ -172,32 +271,63 @@ Deno.serve(async (req) => {
   const capMatch = q.match(/(\d+)\s*k/);
   const cap = capMatch ? parseInt(capMatch[1], 10) * 1000 : null;
   const freeWanted = /free|cheap|broke/.test(q);
+  const diningWanted = /dinner|lunch|eat|food|restaurant|dining|dine|cuisine|date|wife|husband|romantic|brunch/.test(q);
+  const drinksWanted = /drink|bar|cocktail|lounge|wine|beer|rooftop/.test(q);
   const tokens = q.split(/[^a-z0-9]+/).filter((t) => t.length > 3);
 
-  const scored = events
-    .map((e) => {
-      let score = 0;
-      const hay = `${e.title} ${e.venue_name ?? ''} ${e.address ?? ''} ${e.description ?? ''} ${e.theme}`.toLowerCase();
-      for (const t of tokens) if (hay.includes(t)) score += 2;
-      if (freeWanted && !e.is_ticketed) score += 3;
-      if (cap != null && e.from_minor != null && e.from_minor <= cap) score += 2;
-      if (cap != null && e.from_minor != null && e.from_minor > cap) score -= 3;
-      return { e, score };
-    })
-    .sort((a, b) => b.score - a.score || (a.e.starts_at ?? '').localeCompare(b.e.starts_at ?? ''));
+  const scored: { item: Pick; score: number }[] = [];
 
-  const top = scored.slice(0, 4).map(({ e }) => ({
-    ...e,
-    reason:
-      cap != null && e.from_minor != null && e.from_minor <= cap
-        ? `Within budget · from ${money(e.from_minor, e.currency)}`
-        : !e.is_ticketed
+  for (const e of events) {
+    let score = 0;
+    const hay = `${e.title} ${e.venue_name ?? ''} ${e.address ?? ''} ${e.description ?? ''} ${e.theme}`.toLowerCase();
+    for (const t of tokens) if (hay.includes(t)) score += 2;
+    if (freeWanted && !e.is_ticketed) score += 3;
+    if (cap != null && e.from_minor != null && e.from_minor <= cap) score += 2;
+    if (cap != null && e.from_minor != null && e.from_minor > cap) score -= 3;
+    if (diningWanted) score -= 2; // a dinner request is usually about a place, not an event
+    if (e.distance_km != null && e.distance_km < 5) score += 1;
+    scored.push({ item: e, score });
+  }
+
+  for (const v of venues) {
+    let score = 0;
+    const hay = `${v.name} ${v.kind} ${v.address ?? ''} ${v.description ?? ''} ${v.cuisines.join(' ')}`.toLowerCase();
+    for (const t of tokens) if (hay.includes(t)) score += 2;
+    if (diningWanted && v.kind === 'restaurant') score += 4;
+    if (drinksWanted && (v.kind === 'bar' || v.kind === 'lounge' || v.kind === 'club')) score += 4;
+    if (/fine|fancy|upscale|classy|nice/.test(q) && v.price_range === '$$$') score += 2;
+    if (v.distance_km != null && v.distance_km < 5) score += 1;
+    scored.push({ item: v, score });
+  }
+
+  scored.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    const da = a.item.distance_km ?? Infinity;
+    const db = b.item.distance_km ?? Infinity;
+    return da - db;
+  });
+
+  const top = scored.slice(0, 5).map(({ item }) => {
+    const dist = distanceLabel(item.distance_km);
+    if (item.type === 'venue') {
+      const cuisine = item.cuisines[0];
+      const reason = dist ?? (cuisine ? `${cuisine} · ${item.price_range ?? ''}`.trim() : `${item.kind} in ${item.city ?? city}`);
+      return { ...item, reason };
+    }
+    const reason =
+      dist ??
+      (cap != null && item.from_minor != null && item.from_minor <= cap
+        ? `Within budget · from ${money(item.from_minor, item.currency)}`
+        : !item.is_ticketed
           ? 'Free entry · easy night out'
-          : 'Coming up soon in your city',
-  }));
+          : 'Coming up soon in your city');
+    return { ...item, reason };
+  });
 
   return json({
-    intro: `Here's what's good in ${city} right now:`,
+    intro: diningWanted
+      ? `Great picks for a meal out in ${city}:`
+      : `Here's what's good in ${city} right now:`,
     picks: top,
     ai: false,
   });
