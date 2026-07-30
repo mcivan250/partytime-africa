@@ -8,9 +8,12 @@
     "scheme": "partytime",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "africa.partytime.app",
+      "supportsTablet": true
     },
     "android": {
+      "package": "africa.partytime.app",
       "adaptiveIcon": {
         "backgroundColor": "#111811",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
