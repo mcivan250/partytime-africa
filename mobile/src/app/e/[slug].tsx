@@ -137,12 +137,31 @@ function GuestRsvp({ slug, eventId }: { slug: string; eventId: string }) {
   };
 
   if (confirmed) {
+    if (confirmed === 'declined') {
+      return (
+        <ThemedText type="smallBold" style={{ color: StateGo }}>
+          Thanks for letting the host know.
+        </ThemedText>
+      );
+    }
     return (
-      <ThemedText type="smallBold" style={{ color: StateGo }}>
-        {confirmed === 'declined'
-          ? 'Thanks for letting the host know.'
-          : `You're on the list, ${guestName.trim()}! 🎉`}
-      </ThemedText>
+      <View style={styles.guestForm}>
+        <ThemedText type="smallBold" style={{ color: StateGo }}>
+          You&apos;re on the list, {guestName.trim()}! 🎉
+        </ThemedText>
+        <ThemedText type="small" themeColor="textSecondary">
+          Know someone who&apos;d love this? Invite them 👇
+        </ThemedText>
+        <Pressable
+          style={[styles.shareButton, styles.shareWhatsApp]}
+          onPress={() =>
+            Share.share({ message: `You're invited! RSVP here: https://partytime.africa/e/${slug}` })
+          }>
+          <ThemedText type="smallBold" style={styles.onState}>
+            Invite a friend
+          </ThemedText>
+        </Pressable>
+      </View>
     );
   }
 
@@ -379,6 +398,8 @@ export default function EventScreen() {
   const [error, setError] = useState<string | null>(null);
   const [buyNotice, setBuyNotice] = useState<string | null>(null);
   const [cohostStatus, setCohostStatus] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [invitePrompt, setInvitePrompt] = useState(false);
   const [minTier, setMinTier] = useState<{ price_minor: number; currency: string } | null>(null);
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
@@ -452,8 +473,25 @@ export default function EventScreen() {
     } else {
       setCohostStatus(null);
     }
+    if (session) {
+      const { data: adm } = await supabase.rpc('is_admin');
+      setIsAdmin(adm === true);
+    } else {
+      setIsAdmin(false);
+    }
     setLoading(false);
   }, [slug, session]);
+
+  const toggleFeatured = async () => {
+    if (!event) return;
+    const next = !event.featured;
+    setEvent({ ...event, featured: next });
+    const { error: fErr } = await supabase.rpc('admin_set_event_featured', {
+      p_id: event.id,
+      p_featured: next,
+    });
+    if (fErr) setEvent({ ...event, featured: !next });
+  };
 
   const requestCohost = async () => {
     if (!session) {
@@ -613,6 +651,7 @@ export default function EventScreen() {
       if (insertError) setError(insertError.message);
       else track('rsvp', { status });
     }
+    if (status === 'going') setInvitePrompt(true);
     await load();
     setSaving(false);
   };
@@ -733,12 +772,42 @@ export default function EventScreen() {
                 {event.allow_plus_ones && myRsvp?.status === 'going' && myRsvp.id ? (
                   <PlusOnesEditor rsvpId={myRsvp.id} eventTitle={event.title} />
                 ) : null}
+                {invitePrompt && myRsvp?.status === 'going' ? (
+                  <View style={styles.invitePrompt}>
+                    <ThemedText type="smallBold" style={styles.invitePromptTitle}>
+                      🎉 You&apos;re on the list!
+                    </ThemedText>
+                    <ThemedText type="small" themeColor="textSecondary">
+                      Bring the crew — every friend you invite makes the night better.
+                    </ThemedText>
+                    <View style={styles.shareRow}>
+                      <Pressable style={[styles.shareButton, styles.shareWhatsApp]} onPress={shareWhatsApp}>
+                        <ThemedText type="smallBold" style={styles.onState}>
+                          Invite on WhatsApp
+                        </ThemedText>
+                      </Pressable>
+                      <Pressable style={[styles.shareButton, styles.shareGhost]} onPress={shareInvite}>
+                        <ThemedText type="smallBold">Share link</ThemedText>
+                      </Pressable>
+                    </View>
+                  </View>
+                ) : null}
               </>
             ) : (
               <GuestRsvp slug={event.slug} eventId={event.id} />
             )}
             {error ? <ThemedText type="small">{error}</ThemedText> : null}
           </ThemedView>
+
+          {isAdmin ? (
+            <Pressable style={styles.adminBar} onPress={toggleFeatured}>
+              <ThemedText type="smallBold" style={styles.adminBarText}>
+                {event.featured
+                  ? '★ Featured on Discover — tap to remove'
+                  : '☆ Feature this on Discover'}
+              </ThemedText>
+            </Pressable>
+          ) : null}
 
           <ThemedView type="backgroundElement" style={styles.infoCard}>
             <View style={styles.infoBlock}>
@@ -1083,6 +1152,29 @@ const styles = StyleSheet.create({
   },
   onState: {
     color: OnBrand,
+  },
+  invitePrompt: {
+    marginTop: Spacing.two,
+    padding: Spacing.three,
+    borderRadius: 14,
+    gap: Spacing.two,
+    backgroundColor: 'rgba(29,201,107,0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(29,201,107,0.35)',
+  },
+  invitePromptTitle: {
+    color: StateGo,
+  },
+  adminBar: {
+    borderRadius: 14,
+    paddingVertical: Spacing.three,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Gold,
+    backgroundColor: 'rgba(212,175,55,0.10)',
+  },
+  adminBarText: {
+    color: Gold,
   },
   poWrap: {
     gap: Spacing.two,

@@ -1668,6 +1668,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      admin_set_event_featured: { Args: { p_id: string; p_featured: boolean }; Returns: undefined }
       venue_directory: {
         Args: Record<PropertyKey, never>
         Returns: {
