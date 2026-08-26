@@ -19,6 +19,7 @@ type Venue = {
   city: string | null;
   description: string | null;
   cover_url: string | null;
+  logo_url: string | null;
   price_range: string | null;
   cuisines: string[];
 };
@@ -53,7 +54,7 @@ export default function VenuesScreen() {
   const load = useCallback(async () => {
     const { data } = await supabase
       .from('venues')
-      .select('id, name, kind, city, description, cover_url, price_range, cuisines')
+      .select('id, name, kind, city, description, cover_url, logo_url, price_range, cuisines')
       .order('name');
     setVenues((data ?? []) as Venue[]);
     setLoading(false);
@@ -129,6 +130,9 @@ export default function VenuesScreen() {
                       {KIND_LABEL[v.kind] ?? 'Venue'}
                     </ThemedText>
                   </View>
+                  {v.logo_url ? (
+                    <Image source={{ uri: v.logo_url }} style={styles.logo} contentFit="cover" transition={200} />
+                  ) : null}
                   <View style={styles.info}>
                     <ThemedText style={styles.name} numberOfLines={1}>
                       {v.name}
@@ -203,6 +207,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.two,
   },
   badgeText: { color: OnBrand, fontSize: 11 },
+  logo: {
+    position: 'absolute',
+    top: Spacing.three,
+    right: Spacing.three,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.35)',
+    backgroundColor: 'rgba(0,0,0,0.25)',
+  },
   info: { padding: Spacing.three, gap: Spacing.one },
   name: { fontFamily: DisplayFont, fontSize: 22, color: '#FFFFFF' },
   meta: { color: 'rgba(255,255,255,0.82)' },
