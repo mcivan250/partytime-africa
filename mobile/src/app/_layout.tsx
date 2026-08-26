@@ -164,6 +164,10 @@ function RootLayout() {
             name="i/[token]"
             options={{ headerShown: true, headerTitle: "You're invited" }}
           />
+          <Stack.Screen
+            name="edit-event/[eventId]"
+            options={{ headerShown: true, headerTitle: 'Edit event' }}
+          />
         </Stack>
       </ThemeProvider>
     </AuthProvider>

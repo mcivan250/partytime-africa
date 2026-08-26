@@ -1651,6 +1651,37 @@ export type Database = {
       set_venue_menu: { Args: { p_id: string; p_menu_url: string }; Returns: undefined }
       add_venue_photo: { Args: { p_venue_id: string; p_url: string }; Returns: string }
       remove_venue_photo: { Args: { p_photo_id: string }; Returns: undefined }
+      host_update_event: {
+        Args: {
+          p_id: string
+          p_title: string
+          p_description: string
+          p_venue_name: string
+          p_venue_id: string | null
+          p_address: string
+          p_starts_at: string | null
+          p_theme: string
+          p_cover_url: string | null
+          p_visibility: string
+          p_allow_plus_ones: boolean
+          p_playlist_url: string
+        }
+        Returns: undefined
+      }
+      venue_directory: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          name: string
+          kind: string
+          city: string | null
+          description: string | null
+          cover_url: string | null
+          logo_url: string | null
+          price_range: string | null
+          cuisines: string[]
+        }[]
+      }
       is_admin: { Args: Record<PropertyKey, never>; Returns: boolean }
       admin_members: {
         Args: Record<PropertyKey, never>

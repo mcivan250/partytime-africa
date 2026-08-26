@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, ScrollView, Share, StyleSheet, TextInput, View } from 'react-native';
 
 import { SectionLabel } from '@/components/section-label';
 import { ThemedText } from '@/components/themed-text';
@@ -168,6 +168,13 @@ export default function ManageEventScreen() {
     setBlastResult(data?.note ?? 'Message sent. 📣');
   };
 
+  const shareEvent = async () => {
+    if (!event) return;
+    await Share.share({
+      message: `${event.title} — RSVP & get tickets on Party Time 👇\nhttps://partytime.africa/e/${event.slug}`,
+    });
+  };
+
   const startEditTier = (t: Tier) => {
     setEditTierId(t.id);
     setEditQty(String(t.quantity));
@@ -284,6 +291,21 @@ export default function ManageEventScreen() {
         <Pressable onPress={() => router.push({ pathname: '/e/[slug]', params: { slug: event.slug } })}>
           <ThemedText type="link">View public event page →</ThemedText>
         </Pressable>
+
+        <View style={styles.topActions}>
+          <Pressable
+            style={styles.topBtn}
+            onPress={() => router.push({ pathname: '/edit-event/[eventId]', params: { eventId: event.id } })}>
+            <ThemedText type="smallBold" style={styles.topBtnText}>
+              ✏️ Edit details
+            </ThemedText>
+          </Pressable>
+          <Pressable style={[styles.topBtn, styles.topBtnPrimary]} onPress={shareEvent}>
+            <ThemedText type="smallBold" style={styles.onBrand}>
+              📣 Share / Promote
+            </ThemedText>
+          </Pressable>
+        </View>
 
         <View style={styles.tileGrid}>
           <StatTile value={String(going)} label="GOING" color={StateGo} />
@@ -670,6 +692,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   onBrand: { color: OnBrand },
+  topActions: { flexDirection: 'row', gap: Spacing.two },
+  topBtn: {
+    flex: 1,
+    borderRadius: 14,
+    paddingVertical: Spacing.three,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.16)',
+  },
+  topBtnPrimary: { backgroundColor: StateGo, borderColor: 'transparent' },
+  topBtnText: { color: '#EFF6EE' },
   rateRow: {
     flexDirection: 'row',
     gap: Spacing.two,

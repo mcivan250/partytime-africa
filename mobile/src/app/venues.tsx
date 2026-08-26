@@ -52,10 +52,8 @@ export default function VenuesScreen() {
   const [filter, setFilter] = useState('all');
 
   const load = useCallback(async () => {
-    const { data } = await supabase
-      .from('venues')
-      .select('id, name, kind, city, description, cover_url, logo_url, price_range, cuisines')
-      .order('name');
+    // Ranked: venues with a photo first, then recent booking traction, then name.
+    const { data } = await supabase.rpc('venue_directory');
     setVenues((data ?? []) as Venue[]);
     setLoading(false);
   }, []);
