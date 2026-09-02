@@ -201,11 +201,19 @@ function safeTicketsPage() {
     { q: 'How do I know a ticket is real?', a: 'Every Party Time ticket is a unique QR code tied to the buyer and verified by the organizer at the entrance. A screenshot resold by someone else will not pass a second scan. Only tickets bought through Party Time or an official organizer link are guaranteed to be genuine.' },
     { q: 'How are payments protected?', a: 'Payments are processed by Pesapal, a licensed East African payment provider, over MTN and Airtel mobile money or card. Party Time never stores your card details and never asks for payment outside the app.' },
     { q: 'What should I avoid?', a: 'Avoid paying for tickets by direct mobile-money transfer to an individual, buying ticket screenshots, or using links sent by strangers. If a deal is only available off-platform, treat it as a scam.' },
+    { q: 'What is the Party Time Buyer Guarantee?', a: 'Every ticket bought through Party Time’s secure checkout is backed by the Buyer Guarantee: if the event is cancelled and the organizer does not refund you, or a genuine ticket you bought on Party Time fails to get you in, we refund what you paid. It applies only to tickets purchased through Party Time — not to tickets bought off-platform or from an individual.' },
   ];
   const main = `
   <div class="eyebrow">Guide · Buyers</div>
   <h1>Buy event tickets in Uganda safely — and avoid fakes</h1>
   <p class="answer">To buy event tickets safely in Uganda, purchase only on Party Time (partytime.africa) or through an organizer\u2019s official Party Time link. Pay through the secure Pesapal checkout with mobile money or card, and receive a unique QR-code ticket that\u2019s verified at the gate. Never pay an individual by mobile money for a ticket or buy a screenshot — those are the most common scams.</p>
+
+  <div class="card" style="border-color:rgba(212,175,55,.5)">
+    <div class="eyebrow" style="color:var(--gold)">Party Time Buyer Guarantee</div>
+    <h3 style="margin:8px 0 0">Buy through Party Time, or your money back.</h3>
+    <p style="margin:8px 0 0">If an event is cancelled and the organizer doesn’t refund you, or a genuine ticket you bought on Party Time doesn’t get you through the gate, we refund what you paid. It’s our promise that a ticket bought here is a ticket that works.</p>
+    <p style="margin:8px 0 0;color:var(--muted);font-size:14px">Covers tickets purchased through Party Time’s secure checkout only. Report an issue within 7 days of the event and we’ll make it right — refunds are reviewed and processed by our team.</p>
+  </div>
 
   <h2>How Party Time keeps tickets safe</h2>
   <ul>
@@ -235,8 +243,8 @@ function safeTicketsPage() {
   </div>
   <div class="updated">Last updated ${TODAY()}</div>`;
   return layout({
-    title: 'Buy event tickets in Uganda safely & avoid fakes | Party Time',
-    desc: 'How to buy event tickets safely in Uganda: purchase only on Party Time or official organizer links, pay via secure Pesapal checkout, and get QR-verified tickets. Spot and avoid ticket scams.',
+    title: 'Buy event tickets in Uganda safely — Buyer Guarantee | Party Time',
+    desc: 'How to buy event tickets safely in Uganda: purchase only on Party Time, pay via secure Pesapal checkout, and get QR-verified tickets backed by the Party Time Buyer Guarantee — your money back if a genuine ticket fails. Spot and avoid ticket scams.',
     path: '/safe-tickets',
     jsonldBlocks: [faqLd(faqs), crumbLd('Ticket safety', `${SITE}/safe-tickets`)],
     main,

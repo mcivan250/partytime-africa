@@ -2,6 +2,7 @@ import { Image } from 'expo-image';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
+import { Appear } from '@/components/appear';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Brand, MaxContentWidth, OnBrand, Spacing, StateGo } from '@/constants/theme';
@@ -43,9 +44,26 @@ type Payout = {
 };
 
 type FunnelRow = { name: string; events: number; users: number };
-type TabKey = 'analytics' | 'bookings' | 'payouts' | 'members' | 'content' | 'venues';
+type EventPerf = {
+  id: string;
+  slug: string;
+  title: string;
+  starts_at: string | null;
+  cover_url: string | null;
+  featured: boolean;
+  status: string;
+  is_ticketed: boolean;
+  views: number;
+  checkouts: number;
+  paid_orders: number;
+  tickets_sold: number;
+  gross_minor: number;
+  currency: string;
+};
+type TabKey = 'analytics' | 'events' | 'bookings' | 'payouts' | 'members' | 'content' | 'venues';
 const TABS: { key: TabKey; label: string }[] = [
   { key: 'analytics', label: 'Analytics' },
+  { key: 'events', label: 'Events' },
   { key: 'bookings', label: 'Bookings' },
   { key: 'payouts', label: 'Payouts' },
   { key: 'members', label: 'Members' },
@@ -82,6 +100,9 @@ export default function AdminScreen() {
   const [tab, setTab] = useState<TabKey>('analytics');
   const [funnel, setFunnel] = useState<FunnelRow[]>([]);
   const [funnelDays, setFunnelDays] = useState(7);
+  const [perf, setPerf] = useState<EventPerf[]>([]);
+  const [perfDays, setPerfDays] = useState(30);
+  const [featuringId, setFeaturingId] = useState<string | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [venues, setVenues] = useState<Venue[]>([]);
@@ -130,9 +151,34 @@ export default function AdminScreen() {
     setFunnel((data ?? []) as FunnelRow[]);
   }, []);
 
+  const loadPerf = useCallback(async (days: number) => {
+    const { data } = await supabase.rpc('admin_event_performance', { p_days: days });
+    setPerf((data ?? []) as EventPerf[]);
+  }, []);
+
   useEffect(() => {
     if (session) loadFunnel(funnelDays);
   }, [session, funnelDays, loadFunnel]);
+
+  useEffect(() => {
+    if (session) loadPerf(perfDays);
+  }, [session, perfDays, loadPerf]);
+
+  // Premium placement is the revenue lever: featuring an event pins it to the
+  // top of Discover. Toggling it here is the paid-placement control.
+  const toggleFeatured = async (e: EventPerf) => {
+    const next = !e.featured;
+    setFeaturingId(e.id);
+    setPerf((prev) => prev.map((x) => (x.id === e.id ? { ...x, featured: next } : x)));
+    const { error } = await supabase.rpc('admin_set_event_featured', { p_id: e.id, p_featured: next });
+    setFeaturingId(null);
+    if (error) {
+      Alert.alert('Could not update placement', error.message);
+      setPerf((prev) => prev.map((x) => (x.id === e.id ? { ...x, featured: e.featured } : x)));
+      return;
+    }
+    tapSuccess();
+  };
 
   const markPayout = async (p: Payout, status: 'processing' | 'paid' | 'failed') => {
     setPayouts((prev) => prev.map((x) => (x.id === p.id ? { ...x, status } : x)));
@@ -374,6 +420,113 @@ export default function AdminScreen() {
               </>
             );
           })()
+        ) : tab === 'events' ? (
+          <>
+            <View style={styles.dayRow}>
+              {[7, 30, 90].map((d) => (
+                <Pressable
+                  key={d}
+                  style={[styles.dayChip, perfDays === d && styles.dayChipOn]}
+                  onPress={() => setPerfDays(d)}>
+                  <ThemedText type="small" style={perfDays === d ? styles.segOnText : styles.segText}>
+                    {d}d
+                  </ThemedText>
+                </Pressable>
+              ))}
+            </View>
+            <ThemedText type="small" themeColor="textSecondary" style={styles.perfHint}>
+              Which events are landing — and who to give premium placement. Featuring pins an event to
+              the top of Discover; sell that spot to promoters and advertisers.
+            </ThemedText>
+            {perf.length === 0 ? (
+              <ThemedText type="small" themeColor="textSecondary" style={styles.empty}>
+                No live or upcoming events to rank yet. Published events appear here with views, sales
+                and conversion so you can spot winners and boost them.
+              </ThemedText>
+            ) : (
+              perf.map((e, i) => {
+                const conv = e.views > 0 ? Math.round((e.paid_orders / e.views) * 100) : 0;
+                // Simple health read: momentum from attention + whether it's converting.
+                const signal =
+                  e.views >= 40 && (e.paid_orders > 0 || !e.is_ticketed)
+                    ? { label: '🔥 Hot', color: StateGo }
+                    : e.views >= 40
+                      ? { label: '👀 High interest', color: '#FFB84D' }
+                      : e.views > 0
+                        ? { label: '🌱 Warming up', color: '#94A697' }
+                        : { label: '💤 Quiet', color: '#94A697' };
+                const when = e.starts_at
+                  ? new Date(e.starts_at).toLocaleDateString(undefined, {
+                      weekday: 'short',
+                      day: 'numeric',
+                      month: 'short',
+                    })
+                  : 'Date TBA';
+                return (
+                  <Appear key={e.id} index={i}>
+                  <ThemedView type="backgroundElement" style={styles.perfCard}>
+                    <View style={styles.perfTop}>
+                      <View style={styles.flex}>
+                        <ThemedText type="smallBold" numberOfLines={1}>
+                          {e.title}
+                        </ThemedText>
+                        <ThemedText type="small" themeColor="textSecondary">
+                          {when}
+                          {e.status === 'draft' ? ' · draft' : ''}
+                        </ThemedText>
+                      </View>
+                      <View style={[styles.signalPill, { backgroundColor: `${signal.color}22` }]}>
+                        <ThemedText type="small" style={{ color: signal.color }}>
+                          {signal.label}
+                        </ThemedText>
+                      </View>
+                    </View>
+                    <View style={styles.metricRow}>
+                      <View style={styles.metric}>
+                        <ThemedText type="smallBold">{e.views}</ThemedText>
+                        <ThemedText type="small" themeColor="textSecondary">
+                          views
+                        </ThemedText>
+                      </View>
+                      <View style={styles.metric}>
+                        <ThemedText type="smallBold">{e.is_ticketed ? e.tickets_sold : '—'}</ThemedText>
+                        <ThemedText type="small" themeColor="textSecondary">
+                          tickets
+                        </ThemedText>
+                      </View>
+                      <View style={styles.metric}>
+                        <ThemedText type="smallBold">{e.is_ticketed ? `${conv}%` : '—'}</ThemedText>
+                        <ThemedText type="small" themeColor="textSecondary">
+                          convert
+                        </ThemedText>
+                      </View>
+                      <View style={styles.metric}>
+                        <ThemedText type="smallBold">
+                          {e.gross_minor > 0 ? formatMoney(e.gross_minor, e.currency) : '—'}
+                        </ThemedText>
+                        <ThemedText type="small" themeColor="textSecondary">
+                          gross
+                        </ThemedText>
+                      </View>
+                    </View>
+                    <Pressable
+                      style={[styles.featureBtn, e.featured ? styles.featureOn : styles.featureOff]}
+                      disabled={featuringId === e.id}
+                      onPress={() => toggleFeatured(e)}>
+                      {featuringId === e.id ? (
+                        <ActivityIndicator color={e.featured ? OnBrand : Brand} />
+                      ) : (
+                        <ThemedText type="smallBold" style={e.featured ? styles.segOnText : styles.featureOffText}>
+                          {e.featured ? '★ Featured — premium placement' : '☆ Give premium placement'}
+                        </ThemedText>
+                      )}
+                    </Pressable>
+                  </ThemedView>
+                  </Appear>
+                );
+              })
+            )}
+          </>
         ) : tab === 'bookings' ? (
           reservations.length === 0 ? (
             <ThemedText type="small" themeColor="textSecondary" style={styles.empty}>
@@ -782,6 +935,16 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.12)',
   },
   dayChipOn: { backgroundColor: Brand, borderColor: 'transparent' },
+  perfHint: { marginBottom: Spacing.two, lineHeight: 18 },
+  perfCard: { borderRadius: 16, padding: Spacing.three, gap: Spacing.three },
+  perfTop: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.two },
+  signalPill: { borderRadius: 999, paddingVertical: 3, paddingHorizontal: Spacing.two },
+  metricRow: { flexDirection: 'row', gap: Spacing.two },
+  metric: { flex: 1, alignItems: 'center', gap: 2 },
+  featureBtn: { borderRadius: 999, paddingVertical: Spacing.two, alignItems: 'center', borderWidth: 1 },
+  featureOn: { backgroundColor: Brand, borderColor: 'transparent' },
+  featureOff: { backgroundColor: 'transparent', borderColor: 'rgba(212,175,55,0.55)' },
+  featureOffText: { color: '#D4AF37' },
   funnelCard: { borderRadius: 14, padding: Spacing.three, gap: Spacing.two },
   funnelTop: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
   funnelNum: { color: '#EFF6EE' },

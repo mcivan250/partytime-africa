@@ -1815,6 +1815,25 @@ export type Database = {
         Args: { p_days?: number }
         Returns: { name: string; events: number; users: number }[]
       }
+      admin_event_performance: {
+        Args: { p_days?: number }
+        Returns: {
+          id: string
+          slug: string
+          title: string
+          starts_at: string | null
+          cover_url: string | null
+          featured: boolean
+          status: string
+          is_ticketed: boolean
+          views: number
+          checkouts: number
+          paid_orders: number
+          tickets_sold: number
+          gross_minor: number
+          currency: string
+        }[]
+      }
       request_friend: { Args: { p_other: string }; Returns: string }
       respond_friend: { Args: { p_other: string; p_accept: boolean }; Returns: undefined }
       remove_friend: { Args: { p_other: string }; Returns: undefined }

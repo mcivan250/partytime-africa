@@ -860,6 +860,14 @@ export default function EventScreen() {
               isManager={isManager}
               onBuy={buyTier}
             />
+            {event.is_ticketed ? (
+              <View style={styles.guaranteeRow}>
+                <ThemedText type="small" style={styles.guaranteeText}>
+                  🛡 Backed by the Party Time Buyer Guarantee — a real, QR-verified ticket, or your
+                  money back.
+                </ThemedText>
+              </View>
+            ) : null}
           </View>
 
           <VenueTables
@@ -1268,6 +1276,19 @@ const styles = StyleSheet.create({
     backgroundColor: '#19231B',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
+  },
+  guaranteeRow: {
+    marginTop: Spacing.two,
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(212,175,55,0.35)',
+    backgroundColor: 'rgba(212,175,55,0.06)',
+  },
+  guaranteeText: {
+    color: '#D4AF37',
+    lineHeight: 18,
   },
   chatHeader: {
     flexDirection: 'row',
