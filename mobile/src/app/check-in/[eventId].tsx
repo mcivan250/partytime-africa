@@ -25,36 +25,19 @@ export default function CheckInScreen() {
     if (!qr || busyRef.current) return;
     busyRef.current = true;
 
-    const { data: ticket } = await supabase
-      .from('tickets')
-      .select('id, attendee_name, status, ticket_tiers(name)')
-      .eq('qr_code', qr)
-      .eq('event_id', eventId)
-      .maybeSingle();
-
-    if (!ticket) {
-      setResult({ kind: 'error', text: 'Ticket not found for this event.' });
-    } else if (ticket.status === 'void') {
-      setResult({ kind: 'error', text: `${ticket.attendee_name}: ticket is void.` });
-    } else if (ticket.status === 'checked_in') {
-      setResult({ kind: 'warn', text: `${ticket.attendee_name} is already checked in.` });
+    // Verification runs server-side (check-in-ticket): it validates rotating
+    // signed tokens, accepts legacy static codes, and marks the ticket used.
+    const { data, error } = await supabase.functions.invoke('check-in-ticket', {
+      body: { code: qr, event_id: eventId },
+    });
+    if (error || !data || data.error) {
+      setResult({ kind: 'error', text: (data && data.error) || 'Could not check in — try again.' });
     } else {
-      const { data: userData } = await supabase.auth.getUser();
-      const { error } = await supabase
-        .from('tickets')
-        .update({
-          status: 'checked_in',
-          checked_in_at: new Date().toISOString(),
-          checked_in_by: userData.user?.id ?? null,
-        })
-        .eq('id', ticket.id);
-      if (error) {
-        setResult({ kind: 'error', text: 'Could not check in — are you the host?' });
-      } else {
-        const tier = (ticket.ticket_tiers as { name: string } | null)?.name;
-        setResult({ kind: 'ok', text: `✓ ${ticket.attendee_name} in${tier ? ` · ${tier}` : ''}` });
-        setCount((c) => c + 1);
-      }
+      const kind = (data.kind as Result['kind']) ?? 'error';
+      // Flag ok scans that used a static (screenshot-able) code, not a live one.
+      const text = kind === 'ok' && data.live === false ? `${data.text}  ⚠︎ static code` : data.text;
+      setResult({ kind, text });
+      if (kind === 'ok') setCount((c) => c + 1);
     }
     setManual('');
     // Brief lock so a held QR code doesn't fire repeatedly.

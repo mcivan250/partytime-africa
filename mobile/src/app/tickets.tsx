@@ -52,6 +52,7 @@ export default function TicketsScreen() {
   const { session } = useAuth();
   const [tickets, setTickets] = useState<WalletTicket[]>([]);
   const [merch, setMerch] = useState<WalletMerch[]>([]);
+  const [tokens, setTokens] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
@@ -81,6 +82,31 @@ export default function TicketsScreen() {
   useEffect(() => {
     load();
   }, [load]);
+
+  // Rotating, signed QR: mint a fresh short-lived token per valid ticket and
+  // refresh it every 30s. A screenshot of the code expires in seconds, so it
+  // can't be resold or reused. Falls back to the static qr_code if offline.
+  const refreshTokens = useCallback(async (list: WalletTicket[]) => {
+    const valid = list.filter((t) => t.status === 'valid');
+    const results = await Promise.all(
+      valid.map(async (t) => {
+        const { data } = await supabase.functions.invoke('ticket-token', { body: { ticket_id: t.id } });
+        return [t.id, (data as { token?: string } | null)?.token] as const;
+      }),
+    );
+    setTokens((prev) => {
+      const next = { ...prev };
+      for (const [id, tok] of results) if (tok) next[id] = tok;
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (tickets.length === 0) return;
+    refreshTokens(tickets);
+    const iv = setInterval(() => refreshTokens(tickets), 30000);
+    return () => clearInterval(iv);
+  }, [tickets, refreshTokens]);
 
   if (!session) {
     return (
@@ -119,7 +145,7 @@ export default function TicketsScreen() {
               </LinearGradient>
               <View style={styles.passBody}>
                 <View style={styles.qrBox}>
-                  <QRCode value={t.qr_code} size={104} backgroundColor="#FFFFFF" color="#0B120D" />
+                  <QRCode value={tokens[t.id] ?? t.qr_code} size={104} backgroundColor="#FFFFFF" color="#0B120D" />
                 </View>
                 <View style={styles.passInfo}>
                   <ThemedText type="smallBold">{t.attendee_name}</ThemedText>
@@ -134,6 +160,11 @@ export default function TicketsScreen() {
                   <ThemedText type="smallBold" style={styles.status}>
                     {STATUS_LABEL[t.status]}
                   </ThemedText>
+                  {t.status === 'valid' && tokens[t.id] ? (
+                    <ThemedText type="small" themeColor="textSecondary" style={styles.secNote}>
+                      🔒 Live code — refreshes for security
+                    </ThemedText>
+                  ) : null}
                 </View>
               </View>
             </ThemedView>
@@ -247,6 +278,10 @@ const styles = StyleSheet.create({
   status: {
     color: Brand,
     marginTop: Spacing.one,
+  },
+  secNote: {
+    marginTop: 2,
+    fontSize: 11,
   },
   sectionHeadingRow: {
     flexDirection: 'row',

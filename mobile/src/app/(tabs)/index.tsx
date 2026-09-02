@@ -773,17 +773,17 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.one,
   },
   cardWrap: {
-    borderRadius: 22,
-    shadowColor: Brand,
-    shadowOpacity: 0.35,
-    shadowRadius: 22,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 10,
+    borderRadius: 24,
+    shadowColor: '#000',
+    shadowOpacity: 0.45,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 8,
   },
   cardWrapFeatured: {
-    shadowColor: Gold,
+    shadowColor: '#000',
     shadowOpacity: 0.5,
-    shadowRadius: 26,
+    shadowRadius: 22,
   },
   card: {
     borderRadius: 24,
@@ -792,9 +792,9 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   cardFeatured: {
-    minHeight: 420,
-    borderWidth: 1.5,
-    borderColor: Gold,
+    minHeight: 400,
+    borderWidth: 1,
+    borderColor: 'rgba(212,175,55,0.55)',
   },
   featuredRibbon: {
     position: 'absolute',
