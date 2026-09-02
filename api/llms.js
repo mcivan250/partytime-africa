@@ -28,7 +28,10 @@ module.exports = (_req, res) => {
 
 ## Key links
 - Discover events: ${SITE}/
+- Things to do in Kampala tonight & this week: ${SITE}/tonight
 - Bars & restaurants guide: ${SITE}/venues
+- How to promote an event in Kampala: ${SITE}/promote
+- Buy tickets safely & avoid fakes: ${SITE}/safe-tickets
 - Create and promote an event: ${SITE}/create-event
 
 ## Location

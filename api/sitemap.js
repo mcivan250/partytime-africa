@@ -42,6 +42,9 @@ module.exports = async (_req, res) => {
   const core = [
     urlTag(`${SITE}/`, null, '1.0'),
     urlTag(`${SITE}/venues`, null, '0.8'),
+    urlTag(`${SITE}/tonight`, null, '0.8'),
+    urlTag(`${SITE}/promote`, null, '0.7'),
+    urlTag(`${SITE}/safe-tickets`, null, '0.7'),
     urlTag(`${SITE}/create-event`, null, '0.6'),
   ];
   const eventUrls = events.map((e) => urlTag(`${SITE}/e/${e.slug}`, e.starts_at || e.created_at, '0.7'));

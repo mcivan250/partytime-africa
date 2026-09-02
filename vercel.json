@@ -7,6 +7,9 @@
     { "source": "/sitemap.xml", "destination": "/api/sitemap" },
     { "source": "/robots.txt", "destination": "/api/robots" },
     { "source": "/llms.txt", "destination": "/api/llms" },
+    { "source": "/promote", "destination": "/api/page?p=promote" },
+    { "source": "/safe-tickets", "destination": "/api/page?p=safe-tickets" },
+    { "source": "/tonight", "destination": "/api/page?p=tonight" },
     {
       "source": "/e/:slug",
       "has": [
