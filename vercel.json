@@ -4,16 +4,41 @@
   "outputDirectory": "mobile/dist",
   "framework": null,
   "rewrites": [
+    { "source": "/sitemap.xml", "destination": "/api/sitemap" },
+    { "source": "/robots.txt", "destination": "/api/robots" },
+    { "source": "/llms.txt", "destination": "/api/llms" },
     {
       "source": "/e/:slug",
       "has": [
         {
           "type": "header",
           "key": "user-agent",
-          "value": ".*(facebookexternalhit|Facebot|Twitterbot|WhatsApp|LinkedInBot|Slackbot|Discordbot|TelegramBot|Pinterest|redditbot|Googlebot|bingbot|Applebot|vkShare|Embedly|Iframely|SkypeUriPreview|Mastodon|Bluesky|WordPress).*"
+          "value": ".*(facebookexternalhit|Facebot|Twitterbot|WhatsApp|LinkedInBot|Slackbot|Discordbot|TelegramBot|Pinterest|redditbot|Googlebot|bingbot|Applebot|DuckDuckBot|vkShare|Embedly|Iframely|SkypeUriPreview|Mastodon|Bluesky|WordPress|GPTBot|OAI-SearchBot|ChatGPT-User|PerplexityBot|Perplexity-User|ClaudeBot|Claude-Web|anthropic-ai|Google-Extended|Amazonbot|Bytespider|cohere-ai|YouBot|Diffbot).*"
         }
       ],
       "destination": "/api/og?slug=:slug"
+    },
+    {
+      "source": "/v/:id",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(facebookexternalhit|Facebot|Twitterbot|WhatsApp|LinkedInBot|Slackbot|Discordbot|TelegramBot|Pinterest|redditbot|Googlebot|bingbot|Applebot|DuckDuckBot|vkShare|Embedly|Iframely|SkypeUriPreview|Mastodon|Bluesky|WordPress|GPTBot|OAI-SearchBot|ChatGPT-User|PerplexityBot|Perplexity-User|ClaudeBot|Claude-Web|anthropic-ai|Google-Extended|Amazonbot|Bytespider|cohere-ai|YouBot|Diffbot).*"
+        }
+      ],
+      "destination": "/api/og?venue=:id"
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(facebookexternalhit|Facebot|Twitterbot|WhatsApp|LinkedInBot|Slackbot|Discordbot|TelegramBot|Pinterest|redditbot|Googlebot|bingbot|Applebot|DuckDuckBot|vkShare|Embedly|Iframely|SkypeUriPreview|Mastodon|Bluesky|WordPress|GPTBot|OAI-SearchBot|ChatGPT-User|PerplexityBot|Perplexity-User|ClaudeBot|Claude-Web|anthropic-ai|Google-Extended|Amazonbot|Bytespider|cohere-ai|YouBot|Diffbot).*"
+        }
+      ],
+      "destination": "/api/og"
     },
     { "source": "/(.*)", "destination": "/" }
   ]
