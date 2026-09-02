@@ -13,6 +13,7 @@ import {
 
 import { Appear } from '@/components/appear';
 import { EmptyState } from '@/components/empty-state';
+import { ReportMenu } from '@/components/report-menu';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BottomNavInset, Brand, OnBrand, Spacing, StateGo } from '@/constants/theme';
@@ -239,29 +240,31 @@ export function CityFeed() {
       }
       renderItem={({ item, index }) => (
         <Appear index={index}>
-          <PostCard post={item} onLike={() => toggleLike(item)} />
+          <PostCard post={item} onLike={() => toggleLike(item)} onBlocked={load} />
         </Appear>
       )}
     />
   );
 }
 
-function PostCard({ post, onLike }: { post: Post; onLike: () => void }) {
+function PostCard({ post, onLike, onBlocked }: { post: Post; onLike: () => void; onBlocked: () => void }) {
   const label = tagLabel(post.tag);
   return (
     <ThemedView type="backgroundElement" style={styles.card}>
-      <Pressable
-        style={styles.cardHead}
-        onPress={() => router.push({ pathname: '/u/[id]', params: { id: post.author_id } })}>
-        <View style={styles.avatar}>
-          <ThemedText style={styles.avatarText}>{initials(post.author_name)}</ThemedText>
-        </View>
-        <View style={styles.flex}>
-          <ThemedText type="smallBold">{post.author_name}</ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">
-            {timeAgo(post.created_at)} ago
-          </ThemedText>
-        </View>
+      <View style={styles.cardHead}>
+        <Pressable
+          style={styles.cardHeadMain}
+          onPress={() => router.push({ pathname: '/u/[id]', params: { id: post.author_id } })}>
+          <View style={styles.avatar}>
+            <ThemedText style={styles.avatarText}>{initials(post.author_name)}</ThemedText>
+          </View>
+          <View style={styles.flex}>
+            <ThemedText type="smallBold">{post.author_name}</ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              {timeAgo(post.created_at)} ago
+            </ThemedText>
+          </View>
+        </Pressable>
         {label ? (
           <View style={styles.flair}>
             <ThemedText type="small" style={styles.flairText}>
@@ -269,7 +272,14 @@ function PostCard({ post, onLike }: { post: Post; onLike: () => void }) {
             </ThemedText>
           </View>
         ) : null}
-      </Pressable>
+        <ReportMenu
+          targetType="feed_post"
+          targetId={post.id}
+          targetOwnerId={post.author_id}
+          targetName={post.author_name}
+          onBlocked={onBlocked}
+        />
+      </View>
 
       <ThemedText style={styles.body}>{post.body}</ThemedText>
 
@@ -413,6 +423,12 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   cardHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  cardHeadMain: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.two,

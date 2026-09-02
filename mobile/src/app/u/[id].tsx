@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { Appear } from '@/components/appear';
+import { ReportMenu } from '@/components/report-menu';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { getEventTheme } from '@/constants/event-themes';
@@ -143,6 +144,16 @@ export default function PublicProfileScreen() {
               onPress={() => router.push({ pathname: '/dm/[id]', params: { id, name } })}>
               <ThemedText type="smallBold">💬 Message</ThemedText>
             </Pressable>
+            <View style={styles.moreBtn}>
+              <ReportMenu
+                targetType="user"
+                targetId={id}
+                targetOwnerId={id}
+                targetName={name}
+                onBlocked={() => router.back()}
+                tint="#EFF6EE"
+              />
+            </View>
           </View>
         ) : null}
 
@@ -221,6 +232,15 @@ const styles = StyleSheet.create({
   btn: { flex: 1, alignItems: 'center', paddingVertical: Spacing.three, borderRadius: 999 },
   primary: { backgroundColor: Brand },
   ghost: { backgroundColor: '#243527', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
+  moreBtn: {
+    backgroundColor: '#243527',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 999,
+    paddingHorizontal: Spacing.two,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   onBrand: { color: OnBrand },
   section: { gap: Spacing.two },
   kicker: { letterSpacing: 2, fontSize: 11 },

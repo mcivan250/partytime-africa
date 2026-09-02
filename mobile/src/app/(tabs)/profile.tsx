@@ -286,6 +286,9 @@ function Dashboard() {
   const [uploading, setUploading] = useState(false);
   const [phoneInput, setPhoneInput] = useState('');
   const [savingPhone, setSavingPhone] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const theme = useTheme();
 
   const load = useCallback(async () => {
@@ -354,6 +357,24 @@ function Dashboard() {
     await supabase.from('profiles').update({ phone: phoneInput.trim() }).eq('id', uid);
     setProfile((p) => (p ? { ...p, phone: phoneInput.trim() } : p));
     setSavingPhone(false);
+  };
+
+  const deleteAccount = async () => {
+    setDeleting(true);
+    setDeleteError(null);
+    const { data, error } = await supabase.functions.invoke('delete-account', {
+      body: { confirm: true },
+    });
+    if (error || !data || (data as { ok?: boolean }).ok !== true) {
+      setDeleteError(
+        (data as { error?: string } | null)?.error ||
+          'Could not delete your account. Please try again or contact support.',
+      );
+      setDeleting(false);
+      return;
+    }
+    // Account gone — end the session and drop back to the signed-out screen.
+    await supabase.auth.signOut();
   };
 
   const changeAvatar = async () => {
@@ -562,6 +583,53 @@ function Dashboard() {
           Sign out
         </ThemedText>
       </Pressable>
+
+      {confirmDelete ? (
+        <ThemedView type="backgroundElement" style={styles.deleteCard}>
+          <ThemedText type="smallBold" style={styles.deleteTitle}>
+            Delete your account?
+          </ThemedText>
+          <ThemedText type="small" themeColor="textSecondary" style={styles.deleteBody}>
+            This permanently deletes your profile, posts, messages, RSVPs and photos, and signs you
+            out for good. Purchase records are kept for legal and accounting reasons but no longer
+            carry your name. This can&apos;t be undone.
+          </ThemedText>
+          {deleteError ? (
+            <ThemedText type="small" style={styles.deleteErr}>
+              {deleteError}
+            </ThemedText>
+          ) : null}
+          <View style={styles.deleteRow}>
+            <Pressable
+              style={[styles.deleteCancel, deleting && styles.disabledBtn]}
+              disabled={deleting}
+              onPress={() => {
+                setConfirmDelete(false);
+                setDeleteError(null);
+              }}>
+              <ThemedText type="smallBold">Keep my account</ThemedText>
+            </Pressable>
+            <Pressable
+              style={[styles.deleteConfirm, deleting && styles.disabledBtn]}
+              disabled={deleting}
+              onPress={deleteAccount}>
+              {deleting ? (
+                <ActivityIndicator color="#F73558" />
+              ) : (
+                <ThemedText type="smallBold" style={styles.deleteConfirmText}>
+                  Delete permanently
+                </ThemedText>
+              )}
+            </Pressable>
+          </View>
+        </ThemedView>
+      ) : (
+        <Pressable style={styles.deleteLink} onPress={() => setConfirmDelete(true)}>
+          <ThemedText type="small" style={styles.deleteLinkText}>
+            Delete account
+          </ThemedText>
+        </Pressable>
+      )}
 
       <ThemedText style={styles.buildTag}>{BUILD_TAG}</ThemedText>
     </ScrollView>
@@ -815,6 +883,54 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     paddingVertical: Spacing.three,
     marginTop: Spacing.two,
+  },
+  deleteLink: {
+    alignSelf: 'center',
+    paddingVertical: Spacing.two,
+  },
+  deleteLinkText: {
+    color: '#8A9A8E',
+  },
+  deleteCard: {
+    borderRadius: 18,
+    padding: Spacing.four,
+    gap: Spacing.two,
+    borderWidth: 1,
+    borderColor: 'rgba(247,53,88,0.35)',
+  },
+  deleteTitle: {
+    color: '#F73558',
+  },
+  deleteBody: {
+    lineHeight: 20,
+  },
+  deleteErr: {
+    color: '#F73558',
+  },
+  deleteRow: {
+    flexDirection: 'row',
+    gap: Spacing.two,
+    marginTop: Spacing.one,
+  },
+  deleteCancel: {
+    flex: 1,
+    backgroundColor: '#243527',
+    borderRadius: 999,
+    paddingVertical: Spacing.three,
+    alignItems: 'center',
+  },
+  deleteConfirm: {
+    flex: 1,
+    backgroundColor: 'rgba(247,53,88,0.15)',
+    borderRadius: 999,
+    paddingVertical: Spacing.three,
+    alignItems: 'center',
+  },
+  deleteConfirmText: {
+    color: '#F73558',
+  },
+  disabledBtn: {
+    opacity: 0.6,
   },
   buildTag: {
     alignSelf: 'center',

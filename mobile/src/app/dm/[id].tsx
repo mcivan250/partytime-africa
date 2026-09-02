@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 
+import { ReportMenu } from '@/components/report-menu';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Brand, MaxContentWidth, OnBrand, Spacing } from '@/constants/theme';
@@ -28,6 +29,7 @@ export default function DmThreadScreen() {
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView>(null);
 
   const load = useCallback(async () => {
@@ -68,6 +70,7 @@ export default function DmThreadScreen() {
     };
     setMessages((prev) => [...prev, optimistic]);
     setText('');
+    setSendError(null);
     const { error } = await supabase
       .from('dm_messages')
       .insert({ sender_id: session.user.id, recipient_id: other, body: b });
@@ -75,6 +78,11 @@ export default function DmThreadScreen() {
     if (error) {
       setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
       setText(b);
+      setSendError(
+        error.message?.includes('blocked')
+          ? 'You can’t message this person — one of you has blocked the other.'
+          : 'Couldn’t send. Try again.',
+      );
     } else {
       load();
     }
@@ -94,11 +102,25 @@ export default function DmThreadScreen() {
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={90}>
-        <Pressable onPress={() => router.push({ pathname: '/u/[id]', params: { id: other } })}>
-          <ThemedText type="smallBold" style={styles.header}>
-            {name ?? 'View profile'} ›
-          </ThemedText>
-        </Pressable>
+        <View style={styles.headerRow}>
+          <Pressable
+            style={styles.flex}
+            onPress={() => router.push({ pathname: '/u/[id]', params: { id: other } })}>
+            <ThemedText type="smallBold" style={styles.header}>
+              {name ?? 'View profile'} ›
+            </ThemedText>
+          </Pressable>
+          <View style={styles.headerMenu}>
+            <ReportMenu
+              targetType="dm"
+              targetId={null}
+              targetOwnerId={other}
+              targetName={name ?? 'this person'}
+              onBlocked={() => router.back()}
+              tint={theme.textSecondary}
+            />
+          </View>
+        </View>
         <ScrollView
           ref={scrollRef}
           contentContainerStyle={styles.content}
@@ -124,6 +146,11 @@ export default function DmThreadScreen() {
           )}
         </ScrollView>
 
+        {sendError ? (
+          <ThemedText type="small" style={styles.sendError}>
+            {sendError}
+          </ThemedText>
+        ) : null}
         <View style={[styles.composer, { backgroundColor: theme.background }]}>
           <TextInput
             style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundElement }]}
@@ -151,11 +178,24 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   flex: { flex: 1 },
   center: { justifyContent: 'center', alignItems: 'center', padding: Spacing.four },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.06)',
+  },
   header: {
     textAlign: 'center',
     paddingVertical: Spacing.two,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
+  },
+  headerMenu: {
+    paddingHorizontal: Spacing.two,
+  },
+  sendError: {
+    color: '#F73558',
+    textAlign: 'center',
+    paddingHorizontal: Spacing.four,
+    paddingBottom: Spacing.one,
   },
   content: {
     padding: Spacing.four,

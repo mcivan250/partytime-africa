@@ -1815,6 +1815,29 @@ export type Database = {
         Args: { p_days?: number }
         Returns: { name: string; events: number; users: number }[]
       }
+      block_user: { Args: { p_id: string }; Returns: undefined }
+      unblock_user: { Args: { p_id: string }; Returns: undefined }
+      my_blocked_ids: { Args: Record<PropertyKey, never>; Returns: { blocked_id: string }[] }
+      report_content: {
+        Args: { p_type: string; p_id: string | null; p_owner: string | null; p_reason: string; p_note?: string | null }
+        Returns: undefined
+      }
+      admin_resolve_report: { Args: { p_id: string; p_status: string }; Returns: undefined }
+      admin_list_reports: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          target_type: string
+          target_id: string | null
+          reason: string
+          note: string | null
+          status: string
+          created_at: string
+          reporter: string
+          target_owner: string
+          target_owner_id: string | null
+        }[]
+      }
       admin_event_performance: {
         Args: { p_days?: number }
         Returns: {

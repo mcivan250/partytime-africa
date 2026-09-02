@@ -10,6 +10,7 @@
     { "source": "/promote", "destination": "/api/page?p=promote" },
     { "source": "/safe-tickets", "destination": "/api/page?p=safe-tickets" },
     { "source": "/tonight", "destination": "/api/page?p=tonight" },
+    { "source": "/delete-account", "destination": "/api/page?p=delete-account" },
     {
       "source": "/e/:slug",
       "has": [

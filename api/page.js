@@ -308,12 +308,66 @@ async function tonightPage() {
   });
 }
 
+function deleteAccountPage() {
+  const faqs = [
+    { q: 'How do I delete my Party Time account?', a: 'Open the Party Time app, go to the Profile tab, scroll to the bottom and tap "Delete account", then confirm. Your account and personal data are deleted immediately and you are signed out. You can also request deletion by emailing support@partytime.africa from your account email.' },
+    { q: 'What data is deleted?', a: 'Your profile (name, username, photo, phone, city), your posts, replies and reactions, your direct messages, your RSVPs, comments and uploaded photos, your reservations, notifications and analytics. Your login is removed so it can never be used again.' },
+    { q: 'What data is kept, and why?', a: 'Purchase and payment records (orders, tickets and payouts) are retained for legal, tax and accounting reasons, but they are stripped of your name and phone number so they no longer identify you. Events you hosted stay published so other guests keep their tickets, with the host shown as "Deleted user".' },
+    { q: 'How long does it take?', a: 'Deletion happens immediately when you confirm in the app. Retained purchase records are kept only as long as the law requires, then removed.' },
+  ];
+  const main = `
+  <div class="eyebrow">Account</div>
+  <h1>Delete your Party Time account</h1>
+  <p class="answer">You can permanently delete your Party Time account and personal data at any time, directly in the app. This page explains how, and exactly what is deleted and what is kept.</p>
+
+  <h2>Delete in the app</h2>
+  <ol class="steps">
+    <li><strong>Open Party Time</strong> and go to the <strong>Profile</strong> tab.</li>
+    <li><strong>Scroll to the bottom</strong> and tap <strong>Delete account</strong>.</li>
+    <li><strong>Confirm.</strong> Your account and personal data are deleted right away and you&rsquo;re signed out.</li>
+  </ol>
+
+  <div class="card">
+    <h3 style="margin-top:0">No longer have the app?</h3>
+    <p style="margin:6px 0 0">Email <a href="mailto:support@partytime.africa">support@partytime.africa</a> from the email address on your account and we&rsquo;ll delete it for you.</p>
+  </div>
+
+  <h2>What&rsquo;s deleted</h2>
+  <ul>
+    <li>Your profile — name, username, photo, phone number and city.</li>
+    <li>Your posts, replies, reactions and direct messages.</li>
+    <li>Your RSVPs, comments, uploaded photos and reservations.</li>
+    <li>Your notifications and usage analytics.</li>
+    <li>Your login — removed permanently.</li>
+  </ul>
+
+  <h2>What&rsquo;s kept, and why</h2>
+  <ul>
+    <li><strong>Purchase &amp; payment records</strong> (orders, tickets, payouts) are retained for legal, tax and accounting reasons — but with your name and phone number removed so they no longer identify you.</li>
+    <li><strong>Events you hosted</strong> stay published so other guests keep their tickets; you&rsquo;ll appear as &ldquo;Deleted user&rdquo;.</li>
+  </ul>
+
+  <h2>Frequently asked questions</h2>
+  <div class="faq">
+    ${faqs.map((f) => `<details><summary>${esc(f.q)}</summary><p>${esc(f.a)}</p></details>`).join('')}
+  </div>
+  <div class="updated">Last updated ${TODAY()}</div>`;
+  return layout({
+    title: 'Delete your Party Time account | Party Time',
+    desc: 'How to permanently delete your Party Time account and personal data from the app, what is deleted, and what purchase records are kept for legal reasons.',
+    path: '/delete-account',
+    jsonldBlocks: [faqLd(faqs), crumbLd('Delete account', `${SITE}/delete-account`)],
+    main,
+  });
+}
+
 module.exports = async (req, res) => {
   const p = req.query && req.query.p ? String(req.query.p) : '';
   let html;
   let maxAge = 'public, max-age=600, s-maxage=3600';
   if (p === 'promote') html = promotePage();
   else if (p === 'safe-tickets') html = safeTicketsPage();
+  else if (p === 'delete-account') html = deleteAccountPage();
   else if (p === 'tonight') {
     html = await tonightPage();
     maxAge = 'public, max-age=300, s-maxage=900';

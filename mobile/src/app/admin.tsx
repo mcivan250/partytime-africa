@@ -44,6 +44,18 @@ type Payout = {
 };
 
 type FunnelRow = { name: string; events: number; users: number };
+type Report = {
+  id: string;
+  target_type: string;
+  target_id: string | null;
+  reason: string;
+  note: string | null;
+  status: string;
+  created_at: string;
+  reporter: string;
+  target_owner: string;
+  target_owner_id: string | null;
+};
 type EventPerf = {
   id: string;
   slug: string;
@@ -105,6 +117,7 @@ export default function AdminScreen() {
   const [featuringId, setFeaturingId] = useState<string | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
+  const [reports, setReports] = useState<Report[]>([]);
   const [venues, setVenues] = useState<Venue[]>([]);
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [claims, setClaims] = useState<Claim[]>([]);
@@ -136,12 +149,14 @@ export default function AdminScreen() {
       setPosts((pRes.data ?? []) as Post[]);
       setVenues((vRes.data ?? []) as Venue[]);
       setReservations((rRes.data ?? []) as Reservation[]);
-      const [{ data: cRows }, { data: payRows }] = await Promise.all([
+      const [{ data: cRows }, { data: payRows }, { data: repRows }] = await Promise.all([
         supabase.rpc('admin_list_claims'),
         supabase.rpc('admin_list_promoter_payouts'),
+        supabase.rpc('admin_list_reports'),
       ]);
       setClaims((cRows ?? []) as Claim[]);
       setPayouts((payRows ?? []) as Payout[]);
+      setReports((repRows ?? []) as Report[]);
     }
     setLoading(false);
   }, []);
@@ -216,6 +231,23 @@ export default function AdminScreen() {
   const removePost = async (p: Post) => {
     setPosts((prev) => prev.filter((x) => x.id !== p.id));
     await supabase.rpc('admin_delete_post', { p_id: p.id });
+  };
+
+  const resolveReport = async (r: Report, status: 'reviewed' | 'actioned' | 'dismissed') => {
+    setReports((prev) => prev.filter((x) => x.id !== r.id));
+    const { error } = await supabase.rpc('admin_resolve_report', { p_id: r.id, p_status: status });
+    if (error) {
+      Alert.alert('Could not update', error.message);
+      load();
+      return;
+    }
+    tapSuccess();
+  };
+
+  const suspendReported = async (r: Report) => {
+    if (!r.target_owner_id) return;
+    await supabase.rpc('admin_set_suspended', { p_id: r.target_owner_id, p_suspended: true });
+    resolveReport(r, 'actioned');
   };
 
   const createVenue = async () => {
@@ -362,6 +394,7 @@ export default function AdminScreen() {
               <ThemedText type="smallBold" numberOfLines={1} style={tab === t.key ? styles.segOnText : styles.segText}>
                 {t.label}
                 {t.key === 'payouts' && payouts.some((p) => p.status === 'requested') ? ' •' : ''}
+                {t.key === 'content' && reports.length > 0 ? ' •' : ''}
               </ThemedText>
             </Pressable>
           ))}
@@ -817,25 +850,80 @@ export default function AdminScreen() {
                 </Pressable>
               </ThemedView>
             ))
-          : posts.length === 0 ? (
-              <ThemedText type="small" themeColor="textSecondary" style={styles.empty}>
-                No feed posts yet.
-              </ThemedText>
-            ) : (
-              posts.map((p) => (
-                <ThemedView key={p.id} type="backgroundElement" style={styles.postCard}>
-                  <ThemedText type="smallBold">{p.author_name}</ThemedText>
-                  <ThemedText type="small" themeColor="textSecondary">
-                    {p.body}
-                    {p.image_path ? '  📷' : ''}
-                  </ThemedText>
-                  <Pressable style={styles.removeBtn} onPress={() => removePost(p)}>
-                    <ThemedText type="smallBold" style={styles.removeText}>
-                      Remove post
+          : (
+              <>
+                {reports.length > 0 ? (
+                  <>
+                    <ThemedText type="smallBold" style={styles.modHeading}>
+                      🚩 Reports ({reports.length})
                     </ThemedText>
-                  </Pressable>
-                </ThemedView>
-              ))
+                    {reports.map((r) => (
+                      <ThemedView key={r.id} type="backgroundElement" style={styles.reportCard}>
+                        <ThemedText type="smallBold" style={styles.reportReason}>
+                          {r.reason}
+                        </ThemedText>
+                        <ThemedText type="small" themeColor="textSecondary">
+                          {r.target_type} · reported by {r.reporter}
+                          {r.target_owner !== '—' ? ` · owner: ${r.target_owner}` : ''}
+                        </ThemedText>
+                        {r.note ? (
+                          <ThemedText type="small" themeColor="textSecondary" style={styles.bookingNote}>
+                            “{r.note}”
+                          </ThemedText>
+                        ) : null}
+                        <View style={styles.bookingActions}>
+                          <Pressable
+                            style={[styles.actionBtn, styles.processingBtn]}
+                            onPress={() => resolveReport(r, 'dismissed')}>
+                            <ThemedText type="smallBold" style={styles.processingText}>
+                              Dismiss
+                            </ThemedText>
+                          </Pressable>
+                          <Pressable
+                            style={[styles.actionBtn, styles.unsuspend]}
+                            onPress={() => resolveReport(r, 'reviewed')}>
+                            <ThemedText type="smallBold" style={styles.unsuspendText}>
+                              Mark reviewed
+                            </ThemedText>
+                          </Pressable>
+                          {r.target_owner_id ? (
+                            <Pressable
+                              style={[styles.actionBtn, styles.suspend]}
+                              onPress={() => suspendReported(r)}>
+                              <ThemedText type="smallBold" style={styles.suspendText}>
+                                Suspend user
+                              </ThemedText>
+                            </Pressable>
+                          ) : null}
+                        </View>
+                      </ThemedView>
+                    ))}
+                    <ThemedText type="smallBold" style={styles.modHeading}>
+                      Feed posts
+                    </ThemedText>
+                  </>
+                ) : null}
+                {posts.length === 0 ? (
+                  <ThemedText type="small" themeColor="textSecondary" style={styles.empty}>
+                    {reports.length === 0 ? 'No reports or feed posts yet.' : 'No feed posts yet.'}
+                  </ThemedText>
+                ) : (
+                  posts.map((p) => (
+                    <ThemedView key={p.id} type="backgroundElement" style={styles.postCard}>
+                      <ThemedText type="smallBold">{p.author_name}</ThemedText>
+                      <ThemedText type="small" themeColor="textSecondary">
+                        {p.body}
+                        {p.image_path ? '  📷' : ''}
+                      </ThemedText>
+                      <Pressable style={styles.removeBtn} onPress={() => removePost(p)}>
+                        <ThemedText type="smallBold" style={styles.removeText}>
+                          Remove post
+                        </ThemedText>
+                      </Pressable>
+                    </ThemedView>
+                  ))
+                )}
+              </>
             )}
         <View style={styles.pad} />
       </ScrollView>
@@ -886,6 +974,15 @@ const styles = StyleSheet.create({
   unsuspend: { backgroundColor: 'rgba(61,220,151,0.15)' },
   unsuspendText: { color: StateGo },
   postCard: { borderRadius: 16, padding: Spacing.three, gap: Spacing.two },
+  modHeading: { marginTop: Spacing.two, marginBottom: Spacing.one },
+  reportCard: {
+    borderRadius: 16,
+    padding: Spacing.three,
+    gap: Spacing.two,
+    borderWidth: 1,
+    borderColor: 'rgba(247,53,88,0.3)',
+  },
+  reportReason: { color: '#F73558' },
   removeBtn: { alignSelf: 'flex-start', paddingVertical: Spacing.one },
   removeText: { color: '#F73558' },
   empty: { textAlign: 'center', marginTop: Spacing.six },

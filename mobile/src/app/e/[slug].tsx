@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AuthSheet } from '@/components/auth-sheet';
 import { Avatars } from '@/components/avatars';
 import { KineticReveal } from '@/components/kinetic-reveal';
 import { PhotoAlbum } from '@/components/photo-album';
@@ -397,6 +398,12 @@ export default function EventScreen() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [buyNotice, setBuyNotice] = useState<string | null>(null);
+  const [authVisible, setAuthVisible] = useState(false);
+  // A checkout the user started before signing in — resumed once they auth,
+  // so they never lose their place or get bounced to another tab.
+  const [pendingBuy, setPendingBuy] = useState<
+    { type: 'tier' | 'table' | 'merch'; arg: { id: string } } | null
+  >(null);
   const [cohostStatus, setCohostStatus] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [invitePrompt, setInvitePrompt] = useState(false);
@@ -530,8 +537,8 @@ export default function EventScreen() {
   const buyTier = async (tier: { id: string }) => {
     tapMedium();
     if (!session) {
-      setBuyNotice('Please sign in to buy a ticket.');
-      router.push('/profile');
+      setPendingBuy({ type: 'tier', arg: tier });
+      setAuthVisible(true);
       return;
     }
     setBuyNotice('Starting secure checkout…');
@@ -562,8 +569,8 @@ export default function EventScreen() {
   const bookTable = async (table: { id: string }) => {
     tapMedium();
     if (!session) {
-      setBuyNotice('Please sign in to book a table.');
-      router.push('/profile');
+      setPendingBuy({ type: 'table', arg: table });
+      setAuthVisible(true);
       return;
     }
     setBuyNotice('Starting secure checkout…');
@@ -593,8 +600,8 @@ export default function EventScreen() {
   const buyMerch = async (variant: { id: string }) => {
     tapMedium();
     if (!session) {
-      setBuyNotice('Please sign in to buy merch.');
-      router.push('/profile');
+      setPendingBuy({ type: 'merch', arg: variant });
+      setAuthVisible(true);
       return;
     }
     setBuyNotice('Starting secure checkout…');
@@ -621,6 +628,19 @@ export default function EventScreen() {
     setBuyNotice('Opening secure checkout — collect your merch at the event with the QR in My Tickets. 🛍️');
     Linking.openURL(data.redirect_url);
   };
+
+  // Once the user signs in via the inline sheet, close it and pick up the
+  // checkout they started, so signing in flows straight into payment.
+  useEffect(() => {
+    if (!session || !pendingBuy) return;
+    const p = pendingBuy;
+    setPendingBuy(null);
+    setAuthVisible(false);
+    if (p.type === 'tier') buyTier(p.arg);
+    else if (p.type === 'table') bookTable(p.arg);
+    else buyMerch(p.arg);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session, pendingBuy]);
 
   const rsvp = async (status: RsvpStatus) => {
     if (!session || !event) return;
@@ -986,6 +1006,16 @@ export default function EventScreen() {
           )}
         </View>
       ) : null}
+
+      <AuthSheet
+        visible={authVisible}
+        onClose={() => {
+          setAuthVisible(false);
+          setPendingBuy(null);
+        }}
+        headline="Sign in to continue"
+        sub="You're one step from checkout — sign in or create an account and we'll pick up right where you left off."
+      />
     </ThemedView>
   );
 }
