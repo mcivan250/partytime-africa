@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
-import { router } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { Appear } from '@/components/appear';
@@ -44,10 +44,14 @@ export default function MessagesScreen() {
     setLoading(false);
   }, []);
 
-  useEffect(() => {
-    if (session) load();
-    else setLoading(false);
-  }, [session, load]);
+  // Reload on focus so unread counts clear after reading a thread and new
+  // messages appear when returning to this screen.
+  useFocusEffect(
+    useCallback(() => {
+      if (session) load();
+      else setLoading(false);
+    }, [session, load]),
+  );
 
   if (!session) {
     return (

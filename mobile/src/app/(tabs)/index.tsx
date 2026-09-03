@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
@@ -440,29 +440,33 @@ export default function EventsScreen() {
     [session],
   );
 
-  useEffect(() => {
-    loadEvents();
-  }, [loadEvents]);
-
-  useEffect(() => {
+  const refreshCounts = useCallback(async () => {
     if (!session) {
       setDmUnread(0);
       setNotifUnread(0);
       return;
     }
-    (async () => {
-      const [{ count: n }, { count: d }] = await Promise.all([
-        supabase.from('notifications').select('id', { count: 'exact', head: true }).is('read_at', null),
-        supabase
-          .from('dm_messages')
-          .select('id', { count: 'exact', head: true })
-          .eq('recipient_id', session.user.id)
-          .is('read_at', null),
-      ]);
-      setNotifUnread(n ?? 0);
-      setDmUnread(d ?? 0);
-    })();
+    const [{ count: n }, { count: d }] = await Promise.all([
+      supabase.from('notifications').select('id', { count: 'exact', head: true }).is('read_at', null),
+      supabase
+        .from('dm_messages')
+        .select('id', { count: 'exact', head: true })
+        .eq('recipient_id', session.user.id)
+        .is('read_at', null),
+    ]);
+    setNotifUnread(n ?? 0);
+    setDmUnread(d ?? 0);
   }, [session]);
+
+  // Refresh on every focus so the feed and the unread badges stay live when the
+  // user returns from reading messages/notifications or creating an event —
+  // loadEvents doesn't toggle the skeleton, so this refreshes silently.
+  useFocusEffect(
+    useCallback(() => {
+      loadEvents();
+      refreshCounts();
+    }, [loadEvents, refreshCounts]),
+  );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
