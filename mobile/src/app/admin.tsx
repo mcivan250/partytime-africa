@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, Share, StyleSheet, TextInput, View } from 'react-native';
 
 import { Appear } from '@/components/appear';
 import { ThemedText } from '@/components/themed-text';
@@ -72,16 +72,37 @@ type EventPerf = {
   gross_minor: number;
   currency: string;
 };
-type TabKey = 'analytics' | 'events' | 'bookings' | 'payouts' | 'members' | 'content' | 'venues';
+type Campaign = {
+  id: string;
+  code: string;
+  name: string;
+  kind: string;
+  event_id: string | null;
+  event_slug: string | null;
+  notes: string | null;
+  active: boolean;
+  created_at: string;
+  scans: number;
+  app_opens: number;
+  signups: number;
+  rsvps: number;
+  checkouts: number;
+};
+type EventLite = { id: string; title: string };
+type TabKey = 'analytics' | 'events' | 'activations' | 'bookings' | 'payouts' | 'members' | 'content' | 'venues';
 const TABS: { key: TabKey; label: string }[] = [
   { key: 'analytics', label: 'Analytics' },
   { key: 'events', label: 'Events' },
+  { key: 'activations', label: 'Activations' },
   { key: 'bookings', label: 'Bookings' },
   { key: 'payouts', label: 'Payouts' },
   { key: 'members', label: 'Members' },
   { key: 'content', label: 'Content' },
   { key: 'venues', label: 'Venues' },
 ];
+
+const SITE = 'https://partytime.africa';
+const CAMPAIGN_KINDS = ['popup', 'billboard', 'installation', 'launch', 'flyer', 'other'];
 
 // Readable labels + funnel order for the tracked events.
 const FUNNEL_LABEL: Record<string, string> = {
@@ -115,6 +136,12 @@ export default function AdminScreen() {
   const [perf, setPerf] = useState<EventPerf[]>([]);
   const [perfDays, setPerfDays] = useState(30);
   const [featuringId, setFeaturingId] = useState<string | null>(null);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [linkEvents, setLinkEvents] = useState<EventLite[]>([]);
+  const [cName, setCName] = useState('');
+  const [cKind, setCKind] = useState('popup');
+  const [cEventId, setCEventId] = useState<string | null>(null);
+  const [creatingCampaign, setCreatingCampaign] = useState(false);
   const [members, setMembers] = useState<Member[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
@@ -171,6 +198,74 @@ export default function AdminScreen() {
     setPerf((data ?? []) as EventPerf[]);
   }, []);
 
+  const loadCampaigns = useCallback(async () => {
+    const now = new Date().toISOString();
+    const [{ data: camps }, { data: evs }] = await Promise.all([
+      supabase.rpc('admin_list_campaigns'),
+      supabase
+        .from('events')
+        .select('id, title')
+        .eq('status', 'published')
+        .gte('starts_at', now)
+        .order('starts_at', { ascending: true })
+        .limit(30),
+    ]);
+    setCampaigns((camps ?? []) as Campaign[]);
+    setLinkEvents((evs ?? []) as EventLite[]);
+  }, []);
+
+  const createCampaign = async () => {
+    if (!cName.trim()) {
+      Alert.alert('Name it', 'Give the activation a name (e.g. "Acacia Mall pop-up").');
+      return;
+    }
+    setCreatingCampaign(true);
+    const { error } = await supabase.rpc('admin_create_campaign', {
+      p_name: cName.trim(),
+      p_kind: cKind,
+      p_event_id: cEventId,
+    });
+    setCreatingCampaign(false);
+    if (error) {
+      Alert.alert('Could not create', error.message);
+      return;
+    }
+    tapSuccess();
+    setCName('');
+    setCEventId(null);
+    loadCampaigns();
+  };
+
+  const toggleCampaign = async (c: Campaign) => {
+    const next = !c.active;
+    setCampaigns((prev) => prev.map((x) => (x.id === c.id ? { ...x, active: next } : x)));
+    const { error } = await supabase.rpc('admin_set_campaign_active', { p_id: c.id, p_active: next });
+    if (error) {
+      setCampaigns((prev) => prev.map((x) => (x.id === c.id ? { ...x, active: c.active } : x)));
+      Alert.alert('Could not update', error.message);
+      return;
+    }
+    tapSuccess();
+  };
+
+  const shareCampaign = async (c: Campaign) => {
+    const url = `${SITE}/go/${c.code}`;
+    if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard) {
+      try {
+        await navigator.clipboard.writeText(url);
+        Alert.alert('Link copied', url);
+        return;
+      } catch {
+        // fall through to Share
+      }
+    }
+    try {
+      await Share.share({ message: `${c.name} — ${url}`, url });
+    } catch {
+      // user dismissed
+    }
+  };
+
   useEffect(() => {
     if (session) loadFunnel(funnelDays);
   }, [session, funnelDays, loadFunnel]);
@@ -178,6 +273,10 @@ export default function AdminScreen() {
   useEffect(() => {
     if (session) loadPerf(perfDays);
   }, [session, perfDays, loadPerf]);
+
+  useEffect(() => {
+    if (session) loadCampaigns();
+  }, [session, loadCampaigns]);
 
   // Premium placement is the revenue lever: featuring an event pins it to the
   // top of Discover. Toggling it here is the paid-placement control.
@@ -558,6 +657,127 @@ export default function AdminScreen() {
                   </Appear>
                 );
               })
+            )}
+          </>
+        ) : tab === 'activations' ? (
+          <>
+            <ThemedText type="small" themeColor="textSecondary" style={styles.perfHint}>
+              Experiential marketing, measured. Create an activation for each real-world moment — a
+              pop-up, billboard, installation or launch — get a QR link, and see exactly what people
+              did after they scanned it: opened the app, signed up, RSVP’d, checked out.
+            </ThemedText>
+
+            <ThemedView type="backgroundElement" style={styles.formCard}>
+              <ThemedText type="smallBold">New activation</ThemedText>
+              <TextInput
+                style={styles.input}
+                placeholder="Name (e.g. Acacia Mall pop-up)"
+                placeholderTextColor="#66766A"
+                value={cName}
+                onChangeText={setCName}
+              />
+              <View style={styles.kindRow}>
+                {CAMPAIGN_KINDS.map((k) => (
+                  <Pressable
+                    key={k}
+                    style={[styles.kindChip, cKind === k && styles.kindChipOn]}
+                    onPress={() => setCKind(k)}>
+                    <ThemedText type="small" style={cKind === k ? styles.segOnText : styles.segText}>
+                      {k}
+                    </ThemedText>
+                  </Pressable>
+                ))}
+              </View>
+              {linkEvents.length > 0 ? (
+                <>
+                  <ThemedText type="small" themeColor="textSecondary">
+                    Link to an event (optional) — sends scanners straight to it:
+                  </ThemedText>
+                  <View style={styles.kindRow}>
+                    {linkEvents.map((e) => (
+                      <Pressable
+                        key={e.id}
+                        style={[styles.kindChip, cEventId === e.id && styles.kindChipOn]}
+                        onPress={() => setCEventId(cEventId === e.id ? null : e.id)}>
+                        <ThemedText type="small" style={cEventId === e.id ? styles.segOnText : styles.segText} numberOfLines={1}>
+                          {e.title}
+                        </ThemedText>
+                      </Pressable>
+                    ))}
+                  </View>
+                </>
+              ) : null}
+              <Pressable
+                style={[styles.saveBtn, creatingCampaign && styles.disabled]}
+                disabled={creatingCampaign}
+                onPress={createCampaign}>
+                {creatingCampaign ? (
+                  <ActivityIndicator color={OnBrand} />
+                ) : (
+                  <ThemedText type="smallBold" style={styles.segOnText}>
+                    Create activation & link
+                  </ThemedText>
+                )}
+              </Pressable>
+            </ThemedView>
+
+            {campaigns.length === 0 ? (
+              <ThemedText type="small" themeColor="textSecondary" style={styles.empty}>
+                No activations yet. Create one above, print the QR on your pop-up or poster, and watch
+                the funnel fill in.
+              </ThemedText>
+            ) : (
+              campaigns.map((c, i) => (
+                <Appear key={c.id} index={i}>
+                  <ThemedView type="backgroundElement" style={styles.perfCard}>
+                    <View style={styles.perfTop}>
+                      <View style={styles.flex}>
+                        <ThemedText type="smallBold" numberOfLines={1}>
+                          {c.name}
+                        </ThemedText>
+                        <ThemedText type="small" themeColor="textSecondary">
+                          {c.kind}
+                          {c.event_slug ? ' · linked to event' : ''}
+                          {!c.active ? ' · paused' : ''}
+                        </ThemedText>
+                      </View>
+                      <Pressable
+                        style={[styles.signalPill, { backgroundColor: c.active ? 'rgba(61,220,151,0.15)' : 'rgba(148,166,151,0.15)' }]}
+                        onPress={() => toggleCampaign(c)}>
+                        <ThemedText type="small" style={{ color: c.active ? StateGo : '#94A697' }}>
+                          {c.active ? 'Active' : 'Paused'}
+                        </ThemedText>
+                      </Pressable>
+                    </View>
+
+                    <Pressable style={styles.linkRow} onPress={() => shareCampaign(c)}>
+                      <ThemedText type="small" style={styles.linkText} numberOfLines={1}>
+                        {SITE.replace('https://', '')}/go/{c.code}
+                      </ThemedText>
+                      <ThemedText type="smallBold" style={styles.copyBtn}>
+                        {Platform.OS === 'web' ? 'Copy' : 'Share'}
+                      </ThemedText>
+                    </Pressable>
+
+                    <View style={styles.metricRow}>
+                      {[
+                        { n: c.scans, l: 'scans' },
+                        { n: c.app_opens, l: 'opens' },
+                        { n: c.signups, l: 'signups' },
+                        { n: c.rsvps, l: 'RSVPs' },
+                        { n: c.checkouts, l: 'checkouts' },
+                      ].map((m) => (
+                        <View key={m.l} style={styles.metric}>
+                          <ThemedText type="smallBold">{m.n}</ThemedText>
+                          <ThemedText type="small" themeColor="textSecondary">
+                            {m.l}
+                          </ThemedText>
+                        </View>
+                      ))}
+                    </View>
+                  </ThemedView>
+                </Appear>
+              ))
             )}
           </>
         ) : tab === 'bookings' ? (
@@ -1042,6 +1262,17 @@ const styles = StyleSheet.create({
   featureOn: { backgroundColor: Brand, borderColor: 'transparent' },
   featureOff: { backgroundColor: 'transparent', borderColor: 'rgba(212,175,55,0.55)' },
   featureOffText: { color: '#D4AF37' },
+  linkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    backgroundColor: '#0E140F',
+    borderRadius: 12,
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.three,
+  },
+  linkText: { flex: 1, color: '#93A899', fontFamily: 'SpaceGrotesk_400Regular' },
+  copyBtn: { color: Brand },
   funnelCard: { borderRadius: 14, padding: Spacing.three, gap: Spacing.two },
   funnelTop: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
   funnelNum: { color: '#EFF6EE' },

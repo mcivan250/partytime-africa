@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 
+import { getCampaign } from '@/lib/campaign';
 import { supabase } from '@/lib/supabase';
 
 // First-party product analytics. Fire-and-forget: never blocks the UI, never
@@ -18,6 +19,11 @@ export type AnalyticsEvent =
   | 'reservation_request';
 
 export function track(name: AnalyticsEvent, props: Record<string, unknown> = {}) {
+  // Tag every event with the experiential activation that brought this visitor
+  // in (if any), so pop-ups/billboards/installations can be measured all the
+  // way down the funnel.
+  const campaign = getCampaign();
+  const enriched = campaign ? { ...props, campaign } : props;
   // Attribute to the signed-in user when we have one; the RLS policy enforces
   // that a supplied profile_id must match the caller.
   supabase.auth.getSession().then(({ data }) => {
@@ -25,7 +31,7 @@ export function track(name: AnalyticsEvent, props: Record<string, unknown> = {})
       .from('app_events')
       .insert({
         name,
-        props,
+        props: enriched,
         platform: Platform.OS,
         profile_id: data.session?.user.id ?? null,
       })

@@ -1815,6 +1815,34 @@ export type Database = {
         Args: { p_days?: number }
         Returns: { name: string; events: number; users: number }[]
       }
+      admin_create_campaign: {
+        Args: { p_name: string; p_kind?: string; p_code?: string | null; p_event_id?: string | null; p_notes?: string | null }
+        Returns: string
+      }
+      admin_set_campaign_active: { Args: { p_id: string; p_active: boolean }; Returns: undefined }
+      resolve_campaign: {
+        Args: { p_code: string }
+        Returns: { name: string; kind: string; event_id: string | null; event_slug: string | null; event_title: string | null; active: boolean }[]
+      }
+      admin_list_campaigns: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          code: string
+          name: string
+          kind: string
+          event_id: string | null
+          event_slug: string | null
+          notes: string | null
+          active: boolean
+          created_at: string
+          scans: number
+          app_opens: number
+          signups: number
+          rsvps: number
+          checkouts: number
+        }[]
+      }
       block_user: { Args: { p_id: string }; Returns: undefined }
       unblock_user: { Args: { p_id: string }; Returns: undefined }
       my_blocked_ids: { Args: Record<PropertyKey, never>; Returns: { blocked_id: string }[] }

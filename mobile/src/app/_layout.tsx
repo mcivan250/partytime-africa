@@ -16,6 +16,7 @@ import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { BodyFontBold, Colors } from '@/constants/theme';
 import { track } from '@/lib/analytics';
 import { AuthProvider } from '@/lib/auth-context';
+import { initCampaign } from '@/lib/campaign';
 
 // Crash & error monitoring. The DSN is a public client key; safe to ship.
 // Disabled in local dev so it only reports real production issues.
@@ -58,7 +59,9 @@ function RootLayout() {
   }, [fontsLoaded]);
 
   useEffect(() => {
-    track('app_open');
+    // Capture any experiential-activation code (?c=) before the first event
+    // fires, so app_open is attributed to the moment that brought them in.
+    initCampaign().finally(() => track('app_open'));
   }, []);
 
   if (!fontsLoaded) {

@@ -11,6 +11,7 @@
     { "source": "/safe-tickets", "destination": "/api/page?p=safe-tickets" },
     { "source": "/tonight", "destination": "/api/page?p=tonight" },
     { "source": "/delete-account", "destination": "/api/page?p=delete-account" },
+    { "source": "/go/:code", "destination": "/api/go?code=:code" },
     {
       "source": "/e/:slug",
       "has": [
