@@ -5,7 +5,8 @@ import QRCode from 'react-native-qrcode-svg';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Brand, BrandGradient, BrandGradientLocations, MaxContentWidth, OnBrand, Spacing } from '@/constants/theme';
+import { Brand, BrandGradient, BrandGradientLocations, MaxContentWidth, OnBrand, Spacing, StateGo } from '@/constants/theme';
+import { LivePulse } from '@/components/live-pulse';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
 
@@ -161,9 +162,12 @@ export default function TicketsScreen() {
                     {STATUS_LABEL[t.status]}
                   </ThemedText>
                   {t.status === 'valid' && tokens[t.id] ? (
-                    <ThemedText type="small" themeColor="textSecondary" style={styles.secNote}>
-                      🔒 Live code — refreshes for security
-                    </ThemedText>
+                    <View style={styles.secRow}>
+                      <LivePulse size={6} color={StateGo} />
+                      <ThemedText type="small" themeColor="textSecondary" style={styles.secNote}>
+                        Live code — refreshes so a screenshot can&apos;t be reused
+                      </ThemedText>
+                    </View>
                   ) : null}
                 </View>
               </View>
@@ -279,9 +283,15 @@ const styles = StyleSheet.create({
     color: Brand,
     marginTop: Spacing.one,
   },
+  secRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 4,
+  },
   secNote: {
-    marginTop: 2,
     fontSize: 11,
+    flex: 1,
   },
   sectionHeadingRow: {
     flexDirection: 'row',

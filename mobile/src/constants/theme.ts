@@ -45,6 +45,12 @@ export const StateMaybe = '#FFB84D';
 export const Gold = '#D4AF37';
 export const GoldSoft = 'rgba(212,175,55,0.14)';
 
+// Nightlife-neon energy accent. Used sparingly for "live / hot / tonight" — the
+// heartbeat that makes the calm forest-black world feel electric. Never a
+// background or large fill; reserved for the 10% that should pulse.
+export const Coral = '#FF3D6E';
+export const CoralSoft = 'rgba(255,61,110,0.15)';
+
 // Corner radii — softer on outer containers, tighter on inner elements, so
 // nested surfaces read as a hierarchy rather than one uniform stamp.
 export const Radius = {

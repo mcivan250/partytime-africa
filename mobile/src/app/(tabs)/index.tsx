@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Appear } from '@/components/appear';
 import { CityFeed } from '@/components/city-feed';
+import { LivePulse } from '@/components/live-pulse';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import {
@@ -24,6 +25,7 @@ import {
   Brand,
   BrandGradient,
   BrandGradientLocations,
+  Coral,
   DisplayFont,
   Gold,
   MaxContentWidth,
@@ -135,7 +137,7 @@ type Badge = { label: string; bg: string; fg: string };
 function fomoBadges(event: FeedEvent): Badge[] {
   const out: Badge[] = [];
   const h = hoursUntil(event.starts_at);
-  if (event.trending_score >= 8) out.push({ label: '🔥 Trending', bg: '#F73558', fg: '#fff' });
+  if (event.trending_score >= 8) out.push({ label: '🔥 Trending', bg: '#FF3D6E', fg: '#fff' });
   if (event.capacity && event.going_count >= event.capacity * 0.85) {
     out.push({ label: 'Almost full', bg: '#FFB84D', fg: '#04120A' });
   } else if (event.going_count >= 20) {
@@ -490,10 +492,18 @@ export default function EventsScreen() {
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.headerRow}>
           <View>
-            <ThemedText type="smallBold" themeColor="textSecondary" style={styles.kicker}>
-              KAMPALA 🌙
+            <View style={styles.kickerRow}>
+              <ThemedText type="smallBold" themeColor="textSecondary" style={styles.kicker}>
+                KAMPALA
+              </ThemedText>
+              <LivePulse size={7} />
+              <ThemedText type="smallBold" style={styles.liveLabel}>
+                LIVE
+              </ThemedText>
+            </View>
+            <ThemedText type="title" style={styles.heroTitle}>
+              What&apos;s on
             </ThemedText>
-            <ThemedText type="title">What&apos;s on</ThemedText>
           </View>
           {session ? (
             <View style={styles.iconCluster}>
@@ -606,12 +616,12 @@ export default function EventsScreen() {
                 <SkeletonCard />
               </View>
             ) : error ? (
-              <ThemedText style={styles.empty}>Could not load events: {error}</ThemedText>
+              <ThemedText style={styles.empty}>Couldn&apos;t load the night — pull down to try again.</ThemedText>
             ) : events.length > 0 ? (
               <ThemedView type="backgroundElement" style={styles.emptyCard}>
-                <ThemedText type="subtitle">Nothing here</ThemedText>
+                <ThemedText type="subtitle">Quiet in here</ThemedText>
                 <ThemedText type="small" themeColor="textSecondary" style={styles.emptyText}>
-                  No events match. Try another filter or clear your search.
+                  Nothing matches that. Loosen the filter, or be the one who starts something.
                 </ThemedText>
                 <Pressable
                   style={styles.emptyButton}
@@ -671,6 +681,22 @@ const styles = StyleSheet.create({
   },
   kicker: {
     letterSpacing: 2,
+  },
+  kickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  liveLabel: {
+    color: Coral,
+    fontSize: 11,
+    letterSpacing: 1.5,
+  },
+  heroTitle: {
+    fontSize: 40,
+    lineHeight: 42,
+    letterSpacing: -1.4,
+    marginTop: 2,
   },
   hostButton: {
     backgroundColor: Brand,

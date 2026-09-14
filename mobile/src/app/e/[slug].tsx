@@ -31,6 +31,7 @@ import {
   Brand,
   BrandGradient,
   BrandGradientLocations,
+  Coral,
   Gold,
   MaxContentWidth,
   OnBrand,
@@ -38,6 +39,7 @@ import {
   StateGo,
   StateMaybe,
 } from '@/constants/theme';
+import { LivePulse } from '@/components/live-pulse';
 import { getEventTheme } from '@/constants/event-themes';
 import { track } from '@/lib/analytics';
 import { useAuth } from '@/lib/auth-context';
@@ -766,7 +768,15 @@ export default function EventScreen() {
               ) : null}
               {goingCount !== null && goingCount > 0 ? (
                 <View style={styles.chip}>
+                  <LivePulse size={7} color={StateGo} />
                   <ThemedText type="small">{goingCount} going</ThemedText>
+                </View>
+              ) : null}
+              {event.capacity && goingCount !== null && goingCount >= event.capacity * 0.85 ? (
+                <View style={[styles.chip, styles.chipHot]}>
+                  <ThemedText type="smallBold" style={styles.chipHotText}>
+                    Almost full
+                  </ThemedText>
                 </View>
               ) : null}
             </View>
@@ -1090,9 +1100,9 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
   },
   heroTitle: {
-    fontSize: 40,
-    lineHeight: 42,
-    letterSpacing: -0.5,
+    fontSize: 42,
+    lineHeight: 43,
+    letterSpacing: -1.4,
   },
   heroChips: {
     flexDirection: 'row',
@@ -1113,12 +1123,22 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     backgroundColor: 'rgba(0,0,0,0.35)',
     borderColor: 'rgba(255,255,255,0.2)',
     borderWidth: 1,
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 999,
+  },
+  chipHot: {
+    backgroundColor: Coral,
+    borderColor: 'transparent',
+  },
+  chipHotText: {
+    color: '#fff',
   },
   body: {
     padding: Spacing.four,
