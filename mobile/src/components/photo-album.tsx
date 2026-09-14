@@ -124,7 +124,7 @@ const styles = StyleSheet.create({
     width: '31.5%',
     aspectRatio: 1,
     borderRadius: 12,
-    backgroundColor: '#243527',
+    backgroundColor: '#1D2A21',
   },
   addButton: {
     backgroundColor: Brand,

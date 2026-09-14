@@ -49,13 +49,14 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: DisplayFont,
     fontSize: 34,
-    lineHeight: 38,
-    letterSpacing: -0.5,
+    lineHeight: 37,
+    letterSpacing: -0.9,
   },
   subtitle: {
     fontFamily: DisplayFontBold,
-    fontSize: 20,
-    lineHeight: 26,
+    fontSize: 21,
+    lineHeight: 27,
+    letterSpacing: -0.4,
   },
   link: {
     fontFamily: BodyFontMedium,

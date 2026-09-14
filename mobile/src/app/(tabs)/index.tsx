@@ -137,9 +137,9 @@ function fomoBadges(event: FeedEvent): Badge[] {
   const h = hoursUntil(event.starts_at);
   if (event.trending_score >= 8) out.push({ label: '🔥 Trending', bg: '#F73558', fg: '#fff' });
   if (event.capacity && event.going_count >= event.capacity * 0.85) {
-    out.push({ label: 'Almost full', bg: '#FFB84D', fg: '#07130B' });
+    out.push({ label: 'Almost full', bg: '#FFB84D', fg: '#04120A' });
   } else if (event.going_count >= 20) {
-    out.push({ label: `${event.going_count} going`, bg: 'rgba(61,220,151,0.9)', fg: '#07130B' });
+    out.push({ label: `${event.going_count} going`, bg: 'rgba(61,220,151,0.9)', fg: '#04120A' });
   }
   if (h !== null && h >= 0 && h <= 10) {
     out.push({ label: h < 1 ? 'Starting soon' : `In ${Math.round(h)}h`, bg: 'rgba(11,11,16,0.6)', fg: '#fff' });
@@ -709,7 +709,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 4,
     borderWidth: 2,
-    borderColor: '#111811',
+    borderColor: '#0B120D',
   },
   iconBadgeText: {
     color: '#fff',
@@ -718,7 +718,7 @@ const styles = StyleSheet.create({
   },
   segment: {
     flexDirection: 'row',
-    backgroundColor: '#19231B',
+    backgroundColor: '#131C16',
     borderRadius: 999,
     padding: 4,
     marginBottom: Spacing.two,
@@ -734,7 +734,7 @@ const styles = StyleSheet.create({
     backgroundColor: Brand,
   },
   segmentText: {
-    color: '#94A697',
+    color: '#8FA895',
   },
   segmentOnText: {
     color: OnBrand,
@@ -778,16 +778,18 @@ const styles = StyleSheet.create({
   },
   cardWrap: {
     borderRadius: 24,
-    shadowColor: '#000',
-    shadowOpacity: 0.45,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 12 },
-    elevation: 8,
+    shadowColor: '#000000',
+    shadowOpacity: 0.42,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 14 },
+    elevation: 9,
   },
   cardWrapFeatured: {
-    shadowColor: '#000',
-    shadowOpacity: 0.5,
-    shadowRadius: 22,
+    // Premium placement gets a warm gold lift so it visibly stands apart.
+    shadowColor: Gold,
+    shadowOpacity: 0.4,
+    shadowRadius: 26,
+    shadowOffset: { width: 0, height: 14 },
   },
   card: {
     borderRadius: 24,
@@ -810,7 +812,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   featuredRibbonText: {
-    color: '#07130B',
+    color: '#04120A',
     fontSize: 12,
     letterSpacing: 0.5,
   },
@@ -820,7 +822,7 @@ const styles = StyleSheet.create({
   skeleton: {
     borderRadius: 22,
     minHeight: 210,
-    backgroundColor: '#19231B',
+    backgroundColor: '#131C16',
   },
   badgeRow: {
     position: 'absolute',
@@ -869,7 +871,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.three,
-    backgroundColor: '#19231B',
+    backgroundColor: '#131C16',
     borderWidth: 1,
     borderColor: 'rgba(29,201,107,0.25)',
     borderRadius: 18,
@@ -884,7 +886,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   planSpark: { fontSize: 18, color: OnBrand },
-  planChevron: { fontSize: 26, color: '#94A697' },
+  planChevron: { fontSize: 26, color: '#8FA895' },
   flex: { flex: 1 },
   activityWrap: {
     gap: Spacing.two,
@@ -896,7 +898,7 @@ const styles = StyleSheet.create({
   },
   activityCard: {
     width: 200,
-    backgroundColor: '#19231B',
+    backgroundColor: '#131C16',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
     borderRadius: 16,
@@ -931,7 +933,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     overflow: 'hidden',
     justifyContent: 'flex-end',
-    backgroundColor: '#19231B',
+    backgroundColor: '#131C16',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.06)',
   },
@@ -959,7 +961,7 @@ const styles = StyleSheet.create({
     backgroundColor: StateGo,
   },
   dateText: {
-    color: '#EFF6EE',
+    color: '#F2F7F1',
     letterSpacing: 1.5,
     fontSize: 12,
   },

@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#243527',
+    backgroundColor: '#1D2A21',
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -159,5 +159,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 6,
   },
-  badgeText: { color: '#07130B', fontSize: 12, fontWeight: '700' },
+  badgeText: { color: '#04120A', fontSize: 12, fontWeight: '700' },
 });

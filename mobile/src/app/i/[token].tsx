@@ -183,11 +183,11 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   cover: { width: '100%', height: 200, borderRadius: 22 },
-  coverFallback: { backgroundColor: '#19231B', alignItems: 'center', justifyContent: 'center' },
+  coverFallback: { backgroundColor: '#131C16', alignItems: 'center', justifyContent: 'center' },
   coverEmoji: { fontSize: 56 },
   kicker: { color: Gold, fontWeight: '700' },
   metaCard: {
-    backgroundColor: '#19231B',
+    backgroundColor: '#131C16',
     borderRadius: 18,
     padding: Spacing.four,
     gap: Spacing.half,

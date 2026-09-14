@@ -585,8 +585,8 @@ export default function AdminScreen() {
                     : e.views >= 40
                       ? { label: '👀 High interest', color: '#FFB84D' }
                       : e.views > 0
-                        ? { label: '🌱 Warming up', color: '#94A697' }
-                        : { label: '💤 Quiet', color: '#94A697' };
+                        ? { label: '🌱 Warming up', color: '#8FA895' }
+                        : { label: '💤 Quiet', color: '#8FA895' };
                 const when = e.starts_at
                   ? new Date(e.starts_at).toLocaleDateString(undefined, {
                       weekday: 'short',
@@ -744,7 +744,7 @@ export default function AdminScreen() {
                       <Pressable
                         style={[styles.signalPill, { backgroundColor: c.active ? 'rgba(61,220,151,0.15)' : 'rgba(148,166,151,0.15)' }]}
                         onPress={() => toggleCampaign(c)}>
-                        <ThemedText type="small" style={{ color: c.active ? StateGo : '#94A697' }}>
+                        <ThemedText type="small" style={{ color: c.active ? StateGo : '#8FA895' }}>
                           {c.active ? 'Active' : 'Paused'}
                         </ThemedText>
                       </Pressable>
@@ -1164,14 +1164,14 @@ const styles = StyleSheet.create({
   },
   segment: {
     flexDirection: 'row',
-    backgroundColor: '#19231B',
+    backgroundColor: '#131C16',
     borderRadius: 999,
     padding: 4,
     gap: 4,
   },
   segItem: { alignItems: 'center', paddingVertical: Spacing.two, paddingHorizontal: Spacing.three, borderRadius: 999 },
   segOn: { backgroundColor: Brand },
-  segText: { color: '#94A697' },
+  segText: { color: '#8FA895' },
   segOnText: { color: OnBrand },
   content: {
     paddingHorizontal: Spacing.four,
@@ -1210,10 +1210,10 @@ const styles = StyleSheet.create({
   formCard: { borderRadius: 16, padding: Spacing.three, gap: Spacing.two, marginBottom: Spacing.two },
   formRow: { flexDirection: 'row', gap: Spacing.two },
   input: {
-    backgroundColor: '#243527',
+    backgroundColor: '#1D2A21',
     borderRadius: 12,
     padding: Spacing.three,
-    color: '#EFF6EE',
+    color: '#F2F7F1',
     fontFamily: 'SpaceGrotesk_400Regular',
   },
   multiline: { minHeight: 60 },
@@ -1275,11 +1275,11 @@ const styles = StyleSheet.create({
   copyBtn: { color: Brand },
   funnelCard: { borderRadius: 14, padding: Spacing.three, gap: Spacing.two },
   funnelTop: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
-  funnelNum: { color: '#EFF6EE' },
-  barTrack: { height: 8, borderRadius: 999, backgroundColor: '#243527', overflow: 'hidden' },
+  funnelNum: { color: '#F2F7F1' },
+  barTrack: { height: 8, borderRadius: 999, backgroundColor: '#1D2A21', overflow: 'hidden' },
   barFill: { height: 8, borderRadius: 999, backgroundColor: Brand },
   venueThumb: { width: 52, height: 52, borderRadius: 12 },
-  venueThumbEmpty: { alignItems: 'center', justifyContent: 'center', backgroundColor: '#243527' },
+  venueThumbEmpty: { alignItems: 'center', justifyContent: 'center', backgroundColor: '#1D2A21' },
   venueCard: { borderRadius: 16, padding: Spacing.three, gap: Spacing.two },
   venueActions: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
   miniBtn: {
@@ -1298,5 +1298,5 @@ const styles = StyleSheet.create({
     minWidth: 72,
     alignItems: 'center',
   },
-  photoText: { color: '#EFF6EE' },
+  photoText: { color: '#F2F7F1' },
 });

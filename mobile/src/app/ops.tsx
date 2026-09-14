@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
   tileGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
   tile: {
     width: '31.5%',
-    backgroundColor: '#19231B',
+    backgroundColor: '#131C16',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.06)',
     borderRadius: 16,
@@ -199,8 +199,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.two,
     gap: 2,
   },
-  tileNum: { fontFamily: DisplayFont, fontSize: 18, color: '#EFF6EE' },
-  tileLabel: { fontSize: 9, letterSpacing: 1, color: '#94A697' },
+  tileNum: { fontFamily: DisplayFont, fontSize: 18, color: '#F2F7F1' },
+  tileLabel: { fontSize: 9, letterSpacing: 1, color: '#8FA895' },
   askRow: { flexDirection: 'row', gap: Spacing.two },
   input: {
     flex: 1,

@@ -545,7 +545,7 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.08)',
-    backgroundColor: '#111811',
+    backgroundColor: '#0B120D',
   },
   draftBtn: {
     alignItems: 'center',
@@ -564,7 +564,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 28,
     borderRadius: 999,
-    backgroundColor: '#243527',
+    backgroundColor: '#1D2A21',
     padding: 3,
     justifyContent: 'center',
   },
@@ -575,7 +575,7 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: '#EFF6EE',
+    backgroundColor: '#F2F7F1',
     alignSelf: 'flex-start',
   },
   knobOn: {
@@ -596,7 +596,7 @@ const styles = StyleSheet.create({
     fontSize: 26,
     lineHeight: 30,
     letterSpacing: -0.5,
-    color: '#EFF6EE',
+    color: '#F2F7F1',
   },
   coverPicker: {
     width: '100%',
@@ -700,7 +700,7 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   vibeSwatchOn: {
-    borderColor: '#EFF6EE',
+    borderColor: '#F2F7F1',
   },
   input: {
     borderRadius: 14,

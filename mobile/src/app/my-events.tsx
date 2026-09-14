@@ -28,7 +28,7 @@ function formatDate(row: EventRow) {
 
 const STATUS_COLOR: Record<string, string> = {
   published: StateGo,
-  draft: '#94A697',
+  draft: '#8FA895',
   cancelled: '#F73558',
 };
 
@@ -80,7 +80,7 @@ export default function MyEventsScreen() {
           </View>
         }
         renderItem={({ item, index }) => {
-          const color = STATUS_COLOR[item.status] ?? '#94A697';
+          const color = STATUS_COLOR[item.status] ?? '#8FA895';
           return (
             <Appear index={index}>
               <Pressable

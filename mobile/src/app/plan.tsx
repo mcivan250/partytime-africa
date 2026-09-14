@@ -288,7 +288,7 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: DisplayFont,
     fontSize: 30,
-    color: '#EFF6EE',
+    color: '#F2F7F1',
   },
   sub: { textAlign: 'center', lineHeight: 20, maxWidth: 320 },
   askRow: { flexDirection: 'row', gap: Spacing.two },
@@ -319,7 +319,7 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
     gap: Spacing.three,
-    backgroundColor: '#19231B',
+    backgroundColor: '#131C16',
     borderRadius: 18,
     padding: Spacing.two,
     borderWidth: 1,

@@ -725,7 +725,7 @@ const styles = StyleSheet.create({
     width: 86,
     height: 86,
     borderRadius: 43,
-    backgroundColor: '#19231B',
+    backgroundColor: '#131C16',
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -737,7 +737,7 @@ const styles = StyleSheet.create({
   avatarInitials: {
     fontFamily: DisplayFont,
     fontSize: 30,
-    color: '#EFF6EE',
+    color: '#F2F7F1',
   },
   avatarBadge: {
     position: 'absolute',
@@ -750,7 +750,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
-    borderColor: '#111811',
+    borderColor: '#0B120D',
   },
   avatarBadgeGlyph: {
     fontSize: 13,
@@ -759,7 +759,7 @@ const styles = StyleSheet.create({
   name: {
     fontFamily: DisplayFont,
     fontSize: 28,
-    color: '#EFF6EE',
+    color: '#F2F7F1',
     textAlign: 'center',
   },
   meta: {
@@ -800,7 +800,7 @@ const styles = StyleSheet.create({
   },
   statTile: {
     flex: 1,
-    backgroundColor: '#19231B',
+    backgroundColor: '#131C16',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.06)',
     borderRadius: 18,
@@ -816,7 +816,7 @@ const styles = StyleSheet.create({
     fontFamily: BodyFontBold,
     fontSize: 10,
     letterSpacing: 1.5,
-    color: '#94A697',
+    color: '#8FA895',
   },
 
   // Next event
@@ -824,7 +824,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.three,
-    backgroundColor: '#19231B',
+    backgroundColor: '#131C16',
     borderWidth: 1,
     borderColor: 'rgba(233,196,106,0.25)',
     borderRadius: 20,
@@ -875,7 +875,7 @@ const styles = StyleSheet.create({
   },
   chevron: {
     fontSize: 26,
-    color: '#94A697',
+    color: '#8FA895',
     marginLeft: Spacing.two,
   },
 
@@ -914,7 +914,7 @@ const styles = StyleSheet.create({
   },
   deleteCancel: {
     flex: 1,
-    backgroundColor: '#243527',
+    backgroundColor: '#1D2A21',
     borderRadius: 999,
     paddingVertical: Spacing.three,
     alignItems: 'center',
@@ -973,7 +973,7 @@ const styles = StyleSheet.create({
   authTitle: {
     fontFamily: DisplayFont,
     fontSize: 30,
-    color: '#EFF6EE',
+    color: '#F2F7F1',
     textAlign: 'center',
   },
   authSub: {

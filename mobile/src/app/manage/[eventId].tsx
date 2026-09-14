@@ -702,7 +702,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.16)',
   },
   topBtnPrimary: { backgroundColor: StateGo, borderColor: 'transparent' },
-  topBtnText: { color: '#EFF6EE' },
+  topBtnText: { color: '#F2F7F1' },
   rateRow: {
     flexDirection: 'row',
     gap: Spacing.two,
@@ -819,7 +819,7 @@ const styles = StyleSheet.create({
     borderRadius: 19,
   },
   guestAvatarFallback: {
-    backgroundColor: '#243527',
+    backgroundColor: '#1D2A21',
     alignItems: 'center',
     justifyContent: 'center',
   },

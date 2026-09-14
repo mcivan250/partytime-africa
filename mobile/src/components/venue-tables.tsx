@@ -20,7 +20,7 @@ type TableStatus = 'available' | 'booked' | 'held' | 'comp';
 const STATUS_META: Record<TableStatus, { accent: string; label: string }> = {
   available: { accent: StateGo, label: 'Open' },
   booked: { accent: Gold, label: 'Booked' },
-  held: { accent: '#94A697', label: 'Held' },
+  held: { accent: '#8FA895', label: 'Held' },
   comp: { accent: '#5AC8E8', label: 'Comp' },
 };
 

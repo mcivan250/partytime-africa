@@ -150,7 +150,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#243527',
+    backgroundColor: '#1D2A21',
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',

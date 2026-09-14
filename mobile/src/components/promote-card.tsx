@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
   },
   shareGhost: {
-    backgroundColor: '#243527',
+    backgroundColor: '#1D2A21',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
   },
@@ -261,7 +261,7 @@ const styles = StyleSheet.create({
   statNum: {
     fontFamily: DisplayFont,
     fontSize: 22,
-    color: '#EFF6EE',
+    color: '#F2F7F1',
   },
   earned: {
     color: Gold,

@@ -27,7 +27,7 @@ export function ReportMenu({
   targetOwnerId,
   targetName,
   onBlocked,
-  tint = '#94A697',
+  tint = '#8FA895',
 }: {
   targetType: 'feed_post' | 'feed_reply' | 'dm' | 'comment' | 'user' | 'event';
   targetId: string | null;

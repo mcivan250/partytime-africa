@@ -415,7 +415,7 @@ const styles = StyleSheet.create({
     aspectRatio: 4 / 5,
     maxHeight: 420,
     borderRadius: 14,
-    backgroundColor: '#243527',
+    backgroundColor: '#1D2A21',
   },
   card: {
     borderRadius: 18,
@@ -437,7 +437,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: '#243527',
+    backgroundColor: '#1D2A21',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -460,7 +460,7 @@ const styles = StyleSheet.create({
   },
   eventChip: {
     alignSelf: 'flex-start',
-    backgroundColor: '#243527',
+    backgroundColor: '#1D2A21',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
     paddingVertical: 6,
@@ -480,7 +480,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   actionText: {
-    color: '#94A697',
+    color: '#8FA895',
   },
   liked: {
     color: StateGo,

@@ -4,7 +4,7 @@ import { ThemedText } from '@/components/themed-text';
 
 // Overlapping initial-circles (DESIGN.md avatar stack). Colors are picked
 // deterministically from the name so a person keeps the same color.
-const COLORS = ['#F73558', '#FF6B35', '#FFB84D', '#3DDC97', '#2EC4B6', '#E9C46A', '#5BEA8E'];
+const COLORS = ['#F73558', '#FF6B35', '#FFB84D', '#3DDC97', '#2EC4B6', '#D4AF37', '#5BEA8E'];
 
 function colorFor(name: string) {
   let hash = 0;
@@ -52,18 +52,18 @@ const styles = StyleSheet.create({
     height: 34,
     borderRadius: 999,
     borderWidth: 2,
-    borderColor: '#19231B',
+    borderColor: '#131C16',
     alignItems: 'center',
     justifyContent: 'center',
   },
   initial: {
-    color: '#07130B',
+    color: '#04120A',
   },
   more: {
     backgroundColor: '#33473A',
     marginLeft: -8,
   },
   moreText: {
-    color: '#EFF6EE',
+    color: '#F2F7F1',
   },
 });

@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   kicker: { color: Brand, letterSpacing: 2, fontSize: 11 },
-  title: { fontFamily: DisplayFont, fontSize: 30, color: '#EFF6EE', lineHeight: 34, marginTop: -Spacing.one },
+  title: { fontFamily: DisplayFont, fontSize: 30, color: '#F2F7F1', lineHeight: 34, marginTop: -Spacing.one },
   subtitle: { lineHeight: 22, maxWidth: 460 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
   chip: {
@@ -189,7 +189,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     overflow: 'hidden',
     justifyContent: 'flex-end',
-    backgroundColor: '#19231B',
+    backgroundColor: '#131C16',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.06)',
   },

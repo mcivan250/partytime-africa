@@ -733,7 +733,7 @@ export default function EventScreen() {
             />
           )}
           <LinearGradient
-            colors={['rgba(17,24,17,0.1)', 'rgba(17,24,17,0.6)', '#111811']}
+            colors={['rgba(17,24,17,0.1)', 'rgba(17,24,17,0.6)', '#0B120D']}
             locations={[0, 0.55, 1]}
             style={StyleSheet.absoluteFill}
           />
@@ -1086,7 +1086,7 @@ const styles = StyleSheet.create({
     backgroundColor: StateGo,
   },
   heroKicker: {
-    color: '#EFF6EE',
+    color: '#F2F7F1',
     letterSpacing: 2,
   },
   heroTitle: {
@@ -1109,7 +1109,7 @@ const styles = StyleSheet.create({
     marginTop: Spacing.one,
   },
   sponsorChipText: {
-    color: '#07130B',
+    color: '#04120A',
     letterSpacing: 0.3,
   },
   chip: {
@@ -1157,7 +1157,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
-    backgroundColor: '#243527',
+    backgroundColor: '#1D2A21',
   },
   rsvpEmoji: {
     fontSize: 20,
@@ -1283,7 +1283,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   shareGhost: {
-    backgroundColor: '#243527',
+    backgroundColor: '#1D2A21',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
   },
@@ -1291,7 +1291,7 @@ const styles = StyleSheet.create({
     backgroundColor: StateGo,
   },
   checkInButton: {
-    backgroundColor: '#243527',
+    backgroundColor: '#1D2A21',
     borderRadius: 16,
     paddingVertical: Spacing.three,
     alignItems: 'center',
@@ -1303,7 +1303,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.three,
     paddingHorizontal: Spacing.four,
     alignItems: 'center',
-    backgroundColor: '#19231B',
+    backgroundColor: '#131C16',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
   },

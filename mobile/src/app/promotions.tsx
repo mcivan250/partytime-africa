@@ -362,7 +362,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   ghost: {
-    backgroundColor: '#243527',
+    backgroundColor: '#1D2A21',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
   },
@@ -370,7 +370,7 @@ const styles = StyleSheet.create({
     backgroundColor: StateGo,
   },
   waLabel: {
-    color: '#07130B',
+    color: '#04120A',
   },
   emptyCard: {
     borderRadius: 20,
@@ -412,6 +412,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.four,
   },
   browseLabel: {
-    color: '#07130B',
+    color: '#04120A',
   },
 });

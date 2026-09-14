@@ -216,7 +216,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
   },
   mine: { backgroundColor: Brand, borderBottomRightRadius: 4 },
-  their: { backgroundColor: '#243527', borderBottomLeftRadius: 4 },
+  their: { backgroundColor: '#1D2A21', borderBottomLeftRadius: 4 },
   mineText: { color: OnBrand },
   composer: {
     flexDirection: 'row',
