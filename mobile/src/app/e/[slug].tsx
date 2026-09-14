@@ -516,17 +516,34 @@ export default function EventScreen() {
     load();
   }, [load]);
 
+  // A magnetic share line — vibe + when + who's going + link. This is the
+  // growth loop: every guest who shares turns their friends into attendees.
+  const shareWhen = event?.starts_at
+    ? new Date(event.starts_at).toLocaleDateString(undefined, {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+        timeZone: event.timezone,
+      })
+    : '';
   const inviteMessage = event
-    ? `You're invited to ${event.title}! RSVP here: ${inviteUrl(event.slug)}`
+    ? `${event.title} 🔥` +
+      (shareWhen ? ` · ${shareWhen}` : '') +
+      (event.venue_name ? ` · ${event.venue_name}` : '') +
+      '\n' +
+      (goingCount && goingCount > 0 ? `${goingCount} going — ` : '') +
+      `get in on Party Time: ${inviteUrl(event.slug)}`
     : '';
 
   const shareInvite = async () => {
     if (!event) return;
+    track('promote_share', { slug: event.slug });
     await Share.share({ message: inviteMessage });
   };
 
   const shareWhatsApp = async () => {
     if (!event) return;
+    track('promote_share', { slug: event.slug });
     const url = `https://wa.me/?text=${encodeURIComponent(inviteMessage)}`;
     const ok = await Linking.canOpenURL(url);
     if (ok) {

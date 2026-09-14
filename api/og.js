@@ -88,7 +88,8 @@ ${bodyHtml}
 async function eventPage(slug) {
   const rows = await sb(
     `events?slug=eq.${encodeURIComponent(slug)}` +
-      `&select=title,description,cover_url,venue_name,address,starts_at,ends_at,is_ticketed,currency,ticket_tiers(price_minor,currency)&limit=1`,
+      `&select=title,description,cover_url,venue_name,address,starts_at,ends_at,is_ticketed,currency,ticket_tiers(price_minor,currency),going:rsvps(count)` +
+      `&rsvps.status=eq.going&limit=1`,
   );
   const ev = rows && rows[0];
   const url = `${SITE}/e/${encodeURIComponent(slug)}`;
@@ -107,7 +108,10 @@ async function eventPage(slug) {
   if (ev.venue_name) bits.push(ev.venue_name);
   const prefix = bits.length ? `${bits.join(' · ')} — ` : '';
   const body = (ev.description || 'Get your tickets on Party Time.').replace(/\s+/g, ' ').trim();
-  const desc = (prefix + body).slice(0, 300);
+  // FOMO: surface the crowd in the link preview when an event has momentum.
+  const going = Array.isArray(ev.going) && ev.going[0] ? Number(ev.going[0].count) || 0 : 0;
+  const fomo = going >= 10 ? `🔥 ${going} going · ` : '';
+  const desc = (fomo + prefix + body).slice(0, 300);
   const image = ev.cover_url || `${SITE}/og-image.png`;
 
   const tiers = Array.isArray(ev.ticket_tiers) ? ev.ticket_tiers : [];
