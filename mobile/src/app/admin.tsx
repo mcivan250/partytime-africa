@@ -5,7 +5,7 @@ import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, Share, Style
 import { Appear } from '@/components/appear';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Brand, MaxContentWidth, OnBrand, Spacing, StateGo } from '@/constants/theme';
+import { Brand, Coral, MaxContentWidth, OnBrand, Spacing, StateGo, StateMaybe } from '@/constants/theme';
 import { tapSuccess } from '@/lib/haptics';
 import { useAuth } from '@/lib/auth-context';
 import { formatMoney } from '@/lib/money';
@@ -89,8 +89,17 @@ type Campaign = {
   checkouts: number;
 };
 type EventLite = { id: string; title: string };
-type TabKey = 'analytics' | 'events' | 'activations' | 'bookings' | 'payouts' | 'members' | 'content' | 'venues';
+type Readiness = {
+  payments: { configured: boolean; mode: string; live: boolean };
+  ai: { gemini: boolean; anthropic: boolean };
+  otp: { whatsapp: boolean; sms: boolean; pepper: boolean };
+  tickets: { qr_secret: boolean };
+  reminders: { cron_secret: boolean };
+  data: { upcoming_events: number; paid_last_30d: number; last_paid_at: string | null };
+};
+type TabKey = 'launch' | 'analytics' | 'events' | 'activations' | 'bookings' | 'payouts' | 'members' | 'content' | 'venues';
 const TABS: { key: TabKey; label: string }[] = [
+  { key: 'launch', label: 'Launch' },
   { key: 'analytics', label: 'Analytics' },
   { key: 'events', label: 'Events' },
   { key: 'activations', label: 'Activations' },
@@ -128,9 +137,28 @@ const FUNNEL_ORDER = [
 
 const VENUE_KINDS = ['bar', 'restaurant', 'club', 'lounge'];
 
+function statusColor(s: 'ok' | 'warn' | 'bad' | 'info') {
+  return s === 'ok' ? StateGo : s === 'warn' ? StateMaybe : s === 'bad' ? Coral : '#8FA895';
+}
+function CheckRow({ label, sub, state }: { label: string; sub: string; state: 'ok' | 'warn' | 'bad' | 'info' }) {
+  return (
+    <ThemedView type="backgroundElement" style={styles.checkRow}>
+      <View style={[styles.checkDot, { backgroundColor: statusColor(state) }]} />
+      <View style={styles.flex}>
+        <ThemedText type="smallBold">{label}</ThemedText>
+        <ThemedText type="small" themeColor="textSecondary" style={styles.checkSub}>
+          {sub}
+        </ThemedText>
+      </View>
+    </ThemedView>
+  );
+}
+
 export default function AdminScreen() {
   const { session } = useAuth();
-  const [tab, setTab] = useState<TabKey>('analytics');
+  const [tab, setTab] = useState<TabKey>('launch');
+  const [readiness, setReadiness] = useState<Readiness | null>(null);
+  const [readinessLoading, setReadinessLoading] = useState(false);
   const [funnel, setFunnel] = useState<FunnelRow[]>([]);
   const [funnelDays, setFunnelDays] = useState(7);
   const [perf, setPerf] = useState<EventPerf[]>([]);
@@ -196,6 +224,13 @@ export default function AdminScreen() {
   const loadPerf = useCallback(async (days: number) => {
     const { data } = await supabase.rpc('admin_event_performance', { p_days: days });
     setPerf((data ?? []) as EventPerf[]);
+  }, []);
+
+  const loadReadiness = useCallback(async () => {
+    setReadinessLoading(true);
+    const { data } = await supabase.functions.invoke('admin-readiness');
+    setReadiness((data as Readiness | null) ?? null);
+    setReadinessLoading(false);
   }, []);
 
   const loadCampaigns = useCallback(async () => {
@@ -277,6 +312,10 @@ export default function AdminScreen() {
   useEffect(() => {
     if (session) loadCampaigns();
   }, [session, loadCampaigns]);
+
+  useEffect(() => {
+    if (session) loadReadiness();
+  }, [session, loadReadiness]);
 
   // Premium placement is the revenue lever: featuring an event pins it to the
   // top of Discover. Toggling it here is the paid-placement control.
@@ -501,7 +540,114 @@ export default function AdminScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {tab === 'analytics' ? (
+        {tab === 'launch' ? (
+          readinessLoading && !readiness ? (
+            <ActivityIndicator color={Brand} style={{ marginTop: Spacing.six }} />
+          ) : !readiness ? (
+            <ThemedText type="small" themeColor="textSecondary" style={styles.empty}>
+              Couldn&apos;t load the readiness check. Pull to refresh, or tap Re-check below.
+            </ThemedText>
+          ) : (
+            (() => {
+              const r = readiness;
+              const paymentsState = r.payments.live ? 'ok' : r.payments.configured ? 'warn' : 'bad';
+              const ready = r.payments.live && r.data.upcoming_events > 0 && (r.ai.gemini || r.ai.anthropic);
+              const lastPaid = r.data.last_paid_at
+                ? new Date(r.data.last_paid_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
+                : null;
+              return (
+                <>
+                  <ThemedView type="backgroundElement" style={[styles.launchHead, { borderColor: ready ? 'rgba(61,220,151,0.4)' : 'rgba(255,61,110,0.4)' }]}>
+                    <ThemedText type="smallBold" style={{ color: ready ? StateGo : Coral }}>
+                      {ready ? '● Ready to sell' : '● Not ready to sell yet'}
+                    </ThemedText>
+                    <ThemedText type="small" themeColor="textSecondary" style={styles.checkSub}>
+                      {ready
+                        ? 'Payments are live, the AI is connected, and there are upcoming events.'
+                        : 'Fix the red items below before taking real money.'}
+                    </ThemedText>
+                  </ThemedView>
+
+                  <CheckRow
+                    label="Payments (Pesapal)"
+                    state={paymentsState}
+                    sub={
+                      !r.payments.configured
+                        ? 'Keys missing — checkout will fail.'
+                        : r.payments.live
+                          ? 'Live — real mobile-money & card payments.'
+                          : `Configured, but in ${r.payments.mode} mode. Switch PESAPAL_ENV to live to take real money.`
+                    }
+                  />
+                  <CheckRow
+                    label="AI concierge"
+                    state={r.ai.gemini || r.ai.anthropic ? 'ok' : 'bad'}
+                    sub={
+                      r.ai.gemini
+                        ? 'Gemini connected — Plan my night & Ops are live.'
+                        : r.ai.anthropic
+                          ? 'Anthropic connected.'
+                          : 'No AI key set — Plan my night & Ops Copilot will fail.'
+                    }
+                  />
+                  <CheckRow
+                    label="Upcoming events"
+                    state={r.data.upcoming_events > 0 ? 'ok' : 'bad'}
+                    sub={
+                      r.data.upcoming_events > 0
+                        ? `${r.data.upcoming_events} upcoming public events in the feed.`
+                        : 'No upcoming events — the feed is empty. Publish or seed events.'
+                    }
+                  />
+                  <CheckRow
+                    label="Ticket security"
+                    state={r.tickets.qr_secret ? 'ok' : 'warn'}
+                    sub={
+                      r.tickets.qr_secret
+                        ? 'Rotating QR secret set.'
+                        : 'Using the service-role fallback. Set TICKET_QR_SECRET to isolate the signing key.'
+                    }
+                  />
+                  <CheckRow
+                    label="Guest phone verification (OTP)"
+                    state={r.otp.whatsapp || r.otp.sms ? 'ok' : 'warn'}
+                    sub={
+                      r.otp.whatsapp
+                        ? 'WhatsApp OTP ready.'
+                        : r.otp.sms
+                          ? 'SMS OTP (Africa’s Talking) ready.'
+                          : 'Off — optional, but recommended before scaling.'
+                    }
+                  />
+                  <CheckRow
+                    label="Event reminders"
+                    state={r.reminders.cron_secret ? 'ok' : 'warn'}
+                    sub={r.reminders.cron_secret ? 'Reminder cron secured.' : 'CRON_SECRET not set — scheduled reminders may not run.'}
+                  />
+                  <CheckRow
+                    label="Sales activity"
+                    state="info"
+                    sub={
+                      lastPaid
+                        ? `Last paid order ${lastPaid} · ${r.data.paid_last_30d} in the last 30 days.`
+                        : 'No paid orders yet — run one real end-to-end test once payments are live.'
+                    }
+                  />
+
+                  <Pressable style={[styles.saveBtn, readinessLoading && styles.disabled]} disabled={readinessLoading} onPress={loadReadiness}>
+                    {readinessLoading ? (
+                      <ActivityIndicator color={OnBrand} />
+                    ) : (
+                      <ThemedText type="smallBold" style={styles.segOnText}>
+                        Re-check
+                      </ThemedText>
+                    )}
+                  </Pressable>
+                </>
+              );
+            })()
+          )
+        ) : tab === 'analytics' ? (
           (() => {
             const byName = new Map(funnel.map((f) => [f.name, f]));
             const rows = FUNNEL_ORDER.map((n) => ({
@@ -1252,6 +1398,27 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.12)',
   },
   dayChipOn: { backgroundColor: Brand, borderColor: 'transparent' },
+  launchHead: {
+    borderRadius: 16,
+    padding: Spacing.three,
+    gap: 4,
+    borderWidth: 1,
+    marginBottom: Spacing.one,
+  },
+  checkRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.three,
+    borderRadius: 14,
+    padding: Spacing.three,
+  },
+  checkDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginTop: 5,
+  },
+  checkSub: { lineHeight: 18, marginTop: 2 },
   perfHint: { marginBottom: Spacing.two, lineHeight: 18 },
   perfCard: { borderRadius: 16, padding: Spacing.three, gap: Spacing.three },
   perfTop: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.two },

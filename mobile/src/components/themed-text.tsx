@@ -48,9 +48,9 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: DisplayFont,
-    fontSize: 34,
-    lineHeight: 37,
-    letterSpacing: -0.9,
+    fontSize: 38,
+    lineHeight: 40,
+    letterSpacing: -1.2,
   },
   subtitle: {
     fontFamily: DisplayFontBold,

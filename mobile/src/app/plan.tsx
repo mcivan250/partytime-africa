@@ -287,7 +287,10 @@ const styles = StyleSheet.create({
   spark: { fontSize: 34, marginBottom: Spacing.one },
   title: {
     fontFamily: DisplayFont,
-    fontSize: 30,
+    fontSize: 38,
+    lineHeight: 40,
+    letterSpacing: -1.2,
+    textAlign: 'center',
     color: '#F2F7F1',
   },
   sub: { textAlign: 'center', lineHeight: 20, maxWidth: 320 },
