@@ -21,3 +21,14 @@ export const EVENT_THEMES: EventTheme[] = [
 export function getEventTheme(key?: string | null): EventTheme {
   return EVENT_THEMES.find((t) => t.key === key) ?? EVENT_THEMES[0];
 }
+
+// Deterministic, colourful gradient for cover-less cards (events/venues), keyed
+// off a stable string (slug/id). Excludes the green "forest" theme so fallbacks
+// read as a varied, premium palette instead of a monochrome wall of brand-green.
+const FALLBACK_THEMES = EVENT_THEMES.filter((t) => t.key !== 'forest');
+export function gradientFor(key?: string | null): readonly [string, string, string] {
+  if (!key) return FALLBACK_THEMES[0].gradient;
+  let h = 0;
+  for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
+  return FALLBACK_THEMES[h % FALLBACK_THEMES.length].gradient;
+}

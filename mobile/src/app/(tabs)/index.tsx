@@ -19,6 +19,7 @@ import { CityFeed } from '@/components/city-feed';
 import { LivePulse } from '@/components/live-pulse';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { gradientFor } from '@/constants/event-themes';
 import {
   BodyFontBold,
   BottomNavInset,
@@ -166,7 +167,7 @@ function EventCard({ event, onReact }: { event: FeedEvent; onReact: (event: Feed
           <Image source={{ uri: event.cover_url }} style={StyleSheet.absoluteFill} contentFit="cover" />
         ) : (
           <LinearGradient
-            colors={BrandGradient}
+            colors={gradientFor(event.slug)}
             locations={BrandGradientLocations}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
@@ -316,7 +317,7 @@ function VenueRail({ venues }: { venues: VenueLite[] }) {
               <Image source={{ uri: v.cover_url }} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} />
             ) : (
               <LinearGradient
-                colors={BrandGradient}
+                colors={gradientFor(v.id)}
                 locations={BrandGradientLocations}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
