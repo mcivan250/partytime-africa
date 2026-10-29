@@ -9,7 +9,10 @@
     { "source": "/llms.txt", "destination": "/api/llms" },
     { "source": "/promote", "destination": "/api/page?p=promote" },
     { "source": "/safe-tickets", "destination": "/api/page?p=safe-tickets" },
+    { "source": "/sell-tickets", "destination": "/api/page?p=sell-tickets" },
     { "source": "/tonight", "destination": "/api/page?p=tonight" },
+    { "source": "/this-weekend", "destination": "/api/page?p=this-weekend" },
+    { "source": "/bars", "destination": "/api/page?p=bars" },
     { "source": "/delete-account", "destination": "/api/page?p=delete-account" },
     { "source": "/go/:code", "destination": "/api/go?code=:code" },
     {

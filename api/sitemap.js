@@ -42,8 +42,11 @@ module.exports = async (_req, res) => {
   const core = [
     urlTag(`${SITE}/`, null, '1.0'),
     urlTag(`${SITE}/venues`, null, '0.8'),
+    urlTag(`${SITE}/bars`, null, '0.8'),
     urlTag(`${SITE}/tonight`, null, '0.8'),
+    urlTag(`${SITE}/this-weekend`, null, '0.8'),
     urlTag(`${SITE}/promote`, null, '0.7'),
+    urlTag(`${SITE}/sell-tickets`, null, '0.7'),
     urlTag(`${SITE}/safe-tickets`, null, '0.7'),
     urlTag(`${SITE}/create-event`, null, '0.6'),
   ];

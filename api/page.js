@@ -202,6 +202,8 @@ function safeTicketsPage() {
     { q: 'How are payments protected?', a: 'Payments are processed by Pesapal, a licensed East African payment provider, over MTN and Airtel mobile money or card. Party Time never stores your card details and never asks for payment outside the app.' },
     { q: 'What should I avoid?', a: 'Avoid paying for tickets by direct mobile-money transfer to an individual, buying ticket screenshots, or using links sent by strangers. If a deal is only available off-platform, treat it as a scam.' },
     { q: 'What is the Party Time Buyer Guarantee?', a: 'Every ticket bought through Party Time’s secure checkout is backed by the Buyer Guarantee: if the event is cancelled and the organizer does not refund you, or a genuine ticket you bought on Party Time fails to get you in, we refund what you paid. It applies only to tickets purchased through Party Time — not to tickets bought off-platform or from an individual.' },
+    { q: 'Is it safe to buy event tickets online in Uganda?', a: 'Yes — as long as you buy through a proper platform with secure payment and verified tickets. On Party Time you pay through Pesapal (MTN/Airtel mobile money or card) and get a unique QR ticket backed by the Buyer Guarantee. It is not safe to pay an individual by mobile money or buy a ticket screenshot from a stranger — that is how most ticket scams in Uganda happen.' },
+    { q: 'How do I avoid fake event tickets in Kampala?', a: 'Only buy from the Party Time app or an organizer’s official Party Time link. Never send mobile money to a personal number for a ticket, never buy a photo or screenshot of a ticket, and avoid any deal that is only available off-platform or by DM from a stranger. Genuine Party Time tickets are unique QR codes verified at the gate — a resold screenshot will not pass a second scan.' },
   ];
   const main = `
   <div class="eyebrow">Guide · Buyers</div>
@@ -361,16 +363,195 @@ function deleteAccountPage() {
   });
 }
 
+function sellTicketsPage() {
+  const faqs = [
+    { q: 'How do I sell event tickets online in Uganda?', a: 'Create your event free on Party Time (partytime.africa), add ticket tiers with prices in UGX, and publish. Buyers pay by MTN or Airtel mobile money or card through the secure Pesapal checkout, and you get a live sales dashboard, QR check-in at the door, and payouts to your mobile-money or bank account.' },
+    { q: 'How do buyers pay — does it support mobile money?', a: 'Yes. Checkout runs through Pesapal and accepts MTN Mobile Money, Airtel Money and cards. Every paid ticket is issued as a unique QR code that your team scans at the entrance.' },
+    { q: 'What does it cost to sell tickets?', a: 'Creating and listing an event is free, and free (RSVP) events cost nothing. A small fee applies only on paid ticket sales, taken through the secure checkout — you keep the rest.' },
+    { q: 'When do I get paid?', a: 'Ticket revenue is collected securely and paid out to your mobile-money or bank account. Party Time is built on fast disbursement so organizers are not left waiting long after the event to access their money.' },
+    { q: 'Can promoters help me sell?', a: 'Yes. Turn on promoter commissions and every promoter gets a trackable referral link and a cut you set on each ticket they sell, so Kampala’s street-team economy can sell out your event for you.' },
+  ];
+  const steps = [
+    { name: 'Create your event', text: 'List it free in minutes — add a cover photo, date, venue and description.' },
+    { name: 'Set ticket tiers', text: 'Add tiers (Advance, At the door, VIP) with prices in UGX, or keep it free with RSVPs.' },
+    { name: 'Publish and share', text: 'Share your event link on WhatsApp, Instagram and TikTok, and turn on promoter commissions.' },
+    { name: 'Get paid & check in', text: 'Buyers pay by mobile money or card; scan QR tickets at the door and track sales live.' },
+  ];
+  const howTo = {
+    '@context': 'https://schema.org',
+    '@type': 'HowTo',
+    name: 'How to sell event tickets online in Uganda',
+    step: steps.map((s, i) => ({ '@type': 'HowToStep', position: i + 1, name: s.name, text: s.text })),
+  };
+  const main = `
+  <div class="eyebrow">Guide · Organizers</div>
+  <h1>Sell event tickets online in Uganda — get paid by mobile money</h1>
+  <p class="answer">To sell event tickets online in Uganda, list your event free on Party Time, add ticket tiers priced in UGX, and publish. Buyers pay securely by MTN or Airtel mobile money or card, you check guests in with QR codes at the door, and you get paid fast — with promoter commissions to help you sell out.</p>
+  <div class="lede-links"><a href="${SITE}/create-event">List your event free →</a></div>
+
+  <h2>Sell out in 4 steps</h2>
+  <ol class="steps">
+    ${steps.map((s) => `<li><strong>${esc(s.name)}.</strong> ${esc(s.text)}</li>`).join('')}
+  </ol>
+
+  <h2>Why organizers sell with Party Time</h2>
+  <ul>
+    <li><strong>Mobile-money checkout</strong> — MTN &amp; Airtel plus card, through secure Pesapal.</li>
+    <li><strong>Fast payouts</strong> — access your ticket revenue quickly, not weeks after the event.</li>
+    <li><strong>QR check-in</strong> — scan tickets at the door; screenshots and duplicates are rejected.</li>
+    <li><strong>Promoter network</strong> — pay commissions on trackable links so your crowd sells for you.</li>
+    <li><strong>Buyer Guarantee</strong> — buyers trust the sale, so more of them complete checkout.</li>
+  </ul>
+
+  <div class="card">
+    <h3 style="margin-top:0">Ready to sell tickets?</h3>
+    <p style="margin:6px 0 0">List your event free and start taking mobile-money payments today.</p>
+    <a class="cta" href="${SITE}/create-event">Create your event</a>
+  </div>
+
+  <h2>Frequently asked questions</h2>
+  <div class="faq">
+    ${faqs.map((f) => `<details><summary>${esc(f.q)}</summary><p>${esc(f.a)}</p></details>`).join('')}
+  </div>
+  <div class="updated">Last updated ${TODAY()}</div>`;
+  return layout({
+    title: 'Sell event tickets online in Uganda — mobile money | Party Time',
+    desc: 'Sell event tickets online in Uganda on Party Time: list free, take MTN/Airtel mobile money & card payments via Pesapal, check in guests with QR codes, pay promoters a commission, and get paid fast.',
+    path: '/sell-tickets',
+    jsonldBlocks: [howTo, faqLd(faqs), crumbLd('Sell tickets', `${SITE}/sell-tickets`)],
+    main,
+  });
+}
+
+function weekdayEN(iso) {
+  try {
+    return new Date(iso).getUTCDay();
+  } catch {
+    return -1;
+  }
+}
+
+async function thisWeekendPage() {
+  const nowIso = new Date().toISOString();
+  const tenDaysIso = new Date(Date.now() + 10 * 864e5).toISOString();
+  const all = await sb(
+    `events?status=eq.published&visibility=eq.public&starts_at=gte.${nowIso}&starts_at=lte.${tenDaysIso}` +
+      `&select=slug,title,starts_at,venue_name&order=starts_at.asc&limit=40`,
+  );
+  // Prefer Fri/Sat/Sun; if there are none in range, show everything coming up.
+  const weekendOnly = all.filter((e) => [5, 6, 0].includes(weekdayEN(e.starts_at)));
+  const rows = weekendOnly.length ? weekendOnly : all;
+  const fmt = (iso) => {
+    try {
+      return new Date(iso).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    } catch {
+      return 'TBA';
+    }
+  };
+  const list = rows.length
+    ? rows
+        .map(
+          (e) =>
+            `<a class="evrow" href="${SITE}/e/${esc(e.slug)}" style="text-decoration:none;color:inherit">` +
+            `<span class="d">${esc(fmt(e.starts_at))}</span>` +
+            `<span><span class="t" style="color:var(--text)">${esc(e.title)}</span>` +
+            (e.venue_name ? `<br><span class="v">${esc(e.venue_name)}</span>` : '') +
+            `</span></a>`,
+        )
+        .join('')
+    : `<p class="v">No events listed for this weekend yet — new ones drop all the time. <a href="${SITE}/">Check the live feed →</a></p>`;
+  const itemList = {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: 'Things to do in Kampala this weekend',
+    itemListElement: rows.map((e, i) => ({ '@type': 'ListItem', position: i + 1, url: `${SITE}/e/${e.slug}`, name: e.title })),
+  };
+  const main = `
+  <div class="eyebrow">Live · Updated hourly</div>
+  <h1>Things to do in Kampala this weekend</h1>
+  <p class="answer">Here’s what’s on in Kampala this weekend — parties, nightlife, concerts and events you can RSVP to or get tickets for on Party Time. This list updates automatically as organizers publish new events.</p>
+  <div class="card" style="padding:8px 24px">
+    ${list}
+  </div>
+  <p><a href="${SITE}/tonight">What’s on tonight →</a> · <a href="${SITE}/">Full live feed →</a> · <a href="${SITE}/bars">Best bars &amp; rooftops →</a></p>
+  <div class="updated">Updated ${TODAY()}</div>`;
+  return layout({
+    title: 'Things to do in Kampala this weekend | Party Time',
+    desc: 'A live list of events, parties, concerts and nightlife in Kampala this weekend — RSVP or get tickets on Party Time. Updated automatically.',
+    path: '/this-weekend',
+    jsonldBlocks: [itemList, crumbLd('This weekend in Kampala', `${SITE}/this-weekend`)],
+    main,
+  });
+}
+
+const VENUE_KIND_WORD = { bar: 'Bar', lounge: 'Lounge', club: 'Nightclub', restaurant: 'Restaurant' };
+
+async function barsPage() {
+  const rows = await sb(
+    `venues?kind=in.(bar,lounge,club)&select=id,name,kind,city,price_range,description&order=name.asc&limit=60`,
+  );
+  const faqs = [
+    { q: 'What are the best bars in Kampala?', a: 'Kampala’s best bars, rooftops and lounges are concentrated in Kololo, Industrial Area, Ntinda and Bugolobi. Browse the full, up-to-date list on Party Time with photos, menus and what’s on tonight, and book a table in a tap.' },
+    { q: 'Where is the best nightlife in Kampala?', a: 'The biggest nightlife is in Industrial Area (large clubs), with upscale lounges and theme nights in Kololo and a lively bar scene in Ntinda and Bugolobi. Party Time lists venues and the events happening at them tonight and this week.' },
+    { q: 'Can I book a table at a Kampala bar or club?', a: 'Yes — many venues on Party Time take table bookings directly in the app, and you can see which events are on before you go.' },
+  ];
+  const list = rows.length
+    ? rows
+        .map(
+          (v) =>
+            `<a class="evrow" href="${SITE}/v/${esc(v.id)}" style="text-decoration:none;color:inherit">` +
+            `<span class="d">${esc(VENUE_KIND_WORD[v.kind] || 'Venue')}</span>` +
+            `<span><span class="t" style="color:var(--text)">${esc(v.name)}</span>` +
+            `<br><span class="v">${esc([v.price_range, v.city || 'Kampala'].filter(Boolean).join(' · '))}</span>` +
+            `</span></a>`,
+        )
+        .join('')
+    : `<p class="v">Our venue guide is filling up. <a href="${SITE}/venues">Browse bars &amp; restaurants →</a></p>`;
+  const itemList = {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: 'Best bars, rooftops & nightclubs in Kampala',
+    itemListElement: rows.map((v, i) => ({ '@type': 'ListItem', position: i + 1, url: `${SITE}/v/${v.id}`, name: v.name })),
+  };
+  const main = `
+  <div class="eyebrow">Guide · Nightlife · Updated monthly</div>
+  <h1>The best bars, rooftops &amp; nightclubs in Kampala</h1>
+  <p class="answer">The best bars, rooftops and nightclubs in Kampala are found in Kololo, Industrial Area, Ntinda and Bugolobi. Here’s a live, curated guide — tap any venue for photos, the menu, what’s on tonight, and to book a table on Party Time.</p>
+  <div class="card" style="padding:8px 24px">
+    ${list}
+  </div>
+  <p><a href="${SITE}/venues">See all bars &amp; restaurants →</a> · <a href="${SITE}/tonight">What’s on tonight →</a></p>
+  <h2>Frequently asked questions</h2>
+  <div class="faq">
+    ${faqs.map((f) => `<details><summary>${esc(f.q)}</summary><p>${esc(f.a)}</p></details>`).join('')}
+  </div>
+  <div class="updated">Updated ${TODAY()}</div>`;
+  return layout({
+    title: 'Best bars, rooftops & nightclubs in Kampala | Party Time',
+    desc: 'A live, curated guide to the best bars, rooftops and nightclubs in Kampala — Kololo, Industrial Area, Ntinda and more. See what’s on tonight and book a table on Party Time.',
+    path: '/bars',
+    jsonldBlocks: [itemList, faqLd(faqs), crumbLd('Best bars in Kampala', `${SITE}/bars`)],
+    main,
+  });
+}
+
 module.exports = async (req, res) => {
   const p = req.query && req.query.p ? String(req.query.p) : '';
   let html;
   let maxAge = 'public, max-age=600, s-maxage=3600';
   if (p === 'promote') html = promotePage();
   else if (p === 'safe-tickets') html = safeTicketsPage();
+  else if (p === 'sell-tickets') html = sellTicketsPage();
   else if (p === 'delete-account') html = deleteAccountPage();
   else if (p === 'tonight') {
     html = await tonightPage();
     maxAge = 'public, max-age=300, s-maxage=900';
+  } else if (p === 'this-weekend') {
+    html = await thisWeekendPage();
+    maxAge = 'public, max-age=300, s-maxage=900';
+  } else if (p === 'bars') {
+    html = await barsPage();
+    maxAge = 'public, max-age=1800, s-maxage=3600';
   } else {
     res.statusCode = 302;
     res.setHeader('Location', SITE);
