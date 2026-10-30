@@ -259,9 +259,12 @@ function ActivityStrip({ items }: { items: ActivityItem[] }) {
   if (items.length === 0) return null;
   return (
     <View style={styles.activityWrap}>
-      <ThemedText type="smallBold" themeColor="textSecondary" style={styles.kicker}>
-        ⚡ RIGHT NOW
-      </ThemedText>
+      <View style={styles.activityHead}>
+        <LivePulse size={7} />
+        <ThemedText type="smallBold" themeColor="textSecondary" style={styles.kicker}>
+          RIGHT NOW
+        </ThemedText>
+      </View>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -274,10 +277,10 @@ function ActivityStrip({ items }: { items: ActivityItem[] }) {
               key={`${item.kind}-${item.event_id}-${i}`}
               onPress={() => router.push({ pathname: '/e/[slug]', params: { slug: item.event_slug } })}
               style={styles.activityCard}>
-              <ThemedText type="smallBold" numberOfLines={2} style={styles.activityText}>
+              <ThemedText type="small" numberOfLines={1} style={styles.activityText}>
                 {emoji} <ThemedText type="smallBold" style={styles.activityActor}>{item.actor}</ThemedText> {verb}
               </ThemedText>
-              <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+              <ThemedText type="smallBold" numberOfLines={2} style={styles.activityTitle}>
                 {item.event_title}
               </ThemedText>
             </Pressable>
@@ -919,20 +922,31 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
     marginBottom: Spacing.three,
   },
+  activityHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   activityRow: {
     gap: Spacing.two,
     paddingRight: Spacing.four,
   },
   activityCard: {
-    width: 200,
+    width: 216,
     backgroundColor: '#131C16',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
+    borderLeftWidth: 3,
+    borderLeftColor: Coral,
     borderRadius: 16,
     padding: Spacing.three,
     gap: Spacing.half,
   },
   activityText: {
+    lineHeight: 18,
+    color: '#8FA895',
+  },
+  activityTitle: {
     lineHeight: 18,
   },
   activityActor: {
