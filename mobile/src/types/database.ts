@@ -975,6 +975,7 @@ export type Database = {
           phone_verified: boolean
           username: string | null
           wa_opt_in: boolean
+          verified: boolean
         }
         Insert: {
           avatar_url?: string | null
@@ -988,6 +989,7 @@ export type Database = {
           phone_verified?: boolean
           username?: string | null
           wa_opt_in?: boolean
+          verified?: boolean
         }
         Update: {
           avatar_url?: string | null
@@ -1001,6 +1003,7 @@ export type Database = {
           phone_verified?: boolean
           username?: string | null
           wa_opt_in?: boolean
+          verified?: boolean
         }
         Relationships: []
       }
@@ -1686,13 +1689,14 @@ export type Database = {
       is_admin: { Args: Record<PropertyKey, never>; Returns: boolean }
       admin_members: {
         Args: Record<PropertyKey, never>
-        Returns: { id: string; name: string; city: string | null; suspended: boolean; created_at: string }[]
+        Returns: { id: string; name: string; city: string | null; suspended: boolean; verified: boolean; created_at: string }[]
       }
       admin_recent_posts: {
         Args: Record<PropertyKey, never>
         Returns: { id: string; author_name: string; body: string; image_path: string | null; created_at: string }[]
       }
       admin_set_suspended: { Args: { p_id: string; p_suspended: boolean }; Returns: undefined }
+      admin_set_verified: { Args: { p_id: string; p_verified: boolean }; Returns: undefined }
       admin_delete_post: { Args: { p_id: string }; Returns: undefined }
       admin_create_venue: {
         Args: {

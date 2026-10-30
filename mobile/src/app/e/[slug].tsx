@@ -40,6 +40,7 @@ import {
   StateMaybe,
 } from '@/constants/theme';
 import { LivePulse } from '@/components/live-pulse';
+import { VerifiedBadge } from '@/components/verified-badge';
 import { getEventTheme } from '@/constants/event-themes';
 import { track } from '@/lib/analytics';
 import { useAuth } from '@/lib/auth-context';
@@ -393,6 +394,7 @@ export default function EventScreen() {
   const theme = useTheme();
   const [event, setEvent] = useState<Tables<'events'> | null>(null);
   const [hostName, setHostName] = useState<string | null>(null);
+  const [hostVerified, setHostVerified] = useState(false);
   const [goingCount, setGoingCount] = useState<number | null>(null);
   const [goingNames, setGoingNames] = useState<string[]>([]);
   const [myRsvp, setMyRsvp] = useState<Pick<Tables<'rsvps'>, 'id' | 'status' | 'plus_ones'> | null>(null);
@@ -435,7 +437,7 @@ export default function EventScreen() {
 
     const [{ data: host }, { count }, { data: going }, myRsvpResult, minTierResult] =
       await Promise.all([
-        supabase.from('profiles').select('display_name').eq('id', eventRow.host_id).maybeSingle(),
+        supabase.from('profiles').select('display_name, verified').eq('id', eventRow.host_id).maybeSingle(),
         supabase
           .from('rsvps')
           .select('id', { count: 'exact', head: true })
@@ -466,6 +468,7 @@ export default function EventScreen() {
           .maybeSingle(),
       ]);
     setHostName(host?.display_name ?? null);
+    setHostVerified(host?.verified === true);
     setGoingCount(count ?? null);
     setGoingNames((going ?? []).map((r) => r.guest_name));
     setMyRsvp(myRsvpResult.data ?? null);
@@ -781,6 +784,7 @@ export default function EventScreen() {
               {hostName ? (
                 <View style={styles.chip}>
                   <ThemedText type="small">Hosted by {hostName}</ThemedText>
+                  {hostVerified ? <VerifiedBadge size={15} /> : null}
                 </View>
               ) : null}
               {goingCount !== null && goingCount > 0 ? (

@@ -6,6 +6,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'reac
 
 import { Appear } from '@/components/appear';
 import { ReportMenu } from '@/components/report-menu';
+import { VerifiedBadge } from '@/components/verified-badge';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { getEventTheme } from '@/constants/event-themes';
@@ -33,7 +34,7 @@ function initials(name: string) {
 export default function PublicProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { session } = useAuth();
-  const [profile, setProfile] = useState<Pick<Tables<'profiles'>, 'display_name' | 'avatar_url' | 'city' | 'created_at'> | null>(null);
+  const [profile, setProfile] = useState<Pick<Tables<'profiles'>, 'display_name' | 'avatar_url' | 'city' | 'created_at' | 'verified'> | null>(null);
   const [events, setEvents] = useState<Ev[]>([]);
   const [status, setStatus] = useState<string>('none');
   const [loading, setLoading] = useState(true);
@@ -42,7 +43,7 @@ export default function PublicProfileScreen() {
   const load = useCallback(async () => {
     const now = new Date().toISOString();
     const [pRes, eRes, sRes] = await Promise.all([
-      supabase.from('profiles').select('display_name, avatar_url, city, created_at').eq('id', id).maybeSingle(),
+      supabase.from('profiles').select('display_name, avatar_url, city, created_at, verified').eq('id', id).maybeSingle(),
       supabase
         .from('events')
         .select('slug, title, starts_at, venue_name, timezone, cover_url, theme')
@@ -106,7 +107,10 @@ export default function PublicProfileScreen() {
               <ThemedText style={styles.avatarText}>{initials(name)}</ThemedText>
             )}
           </View>
-          <ThemedText style={styles.name}>{name}</ThemedText>
+          <View style={styles.nameRow}>
+            <ThemedText style={styles.name}>{name}</ThemedText>
+            {profile?.verified ? <VerifiedBadge size={18} /> : null}
+          </View>
           <ThemedText type="small" themeColor="textSecondary">
             {[profile?.city, since ? `Since ${since}` : null].filter(Boolean).join('  ·  ')}
           </ThemedText>
@@ -228,6 +232,7 @@ const styles = StyleSheet.create({
   avatarImg: { width: '100%', height: '100%' },
   avatarText: { fontFamily: DisplayFont, fontSize: 28, color: '#F2F7F1' },
   name: { fontFamily: DisplayFont, fontSize: 26, color: '#F2F7F1' },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   actions: { flexDirection: 'row', gap: Spacing.two },
   btn: { flex: 1, alignItems: 'center', paddingVertical: Spacing.three, borderRadius: 999 },
   primary: { backgroundColor: Brand },

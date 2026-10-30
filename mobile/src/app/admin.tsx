@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, Share, StyleSheet, TextInput, View } from 'react-native';
 
 import { Appear } from '@/components/appear';
+import { VerifiedBadge } from '@/components/verified-badge';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Brand, Coral, MaxContentWidth, OnBrand, Spacing, StateGo, StateMaybe } from '@/constants/theme';
@@ -12,7 +13,7 @@ import { formatMoney } from '@/lib/money';
 import { pickImage, uploadImage } from '@/lib/storage';
 import { supabase } from '@/lib/supabase';
 
-type Member = { id: string; name: string; city: string | null; suspended: boolean; created_at: string };
+type Member = { id: string; name: string; city: string | null; suspended: boolean; verified: boolean; created_at: string };
 type Post = { id: string; author_name: string; body: string; image_path: string | null; created_at: string };
 type Venue = {
   id: string;
@@ -364,6 +365,18 @@ export default function AdminScreen() {
   const toggleSuspend = async (m: Member) => {
     setMembers((prev) => prev.map((x) => (x.id === m.id ? { ...x, suspended: !x.suspended } : x)));
     await supabase.rpc('admin_set_suspended', { p_id: m.id, p_suspended: !m.suspended });
+  };
+
+  const toggleVerified = async (m: Member) => {
+    const next = !m.verified;
+    setMembers((prev) => prev.map((x) => (x.id === m.id ? { ...x, verified: next } : x)));
+    const { error } = await supabase.rpc('admin_set_verified', { p_id: m.id, p_verified: next });
+    if (error) {
+      setMembers((prev) => prev.map((x) => (x.id === m.id ? { ...x, verified: m.verified } : x)));
+      Alert.alert('Could not update', error.message);
+      return;
+    }
+    tapSuccess();
   };
 
   const removePost = async (p: Post) => {
@@ -1199,14 +1212,24 @@ export default function AdminScreen() {
           ? members.map((m) => (
               <ThemedView key={m.id} type="backgroundElement" style={styles.row}>
                 <View style={styles.flex}>
-                  <ThemedText type="smallBold">
-                    {m.name}
-                    {m.suspended ? '  🚫' : ''}
-                  </ThemedText>
+                  <View style={styles.memberNameRow}>
+                    <ThemedText type="smallBold">
+                      {m.name}
+                      {m.suspended ? '  🚫' : ''}
+                    </ThemedText>
+                    {m.verified ? <VerifiedBadge size={14} /> : null}
+                  </View>
                   <ThemedText type="small" themeColor="textSecondary">
                     {m.city ?? 'Kampala'} · joined {new Date(m.created_at).toLocaleDateString()}
                   </ThemedText>
                 </View>
+                <Pressable
+                  style={[styles.actionBtn, m.verified ? styles.processingBtn : styles.unsuspend]}
+                  onPress={() => toggleVerified(m)}>
+                  <ThemedText type="smallBold" style={m.verified ? styles.processingText : styles.unsuspendText}>
+                    {m.verified ? 'Unverify' : 'Verify'}
+                  </ThemedText>
+                </Pressable>
                 <Pressable
                   style={[styles.actionBtn, m.suspended ? styles.unsuspend : styles.suspend]}
                   onPress={() => toggleSuspend(m)}>
@@ -1349,6 +1372,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(247,53,88,0.3)',
   },
   reportReason: { color: '#F73558' },
+  memberNameRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   removeBtn: { alignSelf: 'flex-start', paddingVertical: Spacing.one },
   removeText: { color: '#F73558' },
   empty: { textAlign: 'center', marginTop: Spacing.six },
