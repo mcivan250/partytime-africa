@@ -801,6 +801,25 @@ export default function EventScreen() {
         </View>
 
         <View style={styles.body}>
+          {event.is_ticketed ? (
+            <View
+              onLayout={(e) => {
+                ticketsY.current = e.nativeEvent.layout.y;
+              }}>
+              <TicketTiers
+                eventId={event.id}
+                currency={event.currency}
+                isManager={isManager}
+                onBuy={buyTier}
+              />
+              <View style={styles.guaranteeRow}>
+                <ThemedText type="small" style={styles.guaranteeText}>
+                  🛡 Backed by the Party Time Buyer Guarantee — a real, QR-verified ticket, or your
+                  money back.
+                </ThemedText>
+              </View>
+            </View>
+          ) : null}
           <ThemedView
             type="backgroundElement"
             style={styles.infoCard}
@@ -896,26 +915,6 @@ export default function EventScreen() {
           ) : null}
 
           {event.playlist_url ? <Playlist url={event.playlist_url} /> : null}
-
-          <View
-            onLayout={(e) => {
-              ticketsY.current = e.nativeEvent.layout.y;
-            }}>
-            <TicketTiers
-              eventId={event.id}
-              currency={event.currency}
-              isManager={isManager}
-              onBuy={buyTier}
-            />
-            {event.is_ticketed ? (
-              <View style={styles.guaranteeRow}>
-                <ThemedText type="small" style={styles.guaranteeText}>
-                  🛡 Backed by the Party Time Buyer Guarantee — a real, QR-verified ticket, or your
-                  money back.
-                </ThemedText>
-              </View>
-            ) : null}
-          </View>
 
           <VenueTables
             eventId={event.id}
