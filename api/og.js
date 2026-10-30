@@ -23,6 +23,18 @@ const DEFAULT_DESC =
 
 const ZERO_DECIMAL = new Set(['UGX', 'KES', 'TZS', 'RWF', 'JPY']);
 
+// Branded fallback share cards (static PNGs in /public) for events/venues with
+// no cover photo — picked by the event's own theme, else deterministically by a
+// key, so cover-less links still unfurl with a premium, varied Party Time card.
+const CARD_THEMES = ['sunset', 'gold', 'ocean', 'fire', 'mono'];
+function pickCard(key) {
+  const k = String(key == null ? '' : key);
+  if (CARD_THEMES.includes(k)) return `${SITE}/og-card-${k}.png`;
+  let h = 0;
+  for (let i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) >>> 0;
+  return `${SITE}/og-card-${CARD_THEMES[h % CARD_THEMES.length]}.png`;
+}
+
 function esc(s) {
   return String(s == null ? '' : s)
     .replace(/&/g, '&amp;')
@@ -88,7 +100,7 @@ ${bodyHtml}
 async function eventPage(slug) {
   const rows = await sb(
     `events?slug=eq.${encodeURIComponent(slug)}` +
-      `&select=title,description,cover_url,venue_name,address,starts_at,ends_at,is_ticketed,currency,ticket_tiers(price_minor,currency),going:rsvps(count)` +
+      `&select=title,description,cover_url,venue_name,address,starts_at,ends_at,is_ticketed,currency,theme,ticket_tiers(price_minor,currency),going:rsvps(count)` +
       `&rsvps.status=eq.going&limit=1`,
   );
   const ev = rows && rows[0];
@@ -112,7 +124,7 @@ async function eventPage(slug) {
   const going = Array.isArray(ev.going) && ev.going[0] ? Number(ev.going[0].count) || 0 : 0;
   const fomo = going >= 10 ? `🔥 ${going} going · ` : '';
   const desc = (fomo + prefix + body).slice(0, 300);
-  const image = ev.cover_url || `${SITE}/og-image.png`;
+  const image = ev.cover_url || pickCard(CARD_THEMES.includes(ev.theme) ? ev.theme : slug);
 
   const tiers = Array.isArray(ev.ticket_tiers) ? ev.ticket_tiers : [];
   const min = tiers.length ? tiers.reduce((a, b) => (b.price_minor < a.price_minor ? b : a)) : null;
@@ -131,7 +143,7 @@ async function eventPage(slug) {
     url,
     eventStatus: 'https://schema.org/EventScheduled',
     eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
-    ...(ev.cover_url ? { image: [ev.cover_url] } : {}),
+    image: [image],
     ...(ev.starts_at ? { startDate: ev.starts_at } : {}),
     ...(ev.ends_at ? { endDate: ev.ends_at } : {}),
     location: {
@@ -169,7 +181,7 @@ async function venuePage(id) {
   const cuisines = Array.isArray(v.cuisines) ? v.cuisines : [];
   const descBase = v.description || `${v.name} — a ${kindLabel.toLowerCase()} in ${v.city || 'Kampala'}. Reserve a table on Party Time.`;
   const desc = [v.price_range, cuisines.slice(0, 3).join(', '), descBase].filter(Boolean).join(' · ').replace(/\s+/g, ' ').slice(0, 300);
-  const image = v.cover_url || `${SITE}/og-image.png`;
+  const image = v.cover_url || pickCard(id);
 
   const venueLd = {
     '@context': 'https://schema.org',
@@ -177,7 +189,7 @@ async function venuePage(id) {
     name: v.name,
     description: (v.description || descBase).slice(0, 500),
     url,
-    ...(v.cover_url ? { image: [v.cover_url] } : {}),
+    image: [image],
     ...(cuisines.length ? { servesCuisine: cuisines } : {}),
     ...(v.price_range ? { priceRange: v.price_range } : {}),
     ...(v.phone ? { telephone: v.phone } : {}),
