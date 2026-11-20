@@ -17,8 +17,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AuthSheet } from '@/components/auth-sheet';
 import { Avatars } from '@/components/avatars';
+import { Confetti } from '@/components/confetti';
 import { EventTitle } from '@/components/event-title';
+import { HeroBackdrop } from '@/components/hero-backdrop';
 import { KineticReveal } from '@/components/kinetic-reveal';
+import { PressableScale } from '@/components/pressable-scale';
 import { PhotoAlbum } from '@/components/photo-album';
 import { Playlist } from '@/components/playlist';
 import { PromoteCard } from '@/components/promote-card';
@@ -86,9 +89,10 @@ function RsvpButtons({
         const selected = current === opt.status;
         const darkLabel = selected && opt.status !== 'declined';
         return (
-          <Pressable
+          <PressableScale
             key={opt.status}
             disabled={disabled}
+            to={0.9}
             onPress={() => onPick(opt.status)}
             style={[
               styles.rsvp,
@@ -98,7 +102,7 @@ function RsvpButtons({
             <ThemedText type="smallBold" style={darkLabel ? styles.onState : undefined}>
               {opt.label}
             </ThemedText>
-          </Pressable>
+          </PressableScale>
         );
       })}
     </View>
@@ -107,7 +111,7 @@ function RsvpButtons({
 
 // Guest RSVP form for signed-out visitors (the web invite-link path). Inserts
 // go through the rsvp-guest Edge Function since RLS blocks anonymous inserts.
-function GuestRsvp({ slug, eventId }: { slug: string; eventId: string }) {
+function GuestRsvp({ slug, eventId, onCelebrate }: { slug: string; eventId: string; onCelebrate?: () => void }) {
   const theme = useTheme();
   const [guestName, setGuestName] = useState('');
   const [guestPhone, setGuestPhone] = useState('');
@@ -139,6 +143,7 @@ function GuestRsvp({ slug, eventId }: { slug: string; eventId: string }) {
       await AsyncStorage.setItem(`guest_rsvp:${eventId}`, data.edit_token);
     }
     setConfirmed(status);
+    if (status === 'going') onCelebrate?.();
   };
 
   if (confirmed) {
@@ -413,6 +418,8 @@ export default function EventScreen() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [invitePrompt, setInvitePrompt] = useState(false);
   const [minTier, setMinTier] = useState<{ price_minor: number; currency: string } | null>(null);
+  const [confettiKey, setConfettiKey] = useState(0);
+  const celebrate = useCallback(() => setConfettiKey((k) => k + 1), []);
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
   const rsvpY = useRef(0);
@@ -694,7 +701,10 @@ export default function EventScreen() {
       if (insertError) setError(insertError.message);
       else track('rsvp', { status });
     }
-    if (status === 'going') setInvitePrompt(true);
+    if (status === 'going') {
+      setInvitePrompt(true);
+      celebrate();
+    }
     await load();
     setSaving(false);
   };
@@ -761,6 +771,7 @@ export default function EventScreen() {
               style={StyleSheet.absoluteFill}
             />
           )}
+          <HeroBackdrop theme={event.theme} show={!event.cover_url} />
           <LinearGradient
             colors={['rgba(17,24,17,0.1)', 'rgba(17,24,17,0.6)', '#0B120D']}
             locations={[0, 0.55, 1]}
@@ -892,7 +903,7 @@ export default function EventScreen() {
                 ) : null}
               </>
             ) : (
-              <GuestRsvp slug={event.slug} eventId={event.id} />
+              <GuestRsvp slug={event.slug} eventId={event.id} onCelebrate={celebrate} />
             )}
             {error ? <ThemedText type="small">{error}</ThemedText> : null}
           </ThemedView>
@@ -1036,11 +1047,11 @@ export default function EventScreen() {
       {!isHost ? (
         <View style={[styles.stickyBar, { paddingBottom: Math.max(insets.bottom, Spacing.three) }]}>
           {isListing ? (
-            <Pressable style={[styles.stickyCta, styles.stickyCtaWide]} onPress={openExternal}>
+            <PressableScale style={[styles.stickyCta, styles.stickyCtaWide]} onPress={openExternal}>
               <ThemedText type="smallBold" style={styles.onState}>
                 Get tickets{event.source_name ? ` on ${event.source_name}` : ''}  ↗
               </ThemedText>
-            </Pressable>
+            </PressableScale>
           ) : event.is_ticketed ? (
             <>
               <View style={styles.stickyInfo}>
@@ -1051,14 +1062,14 @@ export default function EventScreen() {
                   {minTier ? formatMoney(minTier.price_minor, minTier.currency) : 'Tickets'}
                 </ThemedText>
               </View>
-              <Pressable style={styles.stickyCta} onPress={() => scrollToSection(ticketsY.current)}>
+              <PressableScale style={styles.stickyCta} onPress={() => scrollToSection(ticketsY.current)}>
                 <ThemedText type="smallBold" style={styles.onState}>
                   Get tickets
                 </ThemedText>
-              </Pressable>
+              </PressableScale>
             </>
           ) : (
-            <Pressable
+            <PressableScale
               style={[styles.stickyCta, styles.stickyCtaWide]}
               onPress={() => scrollToSection(rsvpY.current)}>
               <ThemedText type="smallBold" style={styles.onState}>
@@ -1066,10 +1077,12 @@ export default function EventScreen() {
                   ? `You're ${myRsvp.status === 'going' ? 'going 🔥' : myRsvp.status} · Change`
                   : 'RSVP now'}
               </ThemedText>
-            </Pressable>
+            </PressableScale>
           )}
         </View>
       ) : null}
+
+      <Confetti fireKey={confettiKey} />
 
       <AuthSheet
         visible={authVisible}
@@ -1133,6 +1146,7 @@ const styles = StyleSheet.create({
   hero: {
     height: HERO_HEIGHT,
     justifyContent: 'flex-end',
+    overflow: 'hidden',
   },
   heroContent: {
     padding: Spacing.four,
