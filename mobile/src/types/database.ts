@@ -366,6 +366,7 @@ export type Database = {
           theme: string
           timezone: string
           title: string
+          title_fx: string | null
           venue_id: string | null
           venue_name: string | null
           visibility: Database["public"]["Enums"]["event_visibility"]
@@ -397,6 +398,7 @@ export type Database = {
           theme?: string
           timezone?: string
           title: string
+          title_fx?: string | null
           venue_id?: string | null
           venue_name?: string | null
           visibility?: Database["public"]["Enums"]["event_visibility"]
@@ -427,6 +429,7 @@ export type Database = {
           theme?: string
           timezone?: string
           title?: string
+          title_fx?: string | null
           venue_name?: string | null
           visibility?: Database["public"]["Enums"]["event_visibility"]
         }
@@ -1671,6 +1674,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      host_set_title_fx: { Args: { p_id: string; p_fx: string | null }; Returns: undefined }
       admin_set_event_featured: { Args: { p_id: string; p_featured: boolean }; Returns: undefined }
       venue_directory: {
         Args: Record<PropertyKey, never>

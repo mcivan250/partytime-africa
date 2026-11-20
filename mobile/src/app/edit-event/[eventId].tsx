@@ -14,10 +14,12 @@ import {
   View,
 } from 'react-native';
 
+import { EventTitle } from '@/components/event-title';
 import { SectionLabel } from '@/components/section-label';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { EVENT_THEMES } from '@/constants/event-themes';
+import { TITLE_EFFECTS, normalizeFx, type TitleFx } from '@/constants/title-effects';
 import { Brand, BrandGradientLocations, MaxContentWidth, OnBrand, Spacing, StateGo } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth-context';
@@ -64,6 +66,7 @@ export default function EditEventScreen() {
   const [playlistUrl, setPlaylistUrl] = useState('');
   const [visibility, setVisibility] = useState<Visibility>('public');
   const [vibe, setVibe] = useState('forest');
+  const [titleFx, setTitleFx] = useState<TitleFx>('none');
   const [allowPlusOnes, setAllowPlusOnes] = useState(false);
   const [coverUri, setCoverUri] = useState<string | null>(null);
   const [coverImage, setCoverImage] = useState<Awaited<ReturnType<typeof pickImage>>>(null);
@@ -82,6 +85,7 @@ export default function EditEventScreen() {
       setPlaylistUrl(data.playlist_url ?? '');
       setVisibility(data.visibility);
       setVibe(data.theme);
+      setTitleFx(normalizeFx(data.title_fx));
       setAllowPlusOnes(data.allow_plus_ones);
       setCoverUri(data.cover_url);
     }
@@ -140,6 +144,7 @@ export default function EditEventScreen() {
         setError(rpcError.message);
         return;
       }
+      await supabase.rpc('host_set_title_fx', { p_id: event.id, p_fx: titleFx === 'none' ? null : titleFx });
       tapSuccess();
       router.replace({ pathname: '/e/[slug]', params: { slug: event.slug } });
     } catch (e) {
@@ -259,6 +264,26 @@ export default function EditEventScreen() {
             })}
           </View>
 
+          <SectionLabel>TITLE STYLE</SectionLabel>
+          <ThemedView type="backgroundElement" style={styles.fxPreview}>
+            <EventTitle title={title.trim() || 'Your Event'} fx={titleFx} style={styles.fxPreviewTitle} />
+          </ThemedView>
+          <View style={styles.chips}>
+            {TITLE_EFFECTS.map((fx) => {
+              const on = titleFx === fx.key;
+              return (
+                <Pressable
+                  key={fx.key}
+                  onPress={() => setTitleFx(fx.key)}
+                  style={[styles.chip, on && styles.chipOn]}>
+                  <ThemedText type="smallBold" style={{ color: on ? OnBrand : fx.tint }}>
+                    {fx.name}
+                  </ThemedText>
+                </Pressable>
+              );
+            })}
+          </View>
+
           <SectionLabel>WHO CAN SEE IT</SectionLabel>
           <View style={styles.chips}>
             {VISIBILITY_OPTIONS.map((v) => (
@@ -361,6 +386,16 @@ const styles = StyleSheet.create({
   },
   multiline: { minHeight: 96, textAlignVertical: 'top' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
+  fxPreview: {
+    borderRadius: 16,
+    paddingVertical: Spacing.four,
+    paddingHorizontal: Spacing.three,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 84,
+    marginTop: Spacing.one,
+  },
+  fxPreviewTitle: { fontSize: 26, lineHeight: 30, letterSpacing: -0.6, textAlign: 'center' },
   chip: {
     borderRadius: 999,
     paddingVertical: Spacing.two,

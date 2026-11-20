@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AuthSheet } from '@/components/auth-sheet';
 import { Avatars } from '@/components/avatars';
+import { EventTitle } from '@/components/event-title';
 import { KineticReveal } from '@/components/kinetic-reveal';
 import { PhotoAlbum } from '@/components/photo-album';
 import { Playlist } from '@/components/playlist';
@@ -769,9 +770,7 @@ export default function EventScreen() {
               </View>
             </KineticReveal>
             <KineticReveal delay={180}>
-              <ThemedText type="title" style={styles.heroTitle}>
-                {event.title}
-              </ThemedText>
+              <EventTitle title={event.title} fx={event.title_fx} style={styles.heroTitle} />
             </KineticReveal>
             {event.featured && event.sponsor_name ? (
               <View style={styles.sponsorChip}>

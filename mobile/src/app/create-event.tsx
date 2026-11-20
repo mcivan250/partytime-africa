@@ -4,10 +4,12 @@ import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
+import { EventTitle } from '@/components/event-title';
 import { SectionLabel } from '@/components/section-label';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { EVENT_THEMES } from '@/constants/event-themes';
+import { TITLE_EFFECTS, type TitleFx } from '@/constants/title-effects';
 import { Brand, BrandGradientLocations, DisplayFont, Gold, MaxContentWidth, OnBrand, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth-context';
@@ -114,6 +116,7 @@ export default function CreateEventScreen() {
   const [playlistUrl, setPlaylistUrl] = useState('');
   const [visibility, setVisibility] = useState<Visibility>('public');
   const [vibe, setVibe] = useState('forest');
+  const [titleFx, setTitleFx] = useState<TitleFx>('none');
   const [allowPlusOnes, setAllowPlusOnes] = useState(false);
   const [aiPrompt, setAiPrompt] = useState('');
   const [drafting, setDrafting] = useState(false);
@@ -180,6 +183,7 @@ export default function CreateEventScreen() {
     if (d.title) setTitle(d.title);
     if (d.description) setDescription(d.description);
     if (d.theme) setVibe(d.theme);
+    if (d.title_fx) setTitleFx(d.title_fx);
     setIsTicketed(!!d.is_ticketed);
     setSuggestedTiers(Array.isArray(d.tiers) ? d.tiers : []);
   };
@@ -217,6 +221,7 @@ export default function CreateEventScreen() {
           playlist_url: playlistUrl.trim() || null,
           visibility,
           theme: vibe,
+          title_fx: titleFx === 'none' ? null : titleFx,
           is_ticketed: isTicketed || suggestedTiers.length > 0,
           allow_plus_ones: allowPlusOnes,
           status,
@@ -457,6 +462,34 @@ export default function CreateEventScreen() {
         </View>
 
         <View style={styles.section}>
+          <SectionLabel>TITLE STYLE</SectionLabel>
+          <ThemedText type="small" themeColor="textSecondary">
+            Give your event name some life — it animates on your invite.
+          </ThemedText>
+          <ThemedView type="backgroundElement" style={styles.fxPreview}>
+            <EventTitle title={title.trim() || 'Your Event'} fx={titleFx} style={styles.fxPreviewTitle} />
+          </ThemedView>
+          <View style={styles.fxRow}>
+            {TITLE_EFFECTS.map((fx) => {
+              const on = titleFx === fx.key;
+              return (
+                <Pressable
+                  key={fx.key}
+                  onPress={() => {
+                    tapMedium();
+                    setTitleFx(fx.key);
+                  }}
+                  style={[styles.fxChip, on && styles.fxChipOn]}>
+                  <ThemedText type="smallBold" style={{ color: on ? OnBrand : fx.tint }}>
+                    {fx.name}
+                  </ThemedText>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+
+        <View style={styles.section}>
           <SectionLabel>WHO CAN SEE IT</SectionLabel>
           <View style={styles.visibilityRow}>
             {VISIBILITY_OPTIONS.map((option) => {
@@ -687,6 +720,37 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: Spacing.three,
     marginTop: Spacing.one,
+  },
+  fxPreview: {
+    borderRadius: 18,
+    paddingVertical: Spacing.five,
+    paddingHorizontal: Spacing.four,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 96,
+  },
+  fxPreviewTitle: {
+    fontSize: 30,
+    lineHeight: 34,
+    letterSpacing: -0.8,
+    textAlign: 'center',
+  },
+  fxRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.two,
+    marginTop: Spacing.one,
+  },
+  fxChip: {
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+  },
+  fxChipOn: {
+    backgroundColor: Brand,
+    borderColor: 'transparent',
   },
   vibeItem: {
     alignItems: 'center',
