@@ -22,6 +22,7 @@ import { EventTitle } from '@/components/event-title';
 import { HeroBackdrop } from '@/components/hero-backdrop';
 import { KineticReveal } from '@/components/kinetic-reveal';
 import { PressableScale } from '@/components/pressable-scale';
+import { RsvpGlyph } from '@/components/rsvp-glyph';
 import { PhotoAlbum } from '@/components/photo-album';
 import { Playlist } from '@/components/playlist';
 import { PromoteCard } from '@/components/promote-card';
@@ -56,16 +57,16 @@ import type { Tables } from '@/types/database';
 
 type RsvpStatus = Tables<'rsvps'>['status'];
 
-const RSVP_OPTIONS: { status: RsvpStatus; label: string; emoji: string; color: string }[] = [
-  { status: 'going', label: 'Going', emoji: '🔥', color: StateGo },
-  { status: 'maybe', label: 'Maybe', emoji: '🤔', color: StateMaybe },
-  { status: 'declined', label: "Can't", emoji: '😢', color: '#33473A' },
+const RSVP_OPTIONS: { status: RsvpStatus; label: string; color: string }[] = [
+  { status: 'going', label: 'Going', color: StateGo },
+  { status: 'maybe', label: 'Maybe', color: StateMaybe },
+  { status: 'declined', label: "Can't", color: '#33473A' },
 ];
 
 const RSVP_CONFIRM: Record<RsvpStatus, string> = {
-  going: "🔥 You're on the list — see you there!",
-  maybe: "We'll save you a maybe. Change anytime.",
-  declined: '😢 Next one, then.',
+  going: "You're on the list — see you there",
+  maybe: "We'll hold a maybe for you. Change anytime",
+  declined: 'No worries — catch the next one',
 };
 
 const HERO_HEIGHT = 380;
@@ -98,7 +99,7 @@ function RsvpButtons({
               styles.rsvp,
               selected && { backgroundColor: opt.color, borderColor: 'transparent' },
             ]}>
-            <ThemedText style={styles.rsvpEmoji}>{opt.emoji}</ThemedText>
+            <RsvpGlyph status={opt.status} color={darkLabel ? OnBrand : '#C7D6CC'} />
             <ThemedText type="smallBold" style={darkLabel ? styles.onState : undefined}>
               {opt.label}
             </ThemedText>
@@ -157,10 +158,10 @@ function GuestRsvp({ slug, eventId, onCelebrate }: { slug: string; eventId: stri
     return (
       <View style={styles.guestForm}>
         <ThemedText type="smallBold" style={{ color: StateGo }}>
-          You&apos;re on the list, {guestName.trim()}! 🎉
+          You&apos;re on the list, {guestName.trim()}
         </ThemedText>
         <ThemedText type="small" themeColor="textSecondary">
-          Know someone who&apos;d love this? Invite them 👇
+          Know someone who&apos;d love this? Pass it on
         </ThemedText>
         <Pressable
           style={[styles.shareButton, styles.shareWhatsApp]}
@@ -246,7 +247,7 @@ function PlusOnesEditor({ rsvpId, eventTitle }: { rsvpId: string; eventTitle: st
       token: d.invite_token,
     }));
     setRows(next);
-    setNote(next.length ? 'Saved. Send each guest their invite below. 🎉' : 'Saved.');
+    setNote(next.length ? 'Saved. Send each guest their invite below.' : 'Saved.');
   };
 
   const shareOne = (name: string, token: string) => {
@@ -825,7 +826,7 @@ export default function EventScreen() {
             <ThemedView type="backgroundElement" style={styles.listingCard}>
               <View style={styles.listingHead}>
                 <ThemedText type="smallBold" style={styles.listingKicker}>
-                  LISTED EVENT
+                  Listed event
                 </ThemedText>
                 {event.source_name ? (
                   <ThemedText type="small" themeColor="textSecondary">
@@ -857,7 +858,7 @@ export default function EventScreen() {
               />
               <View style={styles.guaranteeRow}>
                 <ThemedText type="small" style={styles.guaranteeText}>
-                  🛡 Backed by the Party Time Buyer Guarantee — a real, QR-verified ticket, or your
+                  Backed by the Party Time Buyer Guarantee — a real, QR-verified ticket, or your
                   money back.
                 </ThemedText>
               </View>
@@ -869,7 +870,7 @@ export default function EventScreen() {
             onLayout={(e) => {
               rsvpY.current = e.nativeEvent.layout.y;
             }}>
-            <SectionLabel>ARE YOU PULLING UP?</SectionLabel>
+            <SectionLabel>Are you pulling up?</SectionLabel>
             {session ? (
               <>
                 <RsvpButtons current={myRsvp?.status ?? null} disabled={saving} onPick={rsvp} />
@@ -884,7 +885,7 @@ export default function EventScreen() {
                 {invitePrompt && myRsvp?.status === 'going' ? (
                   <View style={styles.invitePrompt}>
                     <ThemedText type="smallBold" style={styles.invitePromptTitle}>
-                      🎉 You&apos;re on the list!
+                      You&apos;re on the list
                     </ThemedText>
                     <ThemedText type="small" themeColor="textSecondary">
                       Bring the crew — every friend you invite makes the night better.
@@ -920,14 +921,14 @@ export default function EventScreen() {
 
           <ThemedView type="backgroundElement" style={styles.infoCard}>
             <View style={styles.infoBlock}>
-              <SectionLabel>WHEN</SectionLabel>
+              <SectionLabel>When</SectionLabel>
               <ThemedText type="smallBold" style={styles.infoValue}>
                 {startsAt}
               </ThemedText>
             </View>
             {event.venue_name || event.address ? (
               <View style={styles.infoBlock}>
-                <SectionLabel>WHERE</SectionLabel>
+                <SectionLabel>Where</SectionLabel>
                 {event.venue_name ? (
                   event.venue_id ? (
                     <Pressable
@@ -1014,7 +1015,7 @@ export default function EventScreen() {
 
           {goingNames.length > 0 ? (
             <ThemedView type="backgroundElement" style={styles.infoCard}>
-              <SectionLabel>WHO&apos;S THERE</SectionLabel>
+              <SectionLabel>Who&apos;s there</SectionLabel>
               <Avatars names={goingNames} />
             </ThemedView>
           ) : null}
@@ -1074,7 +1075,7 @@ export default function EventScreen() {
               onPress={() => scrollToSection(rsvpY.current)}>
               <ThemedText type="smallBold" style={styles.onState}>
                 {myRsvp
-                  ? `You're ${myRsvp.status === 'going' ? 'going 🔥' : myRsvp.status} · Change`
+                  ? `You're ${myRsvp.status} · Change`
                   : 'RSVP now'}
               </ThemedText>
             </PressableScale>

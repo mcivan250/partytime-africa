@@ -29,7 +29,7 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   label: {
-    fontSize: 11,
-    letterSpacing: 2,
+    fontSize: 12,
+    letterSpacing: 0.3,
   },
 });
