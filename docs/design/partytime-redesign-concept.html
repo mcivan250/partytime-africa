@@ -1,0 +1,316 @@
+<title>Party Time Redesign</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+  /* Layout: a single phone-width app, committed dark "nightlife" world — one
+     explosive animated hero per screen, everything else calm and spacious. */
+  :root{
+    --ink:#07100B;          /* near-black ground, green bias */
+    --ink2:#0E1A12;         /* raised surface */
+    --ink3:#17251B;         /* chips / inputs */
+    --line:rgba(255,255,255,.08);
+    --line2:rgba(255,255,255,.16);
+    --paper:#F3FAF4;        /* headings / primary text */
+    --mute:#8AA593;         /* secondary text */
+    --brand:#19E67A;        /* vivid green */
+    --brand-deep:#0B8F52;
+    --gold:#F5C64A;
+    --coral:#FF2E6A;        /* neon energy */
+    --sky:#39D6E8;
+    color-scheme:dark;
+    --display:'Unbounded', system-ui, sans-serif;
+    --body:'Space Grotesk', system-ui, sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;background:#050806;color:var(--paper);
+    font-family:var(--body);
+    -webkit-font-smoothing:antialiased;
+    display:flex;justify-content:center;
+  }
+  /* grain over everything for a tactile, non-flat feel */
+  body::after{
+    content:"";position:fixed;inset:0;z-index:60;pointer-events:none;opacity:.05;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  }
+  .app{
+    width:100%;max-width:440px;background:var(--ink);position:relative;overflow:hidden;
+    min-height:100%;
+    padding-left:max(0px, env(safe-area-inset-left,0px));
+    padding-right:max(0px, env(safe-area-inset-right,0px));
+  }
+  .gutter{padding-left:max(20px, env(safe-area-inset-left,0px));padding-right:max(20px, env(safe-area-inset-right,0px))}
+
+  /* ---------- top bar / tabs ---------- */
+  .top{position:sticky;top:env(safe-area-inset-top,0px);z-index:40;
+    display:flex;gap:6px;padding:14px 20px;background:rgba(7,16,11,.82);backdrop-filter:blur(14px);
+    border-bottom:1px solid var(--line)}
+  .seg{flex:1;border:0;border-radius:999px;padding:10px 0;font-family:var(--body);font-weight:700;font-size:13px;
+    letter-spacing:.2px;background:transparent;color:var(--mute);cursor:pointer;transition:.25s}
+  .seg.on{background:var(--brand);color:#04120A}
+  .screen{display:none}
+  .screen.on{display:block}
+
+  /* ---------- HERO (invite) ---------- */
+  .hero{position:relative;padding:30px 20px 26px;overflow:hidden;isolation:isolate;
+    min-height:430px;display:flex;flex-direction:column;justify-content:flex-end}
+  .mesh{position:absolute;inset:-30%;z-index:-2;filter:saturate(1.3)}
+  .blob{position:absolute;width:62%;height:62%;border-radius:50%;filter:blur(38px);opacity:.9;mix-blend-mode:screen;
+    animation:drift 14s ease-in-out infinite}
+  .b1{background:var(--coral);top:-6%;left:-8%}
+  .b2{background:var(--gold);top:18%;right:-14%;animation-delay:-4s}
+  .b3{background:var(--brand);bottom:-14%;left:12%;animation-delay:-8s}
+  @keyframes drift{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(14%,10%) scale(1.14)}66%{transform:translate(-10%,6%) scale(.92)}}
+  .heroShade{position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,rgba(7,16,11,.1) 0%,rgba(7,16,11,.55) 55%,var(--ink) 100%)}
+  .spark{position:absolute;color:#fff;z-index:0;pointer-events:none;filter:drop-shadow(0 0 6px rgba(255,255,255,.7));animation:tw 2.4s ease-in-out infinite}
+  @keyframes tw{0%,100%{opacity:.2;transform:scale(.7) rotate(0)}50%{opacity:1;transform:scale(1.1) rotate(45deg)}}
+
+  .eyebrow{display:flex;align-items:center;gap:8px;font-weight:700;font-size:12px;letter-spacing:2.5px;color:var(--paper);text-transform:uppercase;margin-bottom:12px}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--coral);box-shadow:0 0 0 0 var(--coral);animation:pulse 1.8s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(255,46,106,.6)}70%{box-shadow:0 0 0 12px rgba(255,46,106,0)}100%{box-shadow:0 0 0 0 rgba(255,46,106,0)}}
+
+  .title{font-family:var(--display);font-weight:900;line-height:.9;letter-spacing:-.02em;margin:0;
+    font-size:clamp(44px,13vw,60px);
+    background:linear-gradient(92deg,var(--coral),#FF7AA0 45%,var(--gold));
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;
+    filter:drop-shadow(0 0 20px rgba(255,46,106,.45));animation:glow 2.6s ease-in-out infinite;text-wrap:balance}
+  @keyframes glow{0%,100%{filter:drop-shadow(0 0 14px rgba(255,46,106,.4))}50%{filter:drop-shadow(0 0 26px rgba(245,198,74,.65))}}
+
+  .hostRow{display:flex;align-items:center;gap:8px;margin-top:16px;flex-wrap:wrap}
+  .pill{display:inline-flex;align-items:center;gap:6px;background:rgba(0,0,0,.4);border:1px solid var(--line2);
+    border-radius:999px;padding:7px 13px;font-size:13px;font-weight:600;backdrop-filter:blur(6px)}
+  .verif{width:16px;height:16px;border-radius:50%;background:var(--brand);color:#04120A;font-size:10px;display:grid;place-items:center;font-weight:900}
+
+  /* going stack */
+  .goingRow{display:flex;align-items:center;gap:12px;margin-top:18px}
+  .stack{display:flex}
+  .av{width:34px;height:34px;border-radius:50%;margin-left:-10px;border:2px solid var(--ink);
+    display:grid;place-items:center;font-weight:800;font-size:13px;color:#04120A;font-family:var(--display)}
+  .av:first-child{margin-left:0}
+  .goingTxt b{color:var(--brand)}
+  .goingTxt{font-size:14px;color:var(--mute)}
+
+  /* sticker */
+  .sticker{position:absolute;top:24px;right:16px;z-index:2;background:var(--gold);color:#1a1403;
+    font-family:var(--display);font-weight:800;font-size:12px;padding:9px 12px;border-radius:14px;
+    transform:rotate(7deg);box-shadow:0 10px 24px rgba(0,0,0,.4);animation:wobble 3.5s ease-in-out infinite}
+  @keyframes wobble{0%,100%{transform:rotate(7deg)}50%{transform:rotate(-4deg) scale(1.05)}}
+
+  /* ---------- body ---------- */
+  .body{padding:22px 20px 120px;display:flex;flex-direction:column;gap:16px}
+  .card{background:var(--ink2);border:1px solid var(--line);border-radius:22px;padding:20px}
+  .lbl{font-size:11px;letter-spacing:2px;color:var(--mute);font-weight:700;text-transform:uppercase}
+  .big{font-family:var(--display);font-weight:700;font-size:17px;margin-top:6px}
+
+  .rsvpTitle{display:flex;align-items:center;gap:8px;font-family:var(--display);font-weight:700;font-size:18px;margin-bottom:4px}
+  .rsvp{display:flex;gap:10px}
+  .rsvp button{flex:1;border:1px solid var(--line2);background:var(--ink3);border-radius:18px;padding:16px 0;
+    cursor:pointer;color:var(--paper);font-family:var(--body);font-weight:700;display:flex;flex-direction:column;align-items:center;gap:6px;
+    transition:transform .18s cubic-bezier(.34,1.56,.64,1),background .2s,border-color .2s}
+  .rsvp button .em{font-size:22px}
+  .rsvp button:active{transform:scale(.93)}
+  .rsvp button.sel[data-k="going"]{background:var(--brand);color:#04120A;border-color:transparent}
+  .rsvp button.sel[data-k="maybe"]{background:var(--gold);color:#1a1403;border-color:transparent}
+  .rsvp button.sel[data-k="cant"]{background:#33473A;border-color:transparent}
+  .confirm{margin-top:12px;font-weight:700;color:var(--brand);font-size:14px;min-height:18px;text-align:center}
+
+  .cta{position:fixed;left:0;right:0;bottom:0;z-index:50;display:flex;gap:12px;align-items:center;
+    padding:14px 20px calc(16px + env(safe-area-inset-bottom,0px));
+    background:linear-gradient(180deg,rgba(7,16,11,0),rgba(7,16,11,.96) 30%);max-width:440px;margin:0 auto}
+  .ctaMain{flex:1;border:0;border-radius:16px;padding:17px;font-family:var(--display);font-weight:800;font-size:15px;
+    background:var(--brand);color:#04120A;cursor:pointer;transition:transform .18s cubic-bezier(.34,1.56,.64,1)}
+  .ctaMain:active{transform:scale(.96)}
+
+  /* marquee */
+  .marq{overflow:hidden;white-space:nowrap;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:11px 0;margin-top:2px}
+  .marq span{display:inline-block;animation:scrollx 18s linear infinite;font-weight:700;color:var(--mute);font-size:13px}
+  .marq b{color:var(--gold)}
+  @keyframes scrollx{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+  /* ---------- DISCOVER ---------- */
+  .dHead{padding:24px 20px 6px}
+  .kick{display:flex;align-items:center;gap:8px;font-size:12px;letter-spacing:2.5px;font-weight:700;color:var(--mute);text-transform:uppercase}
+  .kick .live{color:var(--coral)}
+  .dTitle{font-family:var(--display);font-weight:900;font-size:40px;letter-spacing:-.03em;margin:6px 0 0}
+  .feed{padding:16px 20px 120px;display:flex;flex-direction:column;gap:18px}
+  .poster{position:relative;border-radius:26px;overflow:hidden;min-height:300px;display:flex;flex-direction:column;justify-content:flex-end;
+    padding:22px;cursor:pointer;isolation:isolate;transition:transform .22s cubic-bezier(.34,1.56,.64,1)}
+  .poster:active{transform:scale(.975)}
+  .pmesh{position:absolute;inset:0;z-index:-2}
+  .pshade{position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,transparent,rgba(5,8,6,.35) 48%,rgba(5,8,6,.96))}
+  .badges{position:absolute;top:16px;left:16px;right:16px;display:flex;gap:8px;flex-wrap:wrap}
+  .badge{font-size:12px;font-weight:800;padding:6px 11px;border-radius:999px;font-family:var(--body)}
+  .pdate{display:flex;align-items:center;gap:8px;font-size:12px;letter-spacing:1.5px;font-weight:700;color:#fff;margin-bottom:8px}
+  .pbar{width:3px;height:14px;border-radius:2px;background:var(--brand)}
+  .ptitle{font-family:var(--display);font-weight:800;font-size:29px;line-height:1.02;letter-spacing:-.02em;margin:0;color:#fff;text-wrap:balance}
+  .pmeta{margin-top:10px;font-size:14px;color:rgba(255,255,255,.82);font-weight:600}
+  .pmeta b{color:var(--brand)}
+
+  @media (prefers-reduced-motion: reduce){
+    .blob,.title,.dot,.sticker,.spark,.marq span{animation:none!important}
+  }
+  canvas.confetti{position:fixed;inset:0;z-index:70;pointer-events:none;max-width:440px;left:50%;transform:translateX(-50%)}
+</style>
+
+<div class="app" id="app">
+  <div class="top">
+    <button class="seg on" data-s="invite">The Invite</button>
+    <button class="seg" data-s="discover">Discover</button>
+  </div>
+
+  <!-- ===================== INVITE ===================== -->
+  <section class="screen on" id="s-invite">
+    <div class="hero">
+      <div class="mesh"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div></div>
+      <div class="heroShade"></div>
+      <div class="sticker">🔥 SELLING FAST</div>
+      <span class="spark" style="top:18%;left:12%;font-size:20px">✦</span>
+      <span class="spark" style="top:30%;right:16%;font-size:14px;animation-delay:.6s">✦</span>
+      <span class="spark" style="top:52%;left:22%;font-size:12px;animation-delay:1.2s">✦</span>
+
+      <div class="eyebrow"><span class="dot"></span> Fri · Dec 18 · Kampala</div>
+      <h1 class="title">Pare Pare Rave</h1>
+      <div class="hostRow">
+        <span class="pill">Hosted by Pare Pare <span class="verif">✓</span></span>
+        <span class="pill">🎧 Amapiano</span>
+      </div>
+      <div class="goingRow">
+        <div class="stack">
+          <div class="av" style="background:var(--brand)">A</div>
+          <div class="av" style="background:var(--gold)">K</div>
+          <div class="av" style="background:var(--coral)">N</div>
+          <div class="av" style="background:var(--sky)">+</div>
+        </div>
+        <div class="goingTxt"><b id="goingN">210</b> going · Uncle Waffles headlining</div>
+      </div>
+    </div>
+
+    <div class="marq"><span id="marqTxt"></span></div>
+
+    <div class="body">
+      <div class="card">
+        <div class="rsvpTitle">Are you pulling up? <span>🎉</span></div>
+        <div class="rsvp" id="rsvp">
+          <button data-k="going"><span class="em">🔥</span>Going</button>
+          <button data-k="maybe"><span class="em">🤔</span>Maybe</button>
+          <button data-k="cant"><span class="em">😮‍💨</span>Can't</button>
+        </div>
+        <div class="confirm" id="confirm"></div>
+      </div>
+
+      <div class="card">
+        <div class="lbl">When</div><div class="big">Friday, December 18 · 2:00 PM</div>
+        <div style="height:14px"></div>
+        <div class="lbl">Where</div><div class="big">Millennium Grounds · Lugogo</div>
+      </div>
+
+      <div class="card" style="border-color:rgba(25,230,122,.28)">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div class="lbl" style="color:var(--brand)">Listed event</div>
+          <div class="lbl">via rave.ug</div>
+        </div>
+        <p style="color:var(--mute);line-height:1.5;margin:12px 0 0;font-size:14px">
+          We list what's actually on in Kampala so you never miss the move. Hosting something? Put it here free.
+        </p>
+      </div>
+    </div>
+
+    <div class="cta" data-for="invite">
+      <button class="ctaMain" id="ticketBtn">Get tickets on rave.ug  ↗</button>
+    </div>
+  </section>
+
+  <!-- ===================== DISCOVER ===================== -->
+  <section class="screen" id="s-discover">
+    <div class="dHead gutter">
+      <div class="kick">Kampala <span class="dot"></span> <span class="live">Live</span></div>
+      <h2 class="dTitle">What's on</h2>
+    </div>
+    <div class="feed" id="feed"></div>
+  </section>
+</div>
+
+<canvas class="confetti" id="cf"></canvas>
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@700;900&family=Space+Grotesk:wght@400;500;700&display=swap">
+<script>
+(function(){
+  // ---- tabs ----
+  var segs=document.querySelectorAll('.seg'), screens=document.querySelectorAll('.screen'), ctas=document.querySelectorAll('.cta');
+  segs.forEach(function(b){b.addEventListener('click',function(){
+    segs.forEach(function(x){x.classList.toggle('on',x===b)});
+    var s=b.dataset.s;
+    screens.forEach(function(sc){sc.classList.toggle('on', sc.id==='s-'+s)});
+    ctas.forEach(function(c){c.style.display=(c.dataset.for===s)?'flex':'none'});
+  });});
+
+  // ---- marquee ----
+  var names=['Aisha','Brian K','Cynthia','DJ Slick','Mariam','Trevor','Zahara','Kato','Patience','Lydia'];
+  var line=names.map(function(n){return n+' is going';}).join('  ✦  ');
+  document.getElementById('marqTxt').innerHTML=('<b>RIGHT NOW</b>  ·  '+line+'  ✦  ').repeat(2);
+
+  // ---- RSVP + confetti ----
+  var rsvp=document.getElementById('rsvp'), confirm=document.getElementById('confirm'), goingN=document.getElementById('goingN');
+  var msgs={going:"🔥 You're on the list — see you there!",maybe:"We'll save you a maybe. Change anytime.",cant:"😢 Next one, then."};
+  rsvp.addEventListener('click',function(e){
+    var btn=e.target.closest('button'); if(!btn) return;
+    [].forEach.call(rsvp.children,function(c){c.classList.toggle('sel',c===btn)});
+    var k=btn.dataset.k; confirm.textContent=msgs[k];
+    confirm.style.color = k==='going'?'var(--brand)':k==='maybe'?'var(--gold)':'var(--mute)';
+    if(k==='going'){ goingN.textContent=211; burst(); }
+    else goingN.textContent=210;
+  });
+
+  // confetti burst
+  var cv=document.getElementById('cf'), ctx=cv.getContext('2d'), parts=[], raf=null;
+  var reduce = window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function size(){ cv.width=Math.min(440,window.innerWidth); cv.height=window.innerHeight; }
+  size(); window.addEventListener('resize',size);
+  var COLORS=['#19E67A','#F5C64A','#FF2E6A','#39D6E8','#F3FAF4'];
+  function burst(){
+    if(reduce) return;
+    var cx=cv.width/2, cy=cv.height*0.62;
+    for(var i=0;i<90;i++){
+      var a=Math.random()*Math.PI*2, sp=4+Math.random()*8;
+      parts.push({x:cx,y:cy,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-6,g:.28,
+        s:5+Math.random()*7,c:COLORS[i%COLORS.length],rot:Math.random()*6,vr:(Math.random()-.5)*.5,life:1});
+    }
+    if(!raf) raf=requestAnimationFrame(tick);
+  }
+  function tick(){
+    ctx.clearRect(0,0,cv.width,cv.height);
+    for(var i=parts.length-1;i>=0;i--){
+      var p=parts[i]; p.vy+=p.g; p.x+=p.vx; p.y+=p.vy; p.rot+=p.vr; p.life-=.009;
+      if(p.life<=0||p.y>cv.height+20){parts.splice(i,1);continue;}
+      ctx.save();ctx.globalAlpha=Math.max(0,p.life);ctx.translate(p.x,p.y);ctx.rotate(p.rot);
+      ctx.fillStyle=p.c;ctx.fillRect(-p.s/2,-p.s/2,p.s,p.s*.6);ctx.restore();
+    }
+    if(parts.length) raf=requestAnimationFrame(tick); else {raf=null;ctx.clearRect(0,0,cv.width,cv.height);}
+  }
+
+  // ---- discover feed ----
+  var events=[
+    {t:'Pare Pare Rave ft. Uncle Waffles',v:'Millennium Grounds',d:'FRI, DEC 18 · 2:00 PM',go:210,g:['#FF2E6A','#F5C64A'],fx:'electric',badges:[['🔥 Trending','#FF2E6A','#fff'],['210 going','rgba(25,230,122,.92)','#04120A']],via:'rave.ug'},
+    {t:'Dr Jose Chameleone Live',v:'Cricket Oval · Lugogo',d:'FRI, DEC 4 · 5:00 PM',go:180,g:['#F5C64A','#F59E0B'],fx:'fire',badges:[['🔥 Trending','#FF2E6A','#fff'],['180 going','rgba(25,230,122,.92)','#04120A']],via:'Evento'},
+    {t:'Konshens Live in Kampala',v:'Cricket Oval · Lugogo',d:'FRI, DEC 11 · 6:00 PM',go:95,g:['#39D6E8','#1D9BC9'],fx:'glow',badges:[['95 going','rgba(25,230,122,.92)','#04120A']],via:'Evento'},
+    {t:'Odeal Live',v:'National Hockey Stadium',d:'FRI, DEC 18 · 6:00 PM',go:60,g:['#3A4A3E','#17251B'],fx:'chrome',badges:[['Tickets','rgba(5,8,6,.6)','#fff']],via:'Bandsintown'}
+  ];
+  var FX={electric:'linear-gradient(92deg,#FF2E6A,#FF7AA0,#FF2E6A)',fire:'linear-gradient(10deg,#FF5A2C,#FF9C3D,#FFD24A)',
+    glow:'#EAFBF1',chrome:'linear-gradient(100deg,#8f9f95,#fff,#cdd8d1,#fff,#8f9f95)'};
+  var feed=document.getElementById('feed');
+  events.forEach(function(e){
+    var el=document.createElement('div'); el.className='poster';
+    var fxcss = e.fx==='glow'
+      ? 'color:#EAFBF1;text-shadow:0 0 14px rgba(61,220,151,.7)'
+      : 'background:'+FX[e.fx]+';-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent';
+    el.innerHTML=
+      '<div class="pmesh" style="background:radial-gradient(120% 90% at 20% 0%,'+e.g[0]+' 0%,'+e.g[1]+' 55%,#060a07 100%)"></div>'+
+      '<div class="pshade"></div>'+
+      '<div class="badges">'+e.badges.map(function(b){return '<span class="badge" style="background:'+b[1]+';color:'+b[2]+'">'+b[0]+'</span>'}).join('')+'</div>'+
+      '<div class="pdate"><span class="pbar"></span>'+e.d+'</div>'+
+      '<h3 class="ptitle" style="'+fxcss+'">'+e.t+'</h3>'+
+      '<div class="pmeta">'+e.v+' · <b>'+e.go+' going</b> · via '+e.via+'</div>';
+    feed.appendChild(el);
+  });
+})();
+</script>
