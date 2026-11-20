@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Appear } from '@/components/appear';
 import { CityFeed } from '@/components/city-feed';
+import { Icon } from '@/components/icon';
 import { LivePulse } from '@/components/live-pulse';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -83,10 +84,10 @@ const VENUE_KIND_LABEL: Record<string, string> = {
 type FilterKey = 'all' | 'trending' | 'tonight' | 'weekend' | 'ticketed' | 'free';
 const FILTERS: { key: FilterKey; label: string }[] = [
   { key: 'all', label: 'All' },
-  { key: 'trending', label: '🔥 Trending' },
+  { key: 'trending', label: 'Trending' },
   { key: 'tonight', label: 'Tonight' },
   { key: 'weekend', label: 'This weekend' },
-  { key: 'ticketed', label: '🎟 Tickets' },
+  { key: 'ticketed', label: 'Tickets' },
   { key: 'free', label: 'Free' },
 ];
 
@@ -137,19 +138,22 @@ function matchesFilter(ev: FeedEvent, filter: FilterKey): boolean {
 
 type Badge = { label: string; bg: string; fg: string };
 
+// Quiet glass chips with a single accent reserved for "Trending" — no rainbow,
+// no emoji. The chip marks state; the card's own colour carries the mood.
+const GLASS = 'rgba(7,15,10,0.6)';
 function fomoBadges(event: FeedEvent): Badge[] {
   const out: Badge[] = [];
   const h = hoursUntil(event.starts_at);
-  if (event.trending_score >= 8) out.push({ label: '🔥 Trending', bg: '#FF3D6E', fg: '#fff' });
+  if (event.trending_score >= 8) out.push({ label: 'Trending', bg: Coral, fg: '#fff' });
   if (event.capacity && event.going_count >= event.capacity * 0.85) {
-    out.push({ label: 'Almost full', bg: '#FFB84D', fg: '#04120A' });
+    out.push({ label: 'Almost full', bg: GLASS, fg: '#fff' });
   } else if (event.going_count >= 20) {
-    out.push({ label: `${event.going_count} going`, bg: 'rgba(61,220,151,0.9)', fg: '#04120A' });
+    out.push({ label: `${event.going_count} going`, bg: GLASS, fg: '#fff' });
   }
   if (h !== null && h >= 0 && h <= 10) {
-    out.push({ label: h < 1 ? 'Starting soon' : `In ${Math.round(h)}h`, bg: 'rgba(11,11,16,0.6)', fg: '#fff' });
+    out.push({ label: h < 1 ? 'Starting soon' : `In ${Math.round(h)}h`, bg: GLASS, fg: '#fff' });
   }
-  if (event.is_ticketed) out.push({ label: '🎟 Tickets', bg: 'rgba(11,11,16,0.6)', fg: '#fff' });
+  if (event.is_ticketed) out.push({ label: 'Tickets', bg: GLASS, fg: '#fff' });
   return out.slice(0, 3);
 }
 
@@ -239,8 +243,9 @@ function EventCard({ event, onReact }: { event: FeedEvent; onReact: (event: Feed
               }}
               hitSlop={8}
               style={[styles.actionPill, event.i_reacted && styles.actionPillOn]}>
+              <Icon name="flame" size={15} color={event.i_reacted ? OnBrand : '#fff'} />
               <ThemedText type="smallBold" style={event.i_reacted ? styles.actionOnText : styles.onImage}>
-                🔥 {event.reaction_count > 0 ? event.reaction_count : 'Hype'}
+                {event.reaction_count > 0 ? event.reaction_count : 'Hype'}
               </ThemedText>
             </Pressable>
             <Pressable
@@ -250,8 +255,9 @@ function EventCard({ event, onReact }: { event: FeedEvent; onReact: (event: Feed
               }}
               hitSlop={8}
               style={styles.actionPill}>
+              <Icon name="chat" size={15} color="#fff" />
               <ThemedText type="smallBold" style={styles.onImage}>
-                💬 {event.comment_count > 0 ? event.comment_count : 'Chat'}
+                {event.comment_count > 0 ? event.comment_count : 'Chat'}
               </ThemedText>
             </Pressable>
           </View>
@@ -269,7 +275,7 @@ function ActivityStrip({ items }: { items: ActivityItem[] }) {
       <View style={styles.activityHead}>
         <LivePulse size={7} />
         <ThemedText type="smallBold" themeColor="textSecondary" style={styles.kicker}>
-          RIGHT NOW
+          Right now
         </ThemedText>
       </View>
       <ScrollView
@@ -278,14 +284,13 @@ function ActivityStrip({ items }: { items: ActivityItem[] }) {
         contentContainerStyle={styles.activityRow}>
         {items.map((item, i) => {
           const verb = item.kind === 'rsvp' ? 'is going to' : 'is hosting';
-          const emoji = item.kind === 'rsvp' ? '🔥' : '✨';
           return (
             <Pressable
               key={`${item.kind}-${item.event_id}-${i}`}
               onPress={() => router.push({ pathname: '/e/[slug]', params: { slug: item.event_slug } })}
               style={styles.activityCard}>
               <ThemedText type="small" numberOfLines={1} style={styles.activityText}>
-                {emoji} <ThemedText type="smallBold" style={styles.activityActor}>{item.actor}</ThemedText> {verb}
+                <ThemedText type="smallBold" style={styles.activityActor}>{item.actor}</ThemedText> {verb}
               </ThemedText>
               <ThemedText type="smallBold" numberOfLines={2} style={styles.activityTitle}>
                 {item.event_title}
@@ -306,7 +311,7 @@ function VenueRail({ venues }: { venues: VenueLite[] }) {
     <View style={styles.railWrap}>
       <View style={styles.railHead}>
         <ThemedText type="smallBold" themeColor="textSecondary" style={styles.kicker}>
-          🍸 WHERE TO EAT & DRINK
+          Where to eat & drink
         </ThemedText>
         <Pressable onPress={() => router.push('/venues')} hitSlop={8}>
           <ThemedText type="smallBold" style={styles.railSeeAll}>
@@ -526,11 +531,11 @@ export default function EventsScreen() {
           <View>
             <View style={styles.kickerRow}>
               <ThemedText type="smallBold" themeColor="textSecondary" style={styles.kicker}>
-                KAMPALA
+                Kampala
               </ThemedText>
               <LivePulse size={7} />
               <ThemedText type="smallBold" style={styles.liveLabel}>
-                LIVE
+                Live
               </ThemedText>
             </View>
             <ThemedText type="title" style={styles.heroTitle}>
@@ -540,7 +545,7 @@ export default function EventsScreen() {
           {session ? (
             <View style={styles.iconCluster}>
               <Pressable style={styles.iconBtn} onPress={() => router.push('/messages')}>
-                <ThemedText style={styles.iconGlyph}>💬</ThemedText>
+                <Icon name="message" size={19} color="#C7D6CC" />
                 {dmUnread > 0 ? (
                   <View style={styles.iconBadge}>
                     <ThemedText style={styles.iconBadgeText}>{dmUnread > 9 ? '9+' : dmUnread}</ThemedText>
@@ -548,7 +553,7 @@ export default function EventsScreen() {
                 ) : null}
               </Pressable>
               <Pressable style={styles.iconBtn} onPress={() => router.push('/notifications')}>
-                <ThemedText style={styles.iconGlyph}>🔔</ThemedText>
+                <Icon name="bell" size={19} color="#C7D6CC" />
                 {notifUnread > 0 ? (
                   <View style={styles.iconBadge}>
                     <ThemedText style={styles.iconBadgeText}>{notifUnread > 9 ? '9+' : notifUnread}</ThemedText>
@@ -582,7 +587,7 @@ export default function EventsScreen() {
           <>
         <TextInput
           style={[styles.search, { color: theme.text, backgroundColor: theme.backgroundElement }]}
-          placeholder="🔍  Search events, venues…"
+          placeholder="Search events and venues"
           placeholderTextColor={theme.textSecondary}
           value={query}
           onChangeText={setQuery}
@@ -613,18 +618,13 @@ export default function EventsScreen() {
           ListHeaderComponent={
             <>
               <Pressable style={styles.planBanner} onPress={() => router.push('/plan')}>
-                <LinearGradient
-                  colors={BrandGradient}
-                  locations={BrandGradientLocations}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.planIcon}>
-                  <ThemedText style={styles.planSpark}>✨</ThemedText>
-                </LinearGradient>
+                <View style={styles.planIcon}>
+                  <Icon name="spark" size={20} color={Brand} />
+                </View>
                 <View style={styles.flex}>
                   <ThemedText type="smallBold">Plan my night</ThemedText>
                   <ThemedText type="small" themeColor="textSecondary">
-                    Ask the AI concierge what&apos;s the move
+                    Tell us the vibe, get a plan for tonight
                   </ThemedText>
                 </View>
                 <ThemedText style={styles.planChevron}>›</ThemedText>
@@ -712,7 +712,8 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.two,
   },
   kicker: {
-    letterSpacing: 2,
+    letterSpacing: 0.4,
+    fontSize: 13,
   },
   kickerRow: {
     flexDirection: 'row',
@@ -721,8 +722,8 @@ const styles = StyleSheet.create({
   },
   liveLabel: {
     color: Coral,
-    fontSize: 11,
-    letterSpacing: 1.5,
+    fontSize: 13,
+    letterSpacing: 0.4,
   },
   heroTitle: {
     fontSize: 40,
@@ -911,6 +912,7 @@ const styles = StyleSheet.create({
   actionPill: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
     backgroundColor: 'rgba(11,11,16,0.55)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.14)',
@@ -942,6 +944,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#1D2A21',
   },
   planSpark: { fontSize: 18, color: OnBrand },
   planChevron: { fontSize: 26, color: '#8FA895' },

@@ -5,6 +5,7 @@ import { Children } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Icon, type IconName } from '@/components/icon';
 import { ThemedText } from '@/components/themed-text';
 import { BrandGradient, BrandGradientLocations, MaxContentWidth, OnBrand, Spacing } from '@/constants/theme';
 
@@ -18,10 +19,10 @@ export function AppTabs() {
       <TabList asChild>
         <BottomBar>
           <TabTrigger name="index" href="/" asChild>
-            <NavItem icon="✦" label="Discover" />
+            <NavItem icon="compass" label="Discover" />
           </TabTrigger>
           <TabTrigger name="profile" href="/profile" asChild>
-            <NavItem icon="◐" label="Profile" />
+            <NavItem icon="user" label="Profile" />
           </TabTrigger>
         </BottomBar>
       </TabList>
@@ -34,10 +35,10 @@ function NavItem({
   label,
   isFocused,
   ...props
-}: TabTriggerSlotProps & { icon: string; label: string }) {
+}: TabTriggerSlotProps & { icon: IconName; label: string }) {
   return (
     <Pressable {...props} style={styles.item}>
-      <ThemedText style={[styles.icon, { opacity: isFocused ? 1 : 0.55 }]}>{icon}</ThemedText>
+      <Icon name={icon} size={21} color={isFocused ? '#F2F7F1' : '#8FA895'} />
       <ThemedText type="small" numberOfLines={1} themeColor={isFocused ? 'text' : 'textSecondary'}>
         {label}
       </ThemedText>
@@ -45,10 +46,10 @@ function NavItem({
   );
 }
 
-function StaticItem({ icon, label, onPress }: { icon: string; label: string; onPress: () => void }) {
+function StaticItem({ icon, label, onPress }: { icon: IconName; label: string; onPress: () => void }) {
   return (
     <Pressable style={styles.item} onPress={onPress}>
-      <ThemedText style={[styles.icon, { opacity: 0.55 }]}>{icon}</ThemedText>
+      <Icon name={icon} size={21} color="#8FA895" />
       <ThemedText type="small" numberOfLines={1} themeColor="textSecondary">
         {label}
       </ThemedText>
@@ -80,10 +81,10 @@ function BottomBar(props: TabListProps) {
       pointerEvents="box-none">
       <View style={styles.bar}>
         {kids[0]}
-        <StaticItem icon="🎟" label="Tickets" onPress={() => router.push('/tickets')} />
+        <StaticItem icon="ticket" label="Tickets" onPress={() => router.push('/tickets')} />
         <Fab />
-        <StaticItem icon="👯" label="Friends" onPress={() => router.push('/friends')} />
-        <StaticItem icon="🍸" label="Venues" onPress={() => router.push('/venues')} />
+        <StaticItem icon="users" label="Friends" onPress={() => router.push('/friends')} />
+        <StaticItem icon="glass" label="Venues" onPress={() => router.push('/venues')} />
         {kids[1]}
       </View>
     </View>
