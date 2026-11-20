@@ -736,6 +736,12 @@ export default function EventScreen() {
   const isHost = session?.user.id === event.host_id;
   const isManager = isHost || cohostStatus === 'accepted';
   const vibe = getEventTheme(event.theme);
+  const isListing = !!event.external_url;
+  const openExternal = () => {
+    if (!event.external_url) return;
+    track('external_ticket_click', { slug: event.slug, source: event.source_name ?? '' });
+    Linking.openURL(event.external_url);
+  };
 
   return (
     <ThemedView style={styles.container}>
@@ -804,6 +810,29 @@ export default function EventScreen() {
         </View>
 
         <View style={styles.body}>
+          {isListing ? (
+            <ThemedView type="backgroundElement" style={styles.listingCard}>
+              <View style={styles.listingHead}>
+                <ThemedText type="smallBold" style={styles.listingKicker}>
+                  LISTED EVENT
+                </ThemedText>
+                {event.source_name ? (
+                  <ThemedText type="small" themeColor="textSecondary">
+                    via {event.source_name}
+                  </ThemedText>
+                ) : null}
+              </View>
+              <Pressable style={styles.listingBtn} onPress={openExternal}>
+                <ThemedText type="smallBold" style={styles.onState}>
+                  Get tickets{event.source_name ? ` on ${event.source_name}` : ''}  ↗
+                </ThemedText>
+              </Pressable>
+              <ThemedText type="small" themeColor="textSecondary" style={styles.listingNote}>
+                Listed from public announcements so you can plan the month. Party Time doesn&apos;t sell
+                these — you&apos;ll finish on the official seller. Hosting something? List it here free.
+              </ThemedText>
+            </ThemedView>
+          ) : null}
           {event.is_ticketed ? (
             <View
               onLayout={(e) => {
@@ -1006,7 +1035,13 @@ export default function EventScreen() {
 
       {!isHost ? (
         <View style={[styles.stickyBar, { paddingBottom: Math.max(insets.bottom, Spacing.three) }]}>
-          {event.is_ticketed ? (
+          {isListing ? (
+            <Pressable style={[styles.stickyCta, styles.stickyCtaWide]} onPress={openExternal}>
+              <ThemedText type="smallBold" style={styles.onState}>
+                Get tickets{event.source_name ? ` on ${event.source_name}` : ''}  ↗
+              </ThemedText>
+            </Pressable>
+          ) : event.is_ticketed ? (
             <>
               <View style={styles.stickyInfo}>
                 <ThemedText type="small" themeColor="textSecondary">
@@ -1345,6 +1380,32 @@ const styles = StyleSheet.create({
     backgroundColor: '#131C16',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
+  },
+  listingCard: {
+    borderRadius: 22,
+    padding: Spacing.four,
+    gap: Spacing.three,
+    borderWidth: 1,
+    borderColor: 'rgba(61,220,151,0.28)',
+  },
+  listingHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  listingKicker: {
+    color: StateGo,
+    letterSpacing: 1.5,
+    fontSize: 11,
+  },
+  listingBtn: {
+    backgroundColor: StateGo,
+    borderRadius: 16,
+    paddingVertical: Spacing.three,
+    alignItems: 'center',
+  },
+  listingNote: {
+    lineHeight: 18,
   },
   guaranteeRow: {
     marginTop: Spacing.two,

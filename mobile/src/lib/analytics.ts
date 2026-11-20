@@ -15,6 +15,7 @@ export type AnalyticsEvent =
   | 'rsvp'
   | 'checkout_start'
   | 'promote_share'
+  | 'external_ticket_click'
   | 'payout_request'
   | 'reservation_request';
 

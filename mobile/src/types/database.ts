@@ -349,6 +349,7 @@ export type Database = {
           currency: string
           description: string | null
           ends_at: string | null
+          external_url: string | null
           featured: boolean
           guest_list_visible: boolean
           host_id: string
@@ -360,6 +361,7 @@ export type Database = {
           promoter_bps: number
           rsvp_deadline: string | null
           slug: string
+          source_name: string | null
           sponsor_name: string | null
           starts_at: string | null
           status: Database["public"]["Enums"]["event_status"]
@@ -382,6 +384,7 @@ export type Database = {
           currency?: string
           description?: string | null
           ends_at?: string | null
+          external_url?: string | null
           featured?: boolean
           guest_list_visible?: boolean
           host_id: string
@@ -392,6 +395,7 @@ export type Database = {
           playlist_url?: string | null
           rsvp_deadline?: string | null
           slug: string
+          source_name?: string | null
           sponsor_name?: string | null
           starts_at?: string | null
           status?: Database["public"]["Enums"]["event_status"]
@@ -413,6 +417,7 @@ export type Database = {
           currency?: string
           description?: string | null
           ends_at?: string | null
+          external_url?: string | null
           featured?: boolean
           guest_list_visible?: boolean
           host_id?: string
@@ -423,6 +428,7 @@ export type Database = {
           playlist_url?: string | null
           rsvp_deadline?: string | null
           slug?: string
+          source_name?: string | null
           sponsor_name?: string | null
           starts_at?: string | null
           status?: Database["public"]["Enums"]["event_status"]

@@ -19,7 +19,7 @@ import { CityFeed } from '@/components/city-feed';
 import { LivePulse } from '@/components/live-pulse';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { gradientFor } from '@/constants/event-themes';
+import { getEventTheme, gradientFor } from '@/constants/event-themes';
 import {
   BodyFontBold,
   BottomNavInset,
@@ -57,6 +57,8 @@ type FeedEvent = {
   reaction_count: number;
   comment_count: number;
   i_reacted: boolean;
+  theme: string | null;
+  source_name: string | null;
 };
 
 type ActivityItem = {
@@ -167,7 +169,7 @@ function EventCard({ event, onReact }: { event: FeedEvent; onReact: (event: Feed
           <Image source={{ uri: event.cover_url }} style={StyleSheet.absoluteFill} contentFit="cover" />
         ) : (
           <LinearGradient
-            colors={gradientFor(event.slug)}
+            colors={event.theme ? getEventTheme(event.theme).gradient : gradientFor(event.slug)}
             locations={BrandGradientLocations}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
@@ -221,6 +223,11 @@ function EventCard({ event, onReact }: { event: FeedEvent; onReact: (event: Feed
             {event.going_count > 0 ? (
               <ThemedText type="small" style={styles.goingText}>
                 {event.going_count} going
+              </ThemedText>
+            ) : null}
+            {event.source_name && event.going_count === 0 ? (
+              <ThemedText type="small" style={styles.onImageDim} numberOfLines={1}>
+                · via {event.source_name}
               </ThemedText>
             ) : null}
           </View>
@@ -401,7 +408,28 @@ export default function EventsScreen() {
     if (queryError) setError(queryError.message);
     else {
       setError(null);
-      setEvents((data ?? []) as FeedEvent[]);
+      // Enrich with each event's chosen vibe + listing source so cover-less
+      // cards reflect the host's theme (not a random hash) and listings are
+      // marked. One lightweight keyed lookup over the visible feed.
+      const rows = (data ?? []) as unknown as Omit<FeedEvent, 'theme' | 'source_name'>[];
+      const ids = rows.map((e) => e.id);
+      let meta: Record<string, { theme: string | null; source_name: string | null }> = {};
+      if (ids.length > 0) {
+        const { data: extra } = await supabase
+          .from('events')
+          .select('id, theme, source_name')
+          .in('id', ids);
+        meta = Object.fromEntries(
+          (extra ?? []).map((r) => [r.id, { theme: r.theme, source_name: r.source_name }]),
+        );
+      }
+      setEvents(
+        rows.map((e) => ({
+          ...e,
+          theme: meta[e.id]?.theme ?? null,
+          source_name: meta[e.id]?.source_name ?? null,
+        })),
+      );
     }
     setActivity((acts ?? []) as ActivityItem[]);
     setVenues((vens ?? []) as VenueLite[]);
